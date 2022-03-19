@@ -70,7 +70,7 @@ private:
     int MemWrite;
     int PC_Select;
     int CSR_enable;
-    int intr_taken;
+    int trap;
     uint32_t mcause;
 
     int getInstructionType();
@@ -85,7 +85,7 @@ public:
     int get_MemWrite();
     int get_PC_Select();
     int get_CSR_enable();
-    int get_intr_taken();
+    int get_trap();
     int get_mcause();
 };
 
@@ -178,17 +178,15 @@ class CSR
 {
 
 private:
-    uint32_t mie;
-    uint32_t mepc;
-    uint32_t mtvec;
-    uint32_t csr_mcause;
-    uint32_t machine_mode;
-    uint32_t csr_rd;
+    uint32_t* csr_register;
+    uint32_t csr_we;
+    uint32_t trap_taken;
 
 public:
     CSR();
-    void update_csr(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-    uint32_t get_csr(int);
+    void set_control_lines(uint32_t, uint32_t, uint32_t, uint32_t);
+    void update_csr(uint32_t, uint32_t);
+    uint32_t get_csr(uint32_t);
 };
 
 #endif // CSR_H

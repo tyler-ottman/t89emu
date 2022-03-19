@@ -305,14 +305,14 @@ TEST(ControlUnit, opcodes) {
 
     signals.setControlLines(0b0110011, 1, 0b000, 0); // machine timer interrupt
     EXPECT_EQ(0x80000007, signals.get_mcause());
-    EXPECT_EQ(1, signals.get_intr_taken());
+    EXPECT_EQ(1, signals.get_trap());
 
     signals.setControlLines(0b0110011, 2, 0b000, 0); // machine external interrupt
     EXPECT_EQ(0x8000000b, signals.get_mcause());
-    EXPECT_EQ(1, signals.get_intr_taken());
+    EXPECT_EQ(1, signals.get_trap());
 
     signals.setControlLines(0b1110011, 0, 0b000, 0); // user mode ecall
-    EXPECT_EQ(1, signals.get_intr_taken());
+    EXPECT_EQ(1, signals.get_trap());
     EXPECT_EQ(0x8, signals.get_mcause());
 }
 
@@ -549,22 +549,33 @@ TEST(ImmediateGenerator, immediates) {
 
 TEST(CSR, csr_test) {
     CSR csr;
-    // 0x000: mie
-    // 0x001: mepc
-    // 0x002: mtvec
-    // 0x003: mcause
-    // 0x004: machine
-    // 0x005: mtime
-    // 0x006: mtimecmp_low
-    // 0x007: mtimecmp_high
-    // intr_taken, csr_addr, csr_we, mcause, pc, wd
-    csr.update_csr(0, 0x002, 1, 0, 0x4, 0xabcdabcd);
-    EXPECT_EQ(0xabcdabcd, csr.get_csr(0x002));
+    // 0x000: mie               - Machine Interrupt Enable
+    // 0x001: mpi               - Machine Pending Interrupt Enable
+    // 0x002: mepc              - Machine Exception Program Counter
+    // 0x003: mtvec             - Machine Trap Vector
+    // 0x004: mcause            - Machine Cause (of trap)
+    // 0x005: mode              - Mode of CPU (user/supervisor/machine)
+    // 0x006: modep             - Previous Mode of CPU before trap
+    // 0x007: mtimecmp_low      - Machine Time Compare (lower 32 bits)
+    // 0x008: mtimecmp_high     - Machine Time Compare (upper 32 bits)
+    
+    // csr_we, trap_taken, mcause, pc
+    csr.set_control_lines(1, 0, 0, 0); // csrrw
+    csr.update_csr(0x000, 1);
+    EXPECT_EQ(1, csr.get_csr(0x000));
 
-    // Interrupt
-    csr.update_csr(1, 0xfff, 0, 0x80000007, 0x4, 0x5);
-    EXPECT_EQ(1, csr.get_csr(0x004));
+    csr.set_control_lines(0, 0, 0, 0); // csrrs
+    csr.update_csr(0x000, 0);
+    EXPECT_EQ(1, csr.get_csr(0x000));
+
+    // Trap Taken (time interrupt when pc at 0x0000ffff)
+    uint32_t pc = 0x0000ffff;
+    uint32_t mcause = 0x80000007;
+    csr.set_control_lines(0, 1, mcause, pc);
+    EXPECT_EQ(mcause, csr.get_csr(0x004));
+    EXPECT_EQ(pc, csr.get_csr(0x002));
     EXPECT_EQ(0, csr.get_csr(0x000));
+    EXPECT_EQ(0, csr.get_csr(0x001));
 }
 
 TEST(Memory, read_write_test) {

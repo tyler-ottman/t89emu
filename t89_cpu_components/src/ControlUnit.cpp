@@ -10,9 +10,8 @@ int MemRead;
 int MemWrite;
 int PC_Select;
 int CSR_enable;
-int intr_taken;
+int trap;
 uint32_t mcause = 0;
-
 
 int ControlUnit::getInstructionType()
 {
@@ -35,7 +34,7 @@ int ControlUnit::getInstructionType()
     return instr_type;
 }
 
-void ControlUnit::setControlLines(int opcode, int csr_interrupt, int funct3, int supervisor_mode)
+void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int supervisor_mode)
 {
     this->opcode = opcode;
     // lui, auipc, jal, jalr, b-type, load, store, i-type, r-type, csr
@@ -67,11 +66,11 @@ void ControlUnit::setControlLines(int opcode, int csr_interrupt, int funct3, int
     this->CSR_enable = 0; // csrrs / ecall / all other instructions
     if(funct3 == 0b001 && instr_type == 9 && supervisor_mode)
         this->CSR_enable = 1; // csrrw
-    this->intr_taken = 0;
+    this->trap = 0;
 
     // Check for trap
-    if ((instr_type == 9 && funct3 == 0b000) || csr_interrupt) {
-        this->intr_taken = 1;
+    if ((instr_type == 9 && funct3 == 0b000) || interrupt) {
+        this->trap = 1;
         this->RegWrite = 0;
         this->ALUSrc = 0;
         this->MemtoReg = 0;
@@ -83,9 +82,9 @@ void ControlUnit::setControlLines(int opcode, int csr_interrupt, int funct3, int
         // update trap cause
         if (instr_type == 9) // ecall from user mode
             this->mcause = 0x00000008;
-        else if (csr_interrupt == 1) // machine timer interrupt
+        else if (interrupt == 1) // machine timer interrupt
             this->mcause = 0x80000007;
-        else if (csr_interrupt == 2) // machine external interrupt
+        else if (interrupt == 2) // machine external interrupt
             this->mcause = 0x8000000b;
         return;
     }
@@ -128,9 +127,9 @@ int ControlUnit::get_CSR_enable()
     return this->CSR_enable;
 }
 
-int ControlUnit::get_intr_taken()
+int ControlUnit::get_trap()
 {
-    return this->intr_taken;
+    return this->trap;
 }
 
 int ControlUnit::get_mcause()

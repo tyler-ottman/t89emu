@@ -1,82 +1,62 @@
 #include <iostream>
 #include "Components.h"
 
-uint32_t mie = 0;              // Machine interrupt enable bit
-uint32_t mepc = 0;             // Machine exception pc
-uint32_t mtvec = 0;            // Machine trap vector
-uint32_t csr_mcause = 0;           // Machine trap cause
-uint32_t machine_mode = 1; // Machine mode bit
-uint32_t csr_rd = 0;               // register destination
+#define CSR_REG_SIZE 9
+#define MIE 0
+#define MPI 1
+#define MEPC 2
+#define MCAUSE 4
+#define MODE 5
+#define MODEP 6
+
+// 0x000: mie               - Machine Interrupt Enable
+// 0x001: mpi               - Machine Pending Interrupt Enable
+// 0x002: mepc              - Machine Exception Program Counter
+// 0x003: mtvec             - Machine Trap Vector
+// 0x004: mcause            - Machine Cause (of trap)
+// 0x005: mode              - Mode of CPU (user/supervisor/machine)
+// 0x006: modep             - Previous Mode of CPU before trap
+// 0x007: mtimecmp_low      - Machine Time Compare (lower 32 bits)
+// 0x008: mtimecmp_high     - Machine Time Compare (upper 32 bits)
+uint32_t* csr_register;
+
+uint32_t csr_we;
+uint32_t trap_taken;
 
 CSR::CSR(){
-    this->mie = 0;
-    this->mepc = 0;
-    this->mtvec = 0;
-    this->csr_mcause = 0;
-    this->machine_mode = 1;
-    this->csr_rd = 0;
+    csr_register = (uint32_t*) calloc(CSR_REG_SIZE, sizeof(uint32_t));
+    csr_register[MODE] = 2; // Machine Initially in machine mode (load OS code)
+    this->csr_we = 0;
+    this->trap_taken = 0;
 }
 
-// 0x000: mie
-// 0x001: mepc
-// 0x002: mtvec
-// 0x003: mcause
-// 0x004: machine
-// 0x005: mtime
-// 0x006: mtimecmp_low
-// 0x007: mtimecmp_high
-// intr_taken, csr_addr, csr_we, mcause, pc, wd
-void CSR::update_csr(uint32_t intr_taken, uint32_t csr_addr, uint32_t csr_we, uint32_t mcause, uint32_t pc, uint32_t wd)
+// Decide when to write to CSR, what happens on interrupt
+void CSR::set_control_lines(uint32_t csr_we, uint32_t trap_taken, uint32_t mcause, uint32_t pc) {
+    // CSR write enable and trap taken are mutually exclusive
+    this->csr_we = csr_we;
+    this->trap_taken = trap_taken;
+    if(trap_taken) {
+        // Trap taken
+        csr_register[MCAUSE] = mcause;              // Cause of trap
+        csr_register[MEPC] = pc;                    // Value of PC at time of trap
+        csr_register[MODEP] = csr_register[MODE];   // Mode of CPU before trap
+        csr_register[MODE] = 2;                     // CPU to machine mode upon trap
+        csr_register[MIE] = 0;                      // Reset MIE
+        csr_register[MPI] = 0;                      // Reset MPI
+    }
+}
+
+void CSR::update_csr(uint32_t csr_addr, uint32_t wd)
 {
     // Check if updating CSR
-    if (csr_we && this->machine_mode)
-    {
-        switch (csr_addr)
-        {
-        case 0x000: // mie
-            this->mie = wd;
-            break;
-        case 0x001: // mepc
-            this->mepc = wd;
-            break;
-        case 0x002: // mtvec
-            this->mtvec = wd;
-            break;
-        case 0x003: // mcause
-            this->csr_mcause = wd;
-            break;
-        case 0x004: // machine mode
-            this->machine_mode = wd;
-            break;
-        }
-    }
-
-    // Check if interrupt
-    if (intr_taken)
-    {
-        // update mcause, machine mode, mepc
-        this->csr_mcause = mcause;
-        this->machine_mode = 1;
-        this->mepc = pc;
+    if ((csr_register[MODE] == 2) & this->csr_we) {
+        csr_register[csr_addr] = wd;
     }
 }
 
-uint32_t CSR::get_csr(int addr)
+uint32_t CSR::get_csr(uint32_t addr)
 {
-    switch (addr)
-    {
-    case 0x000: // mie
-        return this->mie;
-    case 0x001: // mepc
-        return this->mepc;
-    case 0x002: // mtvec
-        return this->mtvec;
-    case 0x003: // mcause
-        return this->csr_mcause;
-    case 0x004: // machine mode
-        return this->machine_mode;
-    }
-    return 0;
+    return csr_register[addr];
 }
 
 class CSR;
