@@ -6,25 +6,15 @@ template <typename T>T nextPC;
 template <typename T>
 int NextPC<T>::jal_jalr_branch(T opcode)
 {
-    int instr_type = -1;
-    switch (opcode)
-    {
-    case 0b1101111: // jal
-        instr_type = 0;
-        break;
-    case 0b1100111: // jalr
-        instr_type = 1;
-        break;
-    case 0b1100011: // B-type
-        instr_type = 2;
-        break;
-    case 0b1110011: // ecall/ CSR instruction
-        instr_type = 3;
-    default: // all other types
-        instr_type = 4;
-        break;
+    //              jal,       jalr,      B-type,    ecall/csr
+    T opcodes[4] = {0b1101111, 0b1100111, 0b1100011, 0b1110011};
+    for (int i = 0; i < 4; i++) {
+        if (opcode == opcodes[i]) {
+            return i;
+        }
     }
-    return instr_type;
+    // All other types of instructions
+    return 4;
 }
 
 template <typename T>
@@ -38,29 +28,20 @@ int NextPC<T>::branch_alu(T A, T B, T funct3)
         {
             return 1;
         }
-        else
-        {
-            return 0;
-        }
+        return 0;
     case 0b001: // bne
         if (ALU_in)
         {
             return 1;
         }
-        else
-        {
-            return 0;
-        }
+        return 0;
     case 0b100: // blt
         if ((ALU_in >> 31))
         {
             // MSB is 1 --> negative
             return 1;
         }
-        else
-        {
-            return 0;
-        }
+        return 0;
     case 0b101: // bge
         return (ALU_in >> 31) == 0;
     case 0b110: // bltu

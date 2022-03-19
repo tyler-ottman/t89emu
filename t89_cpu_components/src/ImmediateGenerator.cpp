@@ -8,41 +8,15 @@ int instr_opcode;
 template <typename T>
 int ImmediateGenerator<T>::getInstrType()
 {
-    int instrType = 0;
-    switch (this->instr_opcode)
-    {               // k-map
-    case 0b0110111: // lui
-        instrType = 0;
-        break;
-    case 0b0010111: // auipc
-        instrType = 1;
-        break;
-    case 0b1101111: // jal
-        instrType = 2;
-        break;
-    case 0b1100111: // jalr
-        instrType = 3;
-        break;
-    case 0b1100011: // B-type
-        instrType = 4;
-        break;
-    case 0b0000011: // Loads
-        instrType = 5;
-        break;
-    case 0b0100011: // Stores
-        instrType = 6;
-        break;
-    case 0b0010011: // Immediate Arithmetic
-        instrType = 7;
-        break;
-    case 0b1110011: // Ecall/csrw
-        instrType = 8;
-        break;
-    default:
-        std::cerr << "Invalid Opcode Error" << std::endl;
-        exit(1);
+    int opcodes[9] =    {0b0110111, 0b0010111, 0b1101111, 0b1100111, 0b1100011,
+                         0b0000011, 0b0100011, 0b0010011, 0b1110011};
+    for (int i = 0; i < 9; i++) {
+        if (opcodes[i] == this->instr_opcode) {
+            return i;
+        }
     }
-    return instrType;
+    std::cerr << "Invalid Opcode Error" << std::endl;
+    exit(1);
 }
 
 template <typename T>
@@ -77,9 +51,6 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     this->instr_opcode = instruction & 0b1111111; // opcode: 6 - 0
     int instrType = getInstrType();
     T immediate = 0;
-    // int start;
-    // T *temp;
-    // T *imm;
     uint32_t leftImm;
     uint32_t rightImm;
     switch (instrType)
@@ -91,42 +62,14 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         immediate = instruction >> 12;
         break;
     case 2: // jal
-        // temp = getBinaryArray(instruction);
-        // imm = (T *)malloc(20 * sizeof(T)); // 20 bits
-        // imm[0] = temp[size_of_instruction - 1 - 31];
-        // start = 19;
-        // for (int i = 1; i <= 9; i++)
-        // {
-        //     imm[i] = temp[size_of_instruction - 1 - start--]; // bits 19 - 12 in instruction
-        // }
-        // imm[10] = temp[size_of_instruction - 1 - 20]; // bit 20 in instruction
-        // start = 30;
-        // for (int i = 11; i <= 20; i++)
-        // {
-        //     imm[i] = temp[size_of_instruction - 1 - start--]; // bits 30, 21 in inst ruction
-        // }
-        // immediate = getNum(imm, 20); // RISC V interpretation of immediate
+        // Not complient with RISC-V architect standards
         immediate = instruction >> 12;
         break;
     case 3:                            // jalr
         immediate = instruction >> 20; // 12 bit immediate
         break;
     case 4: // B-type
-        // temp = getBinaryArray(instruction);
-        // imm = (T *)malloc(12 * sizeof(T)); // 12 bits
-        // imm[0] = temp[size_of_instruction - 1 - 31];
-        // imm[1] = temp[size_of_instruction - 1 - 7];
-        // start = 30;
-        // for (int i = 2; i <= 7; i++)
-        // {
-        //     imm[i] = temp[size_of_instruction - 1 - start--];
-        // }
-        // start = 11;
-        // for (int i = 8; i <= 11; i++)
-        // {
-        //     imm[i] = temp[size_of_instruction - 1 - start--];
-        // }
-        // immediate = getNum(imm, 12); // RISC V interpretation of immediate
+        // Not complient with RISC-V architect standards
         leftImm = (instruction >> 25) & 0b1111111;
         rightImm = (instruction >> 7) & 0b11111;
         immediate = (leftImm << 5) + rightImm;
