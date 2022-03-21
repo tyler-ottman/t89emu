@@ -20,20 +20,22 @@ template <typename T>T* registers;
 int rs1;
 int rs2;
 int rd;
+int Reg_Write;
 
 template <typename T>
 RegisterFile<T>::RegisterFile()
 {
     // All registers initially 0
     this->registers = (T *)calloc(32, sizeof(T));
-
 }
 
 template <typename T>
-void RegisterFile<T>::set_source_reg(int rs1, int rs2)
+void RegisterFile<T>::set_source_reg(int rs1, int rs2, int Reg_Write)
 {
     this->rs1 = rs1;
     this->rs2 = rs2;
+    this->Reg_Write = Reg_Write;
+
 }
 
 template <typename T>
@@ -51,7 +53,9 @@ T RegisterFile<T>::read_rs2()
 template <typename T>
 void RegisterFile<T>::write(T data, int rd)
 {
-    this->registers[rd] = data;
+    if (this->Reg_Write) {
+        this->registers[rd] = data;
+    }
 }
 
 template class RegisterFile<uint32_t>;

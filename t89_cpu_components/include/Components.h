@@ -72,6 +72,7 @@ private:
     int CSR_enable;
     int trap;
     uint32_t mcause;
+    int ALUop;
 
     int getInstructionType();
 
@@ -87,6 +88,7 @@ public:
     int get_CSR_enable();
     int get_trap();
     int get_mcause();
+    int get_ALUop();
 };
 
 #endif // CONTROLUNIT_H
@@ -119,10 +121,11 @@ private:
     int rs1;
     int rs2;
     int rd;
+    int Reg_Write;
 
 public:
     RegisterFile();
-    void set_source_reg(int, int);
+    void set_source_reg(int, int, int);
     T read_rs1();
     T read_rs2();
     void write(T, int);

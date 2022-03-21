@@ -79,7 +79,9 @@ int NextPC<T>::branch_alu(T A, T B, T funct3)
 }
 
 template <typename T>
-NextPC<T>::NextPC(){}
+NextPC<T>::NextPC(){
+    this->nextPC = 0;
+}
 
 template <typename T>
 void NextPC<T>::setCurrentPC(T currentPC) {

@@ -11,6 +11,8 @@ int MemWrite;
 int PC_Select;
 int CSR_enable;
 int trap;
+int ALUop;
+
 uint32_t mcause = 0;
 
 int ControlUnit::getInstructionType()
@@ -64,6 +66,7 @@ void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int sup
     this->MemWrite = MemWrite[instr_type];
     this->PC_Select = PC_Select[instr_type];
     this->CSR_enable = 0; // csrrs / ecall / all other instructions
+    this->ALUop = instr_type;
     if(funct3 == 0b001 && instr_type == 9 && supervisor_mode)
         this->CSR_enable = 1; // csrrw
     this->trap = 0;
@@ -78,6 +81,7 @@ void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int sup
         this->MemWrite = 0;
         this->PC_Select = 0;
         this->CSR_enable = 0;
+        this->ALUop = 0;
 
         // update trap cause
         if (instr_type == 9) // ecall from user mode
@@ -135,6 +139,10 @@ int ControlUnit::get_trap()
 int ControlUnit::get_mcause()
 {
     return this->mcause;
+}
+
+int ControlUnit::get_ALUop() {
+    return this->ALUop;
 }
 
 class ControlUnit;

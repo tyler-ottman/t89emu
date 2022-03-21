@@ -323,7 +323,7 @@ TEST(RegisterFile, read_write) {
     int rs2 = 3;
     uint32_t data = 0xff;
     rf.write(data, rs1);
-    rf.set_source_reg(rs1, rs2);
+    rf.set_source_reg(rs1, rs2, 1);
     EXPECT_EQ(data, rf.read_rs1());
     data = 0x12;
     rf.write(data, rs2);

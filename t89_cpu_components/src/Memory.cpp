@@ -4,7 +4,7 @@
 
 uint32_t data_out;                           // Data output
 uint32_t instr_out;                          // Instrution output
-std::unordered_map<uint32_t, uint32_t> dram; // 16 GB memory module
+// std::unordered_map<uint32_t, uint32_t> dram; // 16 GB memory module
 int MemRead2;
 int MemWrite2;
 int size;
@@ -21,7 +21,9 @@ void Memory::set_control_signals(int MemReadData, int MemWriteData, int size, in
 
 void Memory::write_data(uint32_t addr, uint32_t data)
 {
-    dram[addr] = data;
+    if (this->MemWriteData) {
+        dram[addr] = data;
+    }
 }
 
 void Memory::write_io(uint32_t addr, uint32_t data) {
