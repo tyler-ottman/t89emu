@@ -3,12 +3,12 @@ SRC_DIR = ./src
 INC_DIR = ../t89_cpu_components/include
 LIB_DIR = ../t89_cpu_components/src
 
-CFLAGS += -Wall -lgtest
+CFLAGS += -Wall -lgtest -lX11 -lGL -lpthread -lpng -lstdc++fs -std=c++17
 CXX = g++
 INCLUDE += -I $(INC_DIR)
 
-TARGET_NAME = single_cycle
-TARGET_OBJS = $(OBJ_DIR)/single_cycle.o $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/ControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o
+TARGET_NAME = t89_cpu
+TARGET_OBJS = $(OBJ_DIR)/t89_cpu.o $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/ControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/Memory.o $(OBJ_DIR)/CSR.o
 
 all: directories $(TARGET_NAME)
 
@@ -28,4 +28,4 @@ $(OBJ_DIR):
 
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -rf single_cycle
+	rm -rf $(TARGET_NAME)
