@@ -128,6 +128,7 @@ public:
     void set_control_lines(int, int, int);
     T read_rs1();
     T read_rs2();
+    T read_rd();
     void write(T, int);
 };
 

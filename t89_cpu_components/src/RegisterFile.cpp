@@ -51,10 +51,18 @@ T RegisterFile<T>::read_rs2()
 }
 
 template <typename T>
-void RegisterFile<T>::write(T data, int rd)
+T RegisterFile<T>::read_rd()
 {
+    return this->registers[this->rd];
+}
+
+template <typename T>
+void RegisterFile<T>::write(T data, int rd)
+{   
+    if (rd == 0) return;
     if (this->Reg_Write) {
         this->registers[rd] = data;
+        this->rd = rd;
     }
 }
 

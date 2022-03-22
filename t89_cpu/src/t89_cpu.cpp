@@ -1,26 +1,7 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
-#include "Components.h"
-
-ALU<uint32_t> alu;
-ALUControlUnit aluc;
-ControlUnit ctrl;
-CSR csr;
-ImmediateGenerator<uint32_t> immgen;
-Memory dram;
-NextPC<uint32_t> nextpc;
-ProgramCounter pc;
-RegisterFile<uint32_t> rf;
-
-uint32_t instr_index = 0;
-#define NUM_INSTRUCTIONS 4
-uint32_t instructions[NUM_INSTRUCTIONS] = {
-	0x00f58593,		// addi a1, a1, 0xf
-	0x00f58593,		// addi a1, a1, 0xf
-	0x01e5b593,		// sltiu a1, 0x1e
-	0xfff5c593		// xori a1, a1, 0xfff
-};
-
+#include "../../t89_cpu_components/include/Components.h"
+#include <map>
 
 class CPU : public olc::PixelGameEngine
 {
@@ -29,9 +10,21 @@ private:
 	uint32_t IO_we;		// IO write enable
 	uint32_t IO_addr;	// Address of device
 	int interrupt_assert;
+	int debug;
+
+	ALU<uint32_t> alu;
+	ALUControlUnit aluc;
+	ControlUnit ctrl;
+	CSR csr;
+	ImmediateGenerator<uint32_t> immgen;
+	Memory dram;
+	NextPC<uint32_t> nextpc;
+	ProgramCounter pc;
+	RegisterFile<uint32_t> rf;
 
 	void query_external_interrupt() {
 		// Handle User Input
+		this->IO_BUS = 0;
 		if (GetKey(olc::Key::LEFT).bPressed){
 			this->IO_BUS = (uint32_t)olc::Key::LEFT;
 			this->interrupt_assert = 1;
@@ -62,16 +55,27 @@ private:
 			this->interrupt_assert = 1;
 			this->IO_addr = 0;
 			this->IO_we = 1;
+		} else if (GetKey(olc::Key::TAB).bPressed){
+			this->IO_BUS = (uint32_t)olc::Key::TAB;
+			this->interrupt_assert = 0;
+			this->IO_addr = 0;
+			this->IO_we = 0;
 		}
 	}
 public:
-	CPU() {
+	CPU(std::multimap<uint32_t, uint32_t> memory, int debug = 0) {
 		sAppName = "VGA Output";
 		this->interrupt_assert = 0;
-		this->IO_BUS = 0;	// 32 bit IO bus
+		this->IO_BUS = 0;		// 32 bit IO bus
 		this->IO_we = 0;		// IO write enable
-		this->IO_addr = 0;	// Address of device
-	
+		this->IO_addr = 0;		// Address of device
+		this->debug = debug;	// Debug mode
+		
+		// Load Memory
+		dram.set_control_signals(1, 1, 4, 1);
+		for (std::multimap<uint32_t, uint32_t>::iterator it = memory.begin(); it != memory.end(); it++) {
+			dram.write_data(it->first, it->second);
+		}
 	}
 	bool OnUserCreate() override {return true;}
 	bool OnUserUpdate(float fElapsedTime) override
@@ -88,6 +92,10 @@ public:
 			external_interrupt = 1;
 			this->IO_we = 0;
 			this->interrupt_assert = 0;
+		}
+
+		if(this->debug && (this->IO_BUS != (uint32_t)olc::Key::TAB)) {
+			return true;													// Debug Mode
 		}
 
 		/********************************************
@@ -109,6 +117,21 @@ public:
 		uint32_t immediate = immgen.getImmediate(cur_instruction);			// Instruction Immediate
 		uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;				// CSR Address
 		
+		/******************DEBUG********************/
+		if (this->debug) {
+			std::cout << "Current Instruction: " << cur_instruction << std::endl;
+			switch(opcode) {
+				case 0b0010011:												// I-type
+					std::cout << "immediate: " << immediate;
+					std::cout << " rs1: " << rs1;
+					std::cout << " funct3: " << funct3;
+					std::cout << " rd: " << rd;
+					std::cout << " opcode: " << opcode << std::endl;
+					break;
+			}
+		}
+		/******************DEBUG********************/
+
 		// Control Unit Signals
 		ctrl.setControlLines(opcode, external_interrupt, funct3, mode);
 		uint32_t RegWrite = ctrl.get_RegWrite();							// Write to register?
@@ -164,33 +187,32 @@ public:
 		nextpc.calculateNextPC(immediate, opcode, funct3, A, B, csr.get_csr(0x003), trap_taken);
 		pc.setPC(nextpc.getNextPC());
 
+		// Debug, read registers
+		if(this->debug) {
+			switch(opcode) {
+				case 0b0010011: 											// I-Type
+					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
+			}
+			// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
+			// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
+			// std::cout << "CSR written to: " << csr.get_csr(csr_addr) << std::endl;
+			// std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
+		}
 		return true;
 	}
 };
 
-int main(int argc, char** argv)
+std::multimap<uint32_t, uint32_t> instructions = {
+    {0x00000000, 0x00f58593},
+    {0x00000004, 0x00f58593},
+    {0x00000008, 0x01e5b593},
+    {0x0000000c, 0xfff5c593}
+};
+
+int main(int argc, char* argv[])
 {
-	if (argc == 2) {
-		// Check second argument
-	}
-
-	uint32_t instructions[NUM_INSTRUCTIONS] = {
-		0x00f58593,		// addi a1, a1, 0xf
-		0x00f58593,		// addi a1, a1, 0xf
-		0x01e5b593,		// sltiu a1, 0x1e
-		0xfff5c593		// xori a1, a1, 0xfff
-	};
-	uint32_t cur_instr_addr = 0x0;
-	uint32_t instr_addr_size = 0x4;
-	dram.set_control_signals(1, 1, 4, 1);
-	// Insert instructions into memory
-	for (uint32_t x : instructions) {
-		dram.write_data(cur_instr_addr, x);
-		cur_instr_addr += instr_addr_size;
-	}
-
 	// Start simulation
-	CPU t89;
+	CPU t89(instructions, 1);
 	if (t89.Construct(200, 200, 2, 2))
 		t89.Start();
 	
