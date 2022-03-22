@@ -125,7 +125,7 @@ private:
 
 public:
     RegisterFile();
-    void set_source_reg(int, int, int);
+    void set_control_lines(int, int, int);
     T read_rs1();
     T read_rs2();
     void write(T, int);

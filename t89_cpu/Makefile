@@ -3,7 +3,7 @@ SRC_DIR = ./src
 INC_DIR = ../t89_cpu_components/include
 LIB_DIR = ../t89_cpu_components/src
 
-CFLAGS += -Wall -lgtest -lX11 -lGL -lpthread -lpng -lstdc++fs -std=c++17
+CFLAGS += -Wall -lgtest -lX11 -lGL -lpthread -lpng -lstdc++fs -std=c++17 -g
 CXX = g++
 INCLUDE += -I $(INC_DIR)
 

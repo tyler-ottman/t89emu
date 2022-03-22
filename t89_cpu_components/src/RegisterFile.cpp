@@ -30,7 +30,7 @@ RegisterFile<T>::RegisterFile()
 }
 
 template <typename T>
-void RegisterFile<T>::set_source_reg(int rs1, int rs2, int Reg_Write)
+void RegisterFile<T>::set_control_lines(int rs1, int rs2, int Reg_Write)
 {
     this->rs1 = rs1;
     this->rs2 = rs2;
