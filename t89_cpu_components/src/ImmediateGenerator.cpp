@@ -15,9 +15,11 @@ int ImmediateGenerator<T>::getInstrType()
             return i;
         }
     }
-    std::cout << "opcode: " << this->instr_opcode << std::endl;
+    if (this->instr_opcode == 0b0110011) {
+        return 0;
+    }
     std::cerr << "Invalid Opcode Error" << std::endl;
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 template <typename T>
@@ -58,7 +60,7 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     switch (instrType)
     {       // multiplexor
     case 0: // lui
-        immediate = instruction >> 12;
+        immediate = instruction & 0xfffff000;
         break;
     case 1: // auipc
         immediate = instruction >> 12;

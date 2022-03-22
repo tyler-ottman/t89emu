@@ -123,11 +123,18 @@ public:
 			switch(opcode) {
 				case 0b0110111:												// lui
 					std::cout << "immediate: " << immediate;
-					std::cout << "rd: " << rd;
-					std::cout << "opcode: " << opcode << std::endl;
+					std::cout << " rd: " << rd;
+					std::cout << " opcode: " << opcode << std::endl;
 					break;
 				case 0b0010011:												// I-type
 					std::cout << "immediate: " << immediate;
+					std::cout << " rs1: " << rs1;
+					std::cout << " funct3: " << funct3;
+					std::cout << " rd: " << rd;
+					std::cout << " opcode: " << opcode << std::endl;
+					break;
+				case 0b0110011:												// R-type
+					std::cout << "rs2: " << rs2;
 					std::cout << " rs1: " << rs1;
 					std::cout << " funct3: " << funct3;
 					std::cout << " rd: " << rd;
@@ -201,6 +208,9 @@ public:
 				case 0b0010011: 											// I-Type
 					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
 					break;
+				case 0b0110011:												// R-type
+					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
+					break;
 			}
 			// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
 			// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
@@ -233,7 +243,22 @@ std::multimap<uint32_t, uint32_t> instructions = {
 	{0x00000048, 0x00361613},	// slli a2, a2, 0x003
 	{0x0000004c, 0x00165613},	// srli a2, a2, 0x001
 	{0x00000050, 0x80000637},	// lui a2, 0x80000
-	{0x00000054, 0x40165613}	// srai a2, a2, 0x001
+	{0x00000054, 0x40165613},	// srai a2, a2, 0x001
+	{0x00000058, 0x40000637},	// lui a2, 0x40000
+	{0x0000005c, 0x40165613},	// srai a2, a2, 0x001
+	{0x00000060, 0x80000637},	// lui a2, 0x80000
+	{0x00000064, 0x00162613},	// slti a2, a2, 0x001
+	{0x00000068, 0xfffff637},	// lui a2, 0xfffff
+	{0x0000006c, 0x00162613},	// slti a2, a2, 0x001
+	{0x00000070, 0x80000637},	// lui a2, 0x80000
+	{0x00000074, 0x00163613},	// sltiu a2, a2, 0x001
+	{0x00000078, 0x00100593},	// addi a1, x0, 0x001
+	{0x0000007c, 0x0025b613},	// sltiu a2, a1, 0x002
+	{0x00000080, 0x00100013},	// addi x0, x0, 0x001
+	{0x00000084, 0x00e00613},	// addi a2, x0, 0x00e
+	{0x00000088, 0x00b60633},	// add a2, a2, a1
+	{0x0000008c, 0x80000637},	// lui a2, 0x80000
+	{0x00000090, 0x00b60633}	// add a2, a2, a1
 };
 
 int main(int argc, char* argv[])

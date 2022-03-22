@@ -214,6 +214,7 @@ T ALU<T>::sll()
 template <typename T>
 T ALU<T>::slt()
 {
+    if ((this->A == 0x80000000) && (this->B != this->A)) {return 1;}
     T alu_out = sub(); // A - B
     T MSB = alu_out >> 31;
     return MSB == 1;
@@ -223,7 +224,7 @@ template <typename T>
 T ALU<T>::sltu()
 {
     T alu_out;
-
+    
     // If a and b are positive
     if (((this->A >> 31) == 0) && ((this->B >> 31) == 0)) {
         return (sub() >> 31) == 1;
