@@ -258,7 +258,15 @@ std::multimap<uint32_t, uint32_t> instructions = {
 	{0x00000084, 0x00e00613},	// addi a2, x0, 0x00e
 	{0x00000088, 0x00b60633},	// add a2, a2, a1
 	{0x0000008c, 0x80000637},	// lui a2, 0x80000
-	{0x00000090, 0x00b60633}	// add a2, a2, a1
+	{0x00000090, 0x00b60633},	// add a2, a2, a1
+	{0x00000094, 0x00800613},	// addi a2, x0, 0x008
+	{0x00000098, 0x40b60633},	// sub a2, a2, a1
+	{0x0000009c, 0x40c58633},	// sub a2, a1, a2
+	{0x000000a0, 0x00b00613},	// addi a2, x0, 0x00b
+	{0x000000a4, 0x00b61633},	// sll a2, a2, a1
+	{0x000000a8, 0x00b61633},	// sll a2, a2, a1
+	{0x000000ac, 0x00c5a633},	// slt a2, a1, a2
+	{0x000000b0, 0x00062633}	// slt a2, a2, x0
 };
 
 int main(int argc, char* argv[])
