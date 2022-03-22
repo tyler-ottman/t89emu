@@ -15,6 +15,7 @@ int ImmediateGenerator<T>::getInstrType()
             return i;
         }
     }
+    std::cout << "opcode: " << this->instr_opcode << std::endl;
     std::cerr << "Invalid Opcode Error" << std::endl;
     exit(1);
 }
@@ -50,6 +51,7 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
 {
     this->instr_opcode = instruction & 0b1111111; // opcode: 6 - 0
     int instrType = getInstrType();
+    int funct3;
     T immediate = 0;
     uint32_t leftImm;
     uint32_t rightImm;
@@ -82,6 +84,10 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 7: // Immediate Arithmetic
         immediate = instruction >> 20;
+        funct3 = (instruction >> 12) & 0b111;
+        if (funct3 == 0b001 || funct3 == 0b101) {
+            immediate = immediate & 0b11111;        // slli, srli, srai
+        }
         break;
     case 8: // ecall/csri(w)
         immediate = instruction >> 20;

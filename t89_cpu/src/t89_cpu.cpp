@@ -121,6 +121,11 @@ public:
 		if (this->debug) {
 			std::cout << "Current Instruction: " << cur_instruction << std::endl;
 			switch(opcode) {
+				case 0b0110111:												// lui
+					std::cout << "immediate: " << immediate;
+					std::cout << "rd: " << rd;
+					std::cout << "opcode: " << opcode << std::endl;
+					break;
 				case 0b0010011:												// I-type
 					std::cout << "immediate: " << immediate;
 					std::cout << " rs1: " << rs1;
@@ -190,8 +195,12 @@ public:
 		// Debug, read registers
 		if(this->debug) {
 			switch(opcode) {
+				case 0b0110111:												// lui
+					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
+					break;
 				case 0b0010011: 											// I-Type
 					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
+					break;
 			}
 			// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
 			// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
@@ -203,10 +212,28 @@ public:
 };
 
 std::multimap<uint32_t, uint32_t> instructions = {
-    {0x00000000, 0x00f58593},
-    {0x00000004, 0x00f58593},
-    {0x00000008, 0x01e5b593},
-    {0x0000000c, 0xfff5c593}
+    {0x00000000, 0x00f58593},	// addi a1, a1, 0xf
+    {0x00000004, 0x00f58593},	// addi a1, a1, 0xf
+    {0x00000008, 0x0ff58613},	// addi a2, a1, 0xff
+	{0x0000000c, 0xfff60613},	// addi a2, a2, 0xfff
+	{0x00000010, 0xfff62613},	// slti a2, a1, 0xfff
+	{0x00000014, 0x0ff5a593},	// slti a1, a1, 0xf (test signed later)
+	{0x00000018, 0xfff5b613},	// sltiu a2, a1, 0xfff
+	{0x0000001c, 0x0005b613},	// sltiu a2, a1, 0x0 (test "signed" later)
+	{0x00000020, 0xabc64613},	// xori a2, a2, 0xabc
+	{0x00000024, 0xabc64613},	// xori a2, a2, 0xabc
+	{0x00000028, 0xaaa5e613},	// ori a2, a1, 0xaaa
+	{0x0000002c, 0xfff66613},	// ori a2, a2, 0xfff
+	{0x00000030, 0x0aa67613},	// andi a2, a2, 0x0aa
+	{0x00000034, 0x05567613},	// andi a2, a2, 0x055
+	{0x00000038, 0x00067613},	// andi a2, a2, 0x000
+	{0x0000003c, 0xfff67613},	// andi a2, a2, 0xfff
+	{0x00000040, 0x00359613},	// slli a2, a1, 0x003
+	{0x00000044, 0x00258613},	// addi a2, a1, 0x002
+	{0x00000048, 0x00361613},	// slli a2, a2, 0x003
+	{0x0000004c, 0x00165613},	// srli a2, a2, 0x001
+	{0x00000050, 0x80000637},	// lui a2, 0x80000
+	{0x00000054, 0x40165613}	// srai a2, a2, 0x001
 };
 
 int main(int argc, char* argv[])
