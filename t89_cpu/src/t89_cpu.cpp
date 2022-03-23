@@ -22,6 +22,76 @@ private:
 	ProgramCounter pc;
 	RegisterFile<uint32_t> rf;
 
+	void debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction) {
+		std::cout << "Current Instruction: " << cur_instruction << std::endl;
+		switch (opcode)
+		{
+		case 0b0110111: // lui
+			std::cout << "immediate: " << immediate;
+			std::cout << " rd: " << rd;
+			std::cout << " opcode: " << opcode << std::endl;
+			break;
+		case 0b0010011: // I-type
+			std::cout << "immediate: " << immediate;
+			std::cout << " rs1: " << rs1;
+			std::cout << " funct3: " << funct3;
+			std::cout << " rd: " << rd;
+			std::cout << " opcode: " << opcode << std::endl;
+			break;
+		case 0b0110011: // R-type
+			std::cout << "rs2: " << rs2;
+			std::cout << " rs1: " << rs1;
+			std::cout << " funct3: " << funct3;
+			std::cout << " rd: " << rd;
+			std::cout << " opcode: " << opcode << std::endl;
+			break;
+		case 0b0000011: // Load
+			std::cout << "immediate: " << immediate;
+			std::cout << " rs1: " << rs1;
+			std::cout << " funct3: " << funct3;
+			std::cout << " rd: " << rd;
+			std::cout << " opcode: " << opcode << std::endl;
+			break;
+		case 0b0100011: // Store
+			std::cout << "immediate: " << immediate;
+			std::cout << " rs2: " << rs2;
+			std::cout << " rs1: " << rs1;
+			std::cout << " funct3: " << funct3;
+			std::cout << " opcode: " << opcode << std::endl;
+			break;
+		}
+	}
+
+	void debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate) {
+		switch (opcode)
+		{
+		case 0b0110111: // lui
+			std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
+					  << std::endl;
+			break;
+		case 0b0010011: // I-Type
+			std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
+					  << std::endl;
+			break;
+		case 0b0110011: // R-type
+			std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
+					  << std::endl;
+			break;
+		case 0b0000011: // Load
+			std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
+					  << std::endl;
+			break;
+		case 0b0100011: // Store
+			std::cout << "Wrote " << rf.read_rs2() << " to address " << rf.read_rs1() + immediate << std::endl
+					  << std::endl;
+			break;
+		}
+		// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
+		// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
+		// std::cout << "CSR written to: " << csr.get_csr(csr_addr) << std::endl;
+		// std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
+	}
+
 	void query_external_interrupt() {
 		// Handle User Input
 		this->IO_BUS = 0;
@@ -118,30 +188,7 @@ public:
 		uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;				// CSR Address
 		
 		/******************DEBUG********************/
-		if (this->debug) {
-			std::cout << "Current Instruction: " << cur_instruction << std::endl;
-			switch(opcode) {
-				case 0b0110111:												// lui
-					std::cout << "immediate: " << immediate;
-					std::cout << " rd: " << rd;
-					std::cout << " opcode: " << opcode << std::endl;
-					break;
-				case 0b0010011:												// I-type
-					std::cout << "immediate: " << immediate;
-					std::cout << " rs1: " << rs1;
-					std::cout << " funct3: " << funct3;
-					std::cout << " rd: " << rd;
-					std::cout << " opcode: " << opcode << std::endl;
-					break;
-				case 0b0110011:												// R-type
-					std::cout << "rs2: " << rs2;
-					std::cout << " rs1: " << rs1;
-					std::cout << " funct3: " << funct3;
-					std::cout << " rd: " << rd;
-					std::cout << " opcode: " << opcode << std::endl;
-					break;
-			}
-		}
+		if (this->debug) {debug_pre_execute(opcode, funct3, funct7, rs1, rs2, rd, immediate, csr_addr, cur_instruction);}
 		/******************DEBUG********************/
 
 		// Control Unit Signals
@@ -199,24 +246,10 @@ public:
 		nextpc.calculateNextPC(immediate, opcode, funct3, A, B, csr.get_csr(0x003), trap_taken);
 		pc.setPC(nextpc.getNextPC());
 
-		// Debug, read registers
-		if(this->debug) {
-			switch(opcode) {
-				case 0b0110111:												// lui
-					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
-					break;
-				case 0b0010011: 											// I-Type
-					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
-					break;
-				case 0b0110011:												// R-type
-					std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
-					break;
-			}
-			// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
-			// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
-			// std::cout << "CSR written to: " << csr.get_csr(csr_addr) << std::endl;
-			// std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
-		}
+		/******************DEBUG********************/
+		if (this->debug) {debug_post_execute(opcode, rd, immediate);}
+		/******************DEBUG********************/
+
 		return true;
 	}
 };
@@ -282,7 +315,18 @@ std::multimap<uint32_t, uint32_t> instructions = {
 	{0x000000e4, 0x40b65633},	// sra a2, a2, a1
 	{0x000000e8, 0xfff00593},	// addi a1, x0, 0xfff
 	{0x000000ec, 0x00b666b3},	// or a3, a2, a1
-	{0x000000f0, 0x00b67633}	// and a2, a2, a1
+	{0x000000f0, 0x00b67633},	// and a2, a2, a1
+	{0x000000f4, 0xffff0637},	// lui a2, 0xffff0
+	{0x000000f8, 0x00062683},	// lw a3, 0(a2)
+	{0x000000fc, 0x00462683},	// lw a3, 4(a2)
+	{0x00000100, 0xfe000613},	// addi a2, x0, 0xfe0
+	{0x00000104, 0xfffef6b7},	// lui a3, 0xfffef
+	{0x00000108, 0x00d66633},	// or a2, a2, a3
+	{0x0000010c, 0x02b62023},	// sw a1, 32(a2)
+	{0x00000110, 0xffff0637},	// lui a2, 0xffff0
+	{0x00000114, 0x00062683},	// lw a3, 0(a2)
+	{0xffff0000, 0x000000ff},	// A[0]
+	{0xffff0004, 0x00000010}	// A[1]
 };
 
 int main(int argc, char* argv[])
