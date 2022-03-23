@@ -224,7 +224,7 @@ public:
 std::multimap<uint32_t, uint32_t> instructions = {
     {0x00000000, 0x00f58593},	// addi a1, a1, 0xf
     {0x00000004, 0x00f58593},	// addi a1, a1, 0xf
-    {0x00000008, 0x0ff58613},	// addi a2, a1, 0xff
+	{0x00000008, 0x0ff58613},	// addi a2, a1, 0xff
 	{0x0000000c, 0xfff60613},	// addi a2, a2, 0xfff
 	{0x00000010, 0xfff62613},	// slti a2, a1, 0xfff
 	{0x00000014, 0x0ff5a593},	// slti a1, a1, 0xf (test signed later)
@@ -266,7 +266,23 @@ std::multimap<uint32_t, uint32_t> instructions = {
 	{0x000000a4, 0x00b61633},	// sll a2, a2, a1
 	{0x000000a8, 0x00b61633},	// sll a2, a2, a1
 	{0x000000ac, 0x00c5a633},	// slt a2, a1, a2
-	{0x000000b0, 0x00062633}	// slt a2, a2, x0
+	{0x000000b0, 0x00062633},	// slt a2, a2, x0
+	{0x000000b4, 0x80000637},	// lui a2, 0x80000
+	{0x000000b8, 0x00b62633},	// slt a2, a2, a1
+	{0x000000bc, 0x80000637},	// lui a2, 0x80000
+	{0x000000c0, 0x00b63633},	// sltu a2, a2, a1
+	{0x000000c4, 0xaaaaa637},	// lui a2, 0xaaaaa
+	{0x000000c8, 0x555555b7},	// lui a1, 0x55555
+	{0x000000cc, 0x00b64633},	// xor a2, a2, a1
+	{0x000000d0, 0x00c64633},	// xor a2, a2, a2
+	{0x000000d4, 0x00001637},	// lui a2, 0x00001
+	{0x000000d8, 0x00100593},	// addi a1, x0, 0x001
+	{0x000000dc, 0x00b65633},	// srl a2, a2, a1
+	{0x000000e0, 0x80000637},	// lui a2, 0x00001
+	{0x000000e4, 0x40b65633},	// sra a2, a2, a1
+	{0x000000e8, 0xfff00593},	// addi a1, x0, 0xfff
+	{0x000000ec, 0x00b666b3},	// or a3, a2, a1
+	{0x000000f0, 0x00b67633}	// and a2, a2, a1
 };
 
 int main(int argc, char* argv[])
