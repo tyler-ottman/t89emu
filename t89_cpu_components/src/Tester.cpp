@@ -2,7 +2,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "../include/Components.h"
+#include "Components.h"
 
 // ALU Test
 TEST(ALU, Add)  {
@@ -497,7 +497,7 @@ TEST(ImmediateGenerator, immediates) {
     ImmediateGenerator<uint32_t> imm;
     uint32_t opcode = 0b0110111; // lui
     uint32_t instruction = 0xabcdf000 | opcode;
-    uint32_t immediate = instruction >> 12;
+    uint32_t immediate = instruction & 0xfffff000;
     EXPECT_EQ(immediate, imm.getImmediate(instruction));
 
     opcode = 0b0010111; // auipc
