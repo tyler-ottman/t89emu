@@ -96,16 +96,19 @@ void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec,
     switch (instr_type)
     {
     case 0:                            // jal signal
-        this->nextPC += (offset << 2); // use adder and shifter in hardware
+        // this->nextPC += (offset << 2); // use adder and shifter in hardware
+        this->nextPC += offset;
         break;
     case 1: // jalr signal
-        this->nextPC = A + (offset << 2);
+        // this->nextPC = A + (offset << 2);
+        this->nextPC = A + offset;
         break;
     case 2: // B-type signal
         branch = branch_alu(A, B, funct3);
         if (branch)
         {
-            this->nextPC += (offset << 2);
+            // this->nextPC += (offset << 2);
+            this->nextPC += offset;
         }
         else
         {

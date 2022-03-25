@@ -114,6 +114,21 @@ std::multimap<uint32_t, uint32_t> instructionsBLTU1 = {
 	{0x00000008, 0xfed76e63} // bltu a4, a3, -4
 };
 
+std::multimap<uint32_t, uint32_t> instructionsBGEU = {
+	{0x00000000, 0x80000637}, // lui a2, 0x80000
+	{0x00000004, 0xfe067e63} // bgeu a2, x0, -4
+};
+
+std::multimap<uint32_t, uint32_t> instructionsAUIPC = {
+	{0x00000000, 0x80000637}, // lui a2, 0x80000
+	{0x00000004, 0x00009617}  // auipc a2, 0x9
+};
+
+std::multimap<uint32_t, uint32_t> instructionsECALL = {
+	{0x00000000, 0x80000637}, // lui a2, 0x80000
+	{0x00000004, 0x00000073}  // ecall
+};
+
 int main(int argc, char *argv[])
 {
 	// Start simulation
@@ -123,7 +138,7 @@ int main(int argc, char *argv[])
 		debug = (atoi(argv[1]) == 1) ? 1 : 0;
 	}
 
-	CPU t89(instructionsBLTU1, debug);
+	CPU t89(instructionsECALL, debug);
 	if (t89.Construct(200, 200, 2, 2))
 		t89.Start();
 

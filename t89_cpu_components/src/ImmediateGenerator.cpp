@@ -57,6 +57,7 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     T immediate = 0;
     uint32_t leftImm;
     uint32_t rightImm;
+    int MSB;
     switch (instrType)
     {       // multiplexor
     case 0: // lui
@@ -68,6 +69,12 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     case 2: // jal
         // Not complient with RISC-V architect standards
         immediate = instruction >> 12;
+        // Check if jump is backwards
+        MSB = (immediate >> 11) & 0b1;
+        if (MSB) {
+            // Backwards branch
+            immediate |= 0xfff00000;
+        }
         break;
     case 3:                            // jalr
         immediate = instruction >> 20; // 12 bit immediate
@@ -77,6 +84,10 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         leftImm = (instruction >> 25) & 0b1111111;
         rightImm = (instruction >> 7) & 0b11111;
         immediate = (leftImm << 5) + rightImm;
+        MSB = (instruction >> 31) & 0b1;
+        if(MSB) {
+            immediate |= 0xfffff000;
+        }
         break;
     case 5:                            // Loads
         immediate = instruction >> 20; // 12 bit immediate

@@ -69,6 +69,16 @@ void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, u
 		std::cout << " rd: " << rd;
 		std::cout << " opcode: " << opcode << std::endl;
 		break;
+	case 0b0010111: // auipc
+		std::cout << "immediate: " << immediate;
+		std::cout << " rd: " << rd;
+		std::cout << " opcode: " << opcode << std::endl;
+		break;
+	case 0b1110011: // ecall/csr
+		if (funct3 == 0) {
+			std::cout << "ecall" << std::endl;
+		}
+		break;
 	}
 }
 
@@ -101,6 +111,14 @@ void CPU::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate)
 		break;
 	case 0b1101111: // jal
 		std::cout << "Next PC: " << pc.getPC() << ". Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
+		break;
+	case 0b0010111: // auipc
+		std::cout << "Wrote " << pc.getPC() - 4 + immediate << " to register " << rd << std::endl << std::endl;
+		break;
+	case 0b1110011: // ecall/csr
+		std::cout << "mcause: " << csr.get_csr(4) << std::endl;
+		std::cout << "mepc: " << csr.get_csr(2) << std::endl;
+		std::cout << "Jump to handler at: " << pc.getPC() << std::endl << std::endl;
 		break;
 	}
 	// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;

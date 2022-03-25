@@ -5,6 +5,7 @@
 #define MIE 0
 #define MPI 1
 #define MEPC 2
+#define MTVEC 3
 #define MCAUSE 4
 #define MODE 5
 #define MODEP 6
@@ -25,6 +26,7 @@ uint32_t trap_taken;
 
 CSR::CSR(){
     csr_register = (uint32_t*) calloc(CSR_REG_SIZE, sizeof(uint32_t));
+    csr_register[MTVEC] = 0xf0000000;
     csr_register[MODE] = 2; // Machine Initially in machine mode (load OS code)
     this->csr_we = 0;
     this->trap_taken = 0;
