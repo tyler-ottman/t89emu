@@ -76,8 +76,43 @@ std::multimap<uint32_t, uint32_t> instructionsRIS = {
 	{0xffff0004, 0x00000010}  // A[1]
 };
 
-std::multimap<uint32_t, uint32_t> instructions2 = {
-	{0x00000000, 0x00f58593}};
+std::multimap<uint32_t, uint32_t> instructionsCSRECALL = {
+	{0x00000000, 0x00100613}, // addi a2, x0, 0x1
+	{0x00000004, 0x00300693}, // addi a3, x0, 0x3
+	{0x00000008, 0x00d60663}, // bne a2, a3, end_loop
+	{0x0000000c, 0x00160613}, // addi a2, a2, 0x1
+	{0x00000010, 0xffff806f}  // jal x0, loop
+};
+
+std::multimap<uint32_t, uint32_t> instructionsBNE = {
+	{0x00000000, 0x00268693}, // addi a3, a3, 0x2
+	{0x00000004, 0x000080ef}, // jal x0, jmp
+	{0x00000008, 0x00300693}, // addi a3, x0, 0x3
+	{0x0000000c, 0x00160613}, // addi a2, a2, 0x1 (loop)
+	{0x00000010, 0xfed61e63}  // bne a2, a3, loop
+};
+
+std::multimap<uint32_t, uint32_t> instructionsBLT = {
+	{0x00000000, 0x00268693}, // addi a3, a3, 0x2
+	{0x00000004, 0x000080ef}, // jal x0, jmp
+	{0x00000008, 0x00300693}, // addi a3, x0, 0x3
+	{0x0000000c, 0x00160613}, // addi a2, a2, 0x1 (loop)
+	{0x00000010, 0xfed64e63}  // blt a2, a3, loop
+};
+
+std::multimap<uint32_t, uint32_t> instructionsBGE = {
+	{0x00000000, 0x00300693}, // addi a3, x0, 0x3
+	{0x00000004, 0x00000613}, // addi a2, a2, 0x0
+	{0x00000008, 0xfec6de63}  // bge a3, a2, -4
+};
+
+std::multimap<uint32_t, uint32_t> instructionsBLTU1 = {
+	{0x00000000, 0x00300693}, // addi a3, x0, 0x3
+	// {0x00000004, 0x00d06663}, // bltu x0, a3, +8
+	// {0x00000004, 0xfed06e63}, // blut x0, a3, -4
+	{0x00000004, 0x80000737},  // lui a4, 0x80000
+	{0x00000008, 0xfed76e63} // bltu a4, a3, -4
+};
 
 int main(int argc, char *argv[])
 {
@@ -88,7 +123,7 @@ int main(int argc, char *argv[])
 		debug = (atoi(argv[1]) == 1) ? 1 : 0;
 	}
 
-	CPU t89(instructions2, debug);
+	CPU t89(instructionsBLTU1, debug);
 	if (t89.Construct(200, 200, 2, 2))
 		t89.Start();
 

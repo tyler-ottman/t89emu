@@ -57,6 +57,18 @@ void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, u
 		std::cout << " funct3: " << funct3;
 		std::cout << " opcode: " << opcode << std::endl;
 		break;
+	case 0b1100011: // B-Type
+		std::cout << "immediate: " << immediate;
+		std::cout << " rs2: " << rs2;
+		std::cout << " rs1: " << rs1;
+		std::cout << " funct3: " << funct3;
+		std::cout << " opcode: " << opcode << std::endl;
+		break;
+	case 0b1101111: // jal
+		std::cout << "immediate: " << immediate;
+		std::cout << " rd: " << rd;
+		std::cout << " opcode: " << opcode << std::endl;
+		break;
 	}
 }
 
@@ -83,6 +95,12 @@ void CPU::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate)
 	case 0b0100011: // Store
 		std::cout << "Wrote " << rf.read_rs2() << " to address " << rf.read_rs1() + immediate << std::endl
 				  << std::endl;
+		break;
+	case 0b1100011: // B-Type
+		std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
+		break;
+	case 0b1101111: // jal
+		std::cout << "Next PC: " << pc.getPC() << ". Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
 		break;
 	}
 	// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
