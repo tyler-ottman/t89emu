@@ -164,11 +164,11 @@ T ALU<T>::_xor()
 template <typename T>
 T ALU<T>::srl()
 {
-    if (this->B >= (T)32)
-    {
-        return 0;
+    T shamt = this->B;
+    while (shamt >= (T) this->size_of_operand) {
+        shamt -= (T) this->size_of_operand;
     }
-    for (T i = 0; i < this->B; i++)
+    for (T i = 0; i < shamt; i++)
     {
         bitShiftRight(0);
     }
@@ -198,11 +198,11 @@ T ALU<T>::sra()
 template <typename T>
 T ALU<T>::sll()
 {
-    if (this->B >= (T)32)
-    {
-        return 0;
+    T shamt = this->B;
+    while (shamt >= (T) this->size_of_operand) {
+        shamt -= (T) this->size_of_operand;
     }
-    for (T i = 0; i < this->B; i++)
+    for (T i = 0; i < shamt; i++)
     {
         bitShiftLeft();
     }

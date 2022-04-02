@@ -18,9 +18,6 @@ tester: $(SRC_DIR)/Tester.cpp $(LIB_DIR)/t89_cpu_componentslib.a
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
-# $(TARGET_NAME): $(TARGET_OBJS)
-# 	$(CXX) $(TARGET_OBJS) -o $(TARGET_NAME) $(CFLAGS)
-
 $(TARGET_NAME): $(TARGET_OBJS)
 	ar rv $(TARGET_NAME) $(TARGET_OBJS)
 	ranlib $(TARGET_NAME)
