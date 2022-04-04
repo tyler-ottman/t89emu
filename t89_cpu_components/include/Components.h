@@ -8,6 +8,7 @@ class ALU
 {
 public:
     ALU();
+    ~ALU();
     void printOperands(void);
     T exec(T, T, int);
 
@@ -17,11 +18,11 @@ private:
     T *A_bits;
     T *B_bits;
     int size_of_operand;
-    void setOperands(T A, T B);
-    T getNum(T *arr);
-    T *fullAdder(T a, T b, T carry);
-    T invertNum(T num);
-    void bitShiftRight(T isArithmetic);
+    void setOperands(T, T);
+    T getNum(T*);
+    void fullAdder(T, T, T, T*);
+    T invertNum(T);
+    void bitShiftRight(T);
     void bitShiftLeft();
     T add();
     T sub();
