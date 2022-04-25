@@ -76,7 +76,7 @@ std::multimap<uint32_t, uint32_t> instructionsRIS = {
 	{0xffff0004, 0x00000010}  // A[1]
 };
 
-std::multimap<uint32_t, uint32_t> instructionsCSRECALL = {
+std::multimap<uint32_t, uint32_t> instructionsBNE2 = {
 	{0x00000000, 0x00100613}, // addi a2, x0, 0x1
 	{0x00000004, 0x00300693}, // addi a3, x0, 0x3
 	{0x00000008, 0x00d60663}, // bne a2, a3, end_loop
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 		debug = (atoi(argv[1]) == 1) ? 1 : 0;
 	}
 
-	CPU t89(instructionsECALL, debug);
+	CPU t89(instructionsBGE, debug);
 	if (t89.Construct(200, 200, 2, 2))
 		t89.Start();
 
