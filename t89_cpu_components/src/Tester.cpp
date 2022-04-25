@@ -141,14 +141,6 @@ TEST(ALUControlUnit, Misc_Instr) {
     }
 }
 
-TEST(ALUControlUnit, Branch) {
-    ALUControlUnit branch;
-    int ALUop = 4;
-    int funct7 = 0;
-    int funct3 = 0;
-    EXPECT_EQ(1, branch.getALUoperation(ALUop, funct7, funct3));
-}
-
 TEST(ALUControlUnit, I_type) {
     ALUControlUnit i_type;
     int ALUop = 7;
@@ -159,12 +151,8 @@ TEST(ALUControlUnit, I_type) {
     int expected[7] = {0, 8, 9, 4, 2, 3, 7};
     int ALU_operation;
     for (int x : funct3) {
-        // std::cout << "Here is funct3[" << index << "] = " << x << std::endl;
-        // std::cout << "We expect " << expected[index] << std::endl;
         ALU_operation = i_type.getALUoperation(ALUop, funct7, x);
-        EXPECT_EQ(expected[index], ALU_operation);
-        // std::cout << "What we got: " << ALU_operation << std::endl;
-        index++;
+        EXPECT_EQ(expected[index++], ALU_operation);
     }
 
     // srli/srai
@@ -175,43 +163,70 @@ TEST(ALUControlUnit, I_type) {
 }
 
 TEST(ALUControlUnit, R_type) {
-    // add / sub R-type
-    ALUControlUnit r_type;
-    int funct3_add_sub = 0b000;
-    int funct7_add_sub[2] = {0b0000000, 0b0100000};
-    int ALUop = 8;
-    int expected_add_sub[2] = {0, 1};
+    ALUControlUnit alucu;
+
+    int ALUop = 7;
+    // addi, slti, sltiu, xori, ori, andi, slli
+    std::vector<int> funct3 = {0b000, 0b010, 0b011, 0b100, 0b110, 0b111, 0b001};
+    std::vector<int> funct7 = {0};
     int index = 0;
-    for (int x : funct7_add_sub) {
-        EXPECT_EQ(expected_add_sub[index++], r_type.getALUoperation(ALUop, x, funct3_add_sub));
+    std::vector<int> expected = {0, 8, 9, 4, 2, 3, 7}; // Expected ALU operation code
+    for (int x : funct3) {
+        int ALU_operation = alucu.getALUoperation(ALUop, funct7.at(0), x);
+        EXPECT_EQ(expected.at(index++), ALU_operation);
+    }
+
+    // srli/srai
+    funct7 = {0b0000000, 0b0100000};
+    EXPECT_EQ(5, alucu.getALUoperation(ALUop, funct7.at(0), 0b101));
+    EXPECT_EQ(6, alucu.getALUoperation(ALUop, funct7.at(1), 0b101));
+
+    // Branch
+    EXPECT_EQ(1, alucu.getALUoperation(4, 0, 0));
+
+    // add / sub R-type
+    funct7 = {0b0000000, 0b0100000};
+    ALUop = 8;
+    expected = {0, 1};
+    index = 0;
+    for (int x : funct7) {
+        EXPECT_EQ(expected[index++], alucu.getALUoperation(ALUop, x, 0b000));
     }
 
     // SRL / SRA R-type
-    int funct3_srl_sra = 0b101;
-    int funct7_srl_sra[2] = {0b0000000, 0b0100000};
-    int expected_srl_sra[2] = {5, 6};
+    funct7 = {0b0000000, 0b0100000};
+    expected = {5, 6};
     index = 0;
-    for (int x : funct7_srl_sra) {
-        EXPECT_EQ(expected_srl_sra[index++], r_type.getALUoperation(ALUop, x, funct3_srl_sra));
+    for (int x : funct7) {
+        EXPECT_EQ(expected[index++], alucu.getALUoperation(ALUop, x, 0b101));
     }
 
-    // All others
     // sll, slt, sltu, xor, or, and
-    int funct3[6] = {0b001, 0b010, 0b011, 0b100, 0b110, 0b111};
-    int funct7 = 0;
-    int expected[6] = {7, 8, 9, 4, 2, 3};
+    funct3 = {0b001, 0b010, 0b011, 0b100, 0b110, 0b111};
+    expected = {7, 8, 9, 4, 2, 3};
     index = 0;
     for (int x : funct3) {
-        EXPECT_EQ(expected[index++], r_type.getALUoperation(ALUop, funct7, x));
+        EXPECT_EQ(expected[index++], alucu.getALUoperation(ALUop, 0, x));
     }
 }
+
+#define LUI   0b0110111
+#define AUIPC 0b0010111
+#define JAL   0b1101111
+#define JALR  0b1100111
+#define BTYPE 0b1100011
+#define LOAD  0b0000011
+#define STORE 0b0100011
+#define ITYPE 0b0010011
+#define RTYPE 0b0110011
+#define ECALL 0b1110011
 
 // Control Unit
 TEST(ControlUnit, opcodes) {
     ControlUnit signals;
     // lui, auipc, jal, jalr, b-type, load, store, i-type, r-type, ecall
-    int opcodes[10] =       {0b0110111, 0b0010111, 0b1101111, 0b1100111, 0b1100011, 0b0000011, 0b0100011, 0b0010011, 0b0110011, 0b1110011};
-    int controlLines[10] =  {0b1100000, 0b1100001, 0b1000001, 0b1000001, 0b0010000, 0b1101100, 0b0100010, 0b1100000, 0b1010000, 0b0000000};
+    int opcodes[10] =      {LUI,       AUIPC,     JAL,       JALR,      BTYPE,     LOAD,      STORE,     ITYPE,     RTYPE,     ECALL    };
+    int controlLines[10] = {0b1100000, 0b1100001, 0b1000001, 0b1000001, 0b0010000, 0b1101100, 0b0100010, 0b1100000, 0b1010000, 0b0000000};
     int index = 0;
     for (int x : opcodes) {
         int regWrite = controlLines[index] >> 6;
@@ -274,73 +289,52 @@ TEST(ProgramCounter, setPC) {
 
 TEST(ImmediateGenerator, immediates) {
     ImmediateGenerator<uint32_t> imm;
+    uint32_t instruction;
 
-    
+    // 20-bit immediate instructions
+    std::vector<uint32_t> opcode =    {LUI,     AUIPC,   JAL,     JAL};
+    std::vector<uint32_t> immediate = {0xabcdf, 0xfdcba, 0x7bbff, 0x8bbff};
+    for (size_t i = 0; i < opcode.size(); i++) {
+        if (opcode[i] == AUIPC || opcode[i] == LUI) {
+            immediate[i] = immediate[i] << 12;
+            instruction = immediate[i] | opcode[i];
+        } else {
+            instruction = (immediate[i] << 12) | opcode[i];
+            if (instruction >> 31) {
+                // Backwards jump
+                immediate[i] |= 0xfff00000;
+            }
+        }
+        EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
+    }
+    // B-type and store
+    opcode =                     {BTYPE    , STORE,     BTYPE,     STORE};
+    std::vector<int> left_imm  = {0b0001011, 0b0111111, 0b1001011, 0b1111111};
+    std::vector<int> right_imm = {0b11000  , 0b11111,   0b11000,   0b11111};
+    for (size_t i = 0; i < opcode.size(); i++) {
+        instruction = (left_imm[i] << 25) + (right_imm[i] << 7) + opcode[i];
+        immediate[i] = ((left_imm[i] << 5) + (right_imm[i]));
+        if ((left_imm[i] >> 6)) {
+            immediate[i] |= 0xfffff000;
+        }
+        EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
+    }
 
-    uint32_t opcode = 0b0110111; // lui
-    uint32_t instruction = 0xabcdf000 | opcode;
-    uint32_t immediate = instruction & 0xfffff000;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
+    // Jalr, Load, I-type
+    opcode    = {JALR,  LOAD,  ITYPE};
+    immediate = {0xfff, 0xaaa, 0xcba};
+    for (size_t i = 0; i < opcode.size(); i++) {
+        instruction = (immediate[i] << 20) | opcode[i];
+        EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
+    }
 
-    opcode = 0b0010111; // auipc
-    instruction = 0xfdcba000 | opcode;
-    immediate = instruction >> 12;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    opcode = 0b1100111; // jalr
-    instruction = 0xfff00000 | opcode;
-    immediate = instruction >> 20;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    opcode = 0b0000011; // load
-    instruction = 0xaaa00000 | opcode;
-    immediate = instruction >> 20;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    opcode = 0b0100011; // store
-    uint32_t leftImmediate = 0b1111111 << 25;
-    uint32_t rightImmediate = 0b11111 << 7;
-    immediate = (leftImmediate >> 20) + (rightImmediate >> 7);
-    instruction = leftImmediate | rightImmediate | opcode;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    opcode = 0b0010011; // i-type
-    immediate = 0xcba;
-    instruction = (immediate << 20) | opcode;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    // B-type
-    leftImmediate = 0b1001011;
-    rightImmediate = 0b11000;
-    opcode = 0b1100011;
-    instruction = (leftImmediate << 25) + (rightImmediate << 7) + opcode;
-    immediate = ((leftImmediate << 5) + (rightImmediate));
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    // jal
-    opcode = 0b1101111;
-    immediate = 0xbbbff;
-    instruction = (immediate << 12) | opcode;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
-
-    opcode = 0b1110011; // ecall
-    immediate = 0x001;
-    instruction = (immediate << 20) | opcode;
-    EXPECT_EQ(immediate, imm.getImmediate(instruction));
+    // ecall
+    instruction = (0x001 << 20) | ECALL;
+    EXPECT_EQ(0x001, imm.getImmediate(instruction));
 }
 
 TEST(CSR, csr_test) {
     CSR csr;
-    // 0x000: mie               - Machine Interrupt Enable
-    // 0x001: mpi               - Machine Pending Interrupt Enable
-    // 0x002: mepc              - Machine Exception Program Counter
-    // 0x003: mtvec             - Machine Trap Vector
-    // 0x004: mcause            - Machine Cause (of trap)
-    // 0x005: mode              - Mode of CPU (user/supervisor/machine)
-    // 0x006: modep             - Previous Mode of CPU before trap
-    // 0x007: mtimecmp_low      - Machine Time Compare (lower 32 bits)
-    // 0x008: mtimecmp_high     - Machine Time Compare (upper 32 bits)
-    
     // csr_we, trap_taken, mcause, pc
     csr.set_control_lines(1, 0, 0, 0); // csrrw
     csr.update_csr(0x000, 1);
@@ -360,188 +354,37 @@ TEST(CSR, csr_test) {
     EXPECT_EQ(0, csr.get_csr(0x001));
 }
 
-// TEST(Memory, read_write_test) {
-//     Memory dram;
-//     uint32_t data;
-//     uint32_t address;
-//     // int MemReadData, int MemWriteData, int size, int IO_WR_enable
-//     dram.set_control_signals(1, 1, 4, 0);
-//     address = 0x0000ffff;
-//     data = 0x00005555;
-//     dram.write_data(address, data);
-//     EXPECT_EQ(data, dram.read_data(address));
-//     data = 0x0000abcd;
-//     dram.write_data(address, data);
-//     EXPECT_EQ(data, dram.read_data(address));
-//     address = 0xffffffff;
-//     EXPECT_EQ(0, dram.read_data(address));
-    
-//     address = 0x000000ff;
-//     data = 0x12345678;
-//     dram.write_io(address, data);
-//     EXPECT_EQ(0, dram.read_data(address));
+#define WRITE 0
+#define WRITE_IO 1
+#define READ 2
 
-//     dram.set_control_signals(1, 1, 4, 1);
-//     dram.write_io(address, data);
-//     EXPECT_EQ(data, dram.read_data(address));
-// }
+TEST(Memory, read_write_test) {
+    Memory dram;
+    // int MemReadData, int MemWriteData, int size, int IO_WR_enable
 
-// TEST(NextPC, next_PC) {
-//     NextPC<uint32_t> nextPC;
-//     nextPC.setCurrentPC(0x0);
-//     uint32_t offset = 2;
-//     // uint32_t opcode = 0b0110111;
-//     uint32_t funct3 = 0b000;
-//     uint32_t A = 0x3;
-//     uint32_t B = 0x3;
-//     uint32_t interrupt_taken = 0;
-//     uint32_t mtvec = 0xfff;
-
-//     // lui / auipc / load / store / i-type / r-type
-//     uint32_t opcode[6] = {0b0110111, 0b0010011, 0b0110011, 0b0000011, 0b0100011, 0b0010111};
-//     uint32_t expected_addr = 0;
-//     for (int x : opcode) {
-//         expected_addr += 4;
-//         nextPC.calculateNextPC(offset, x, funct3, A, B, mtvec, interrupt_taken);
-//         EXPECT_EQ(expected_addr, nextPC.getNextPC());
-//     }
-
-//     // b-type - beq, bne, blt, bge, bltu, bgeu
-//     uint32_t funct3_b[6] = {0b000, 0b001, 0b100, 0b101, 0b110, 0b111};
-//     nextPC.setCurrentPC(0);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[0], A, B, mtvec, interrupt_taken); // beq
-//     EXPECT_EQ(0x8, nextPC.getNextPC());
-//     A = 0x3;
-//     B = 0x2;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[1], A, B, mtvec, interrupt_taken); // bne
-//     EXPECT_EQ(0x10, nextPC.getNextPC());
-//     A = 0x80000000;
-//     B = 0x0;
-//     offset = 4;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[2], A, B, mtvec, interrupt_taken); // blt
-//     EXPECT_EQ(32, nextPC.getNextPC());
-//     offset = -4;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[2], A, B, mtvec, interrupt_taken); // blt
-//     EXPECT_EQ(0x10, nextPC.getNextPC());
-//     offset = 4;
-//     A = 0x3;
-//     B = 0x3;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[2], A, B, mtvec, interrupt_taken); // blt
-//     EXPECT_EQ(0x14, nextPC.getNextPC());
-//     offset = 2;
-//     A = 0xff;
-//     B = 0xff;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[3], A, B, mtvec, interrupt_taken); // bge
-//     EXPECT_EQ(0x1c, nextPC.getNextPC());
-//     A = 0xf;
-//     B = 0x80000000;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[3], A, B, mtvec, interrupt_taken); // bge
-//     EXPECT_EQ(0x20, nextPC.getNextPC());
-//     A = 0xf;
-//     B = 0xff;
-//     offset = 10;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[0], A, B, mtvec, interrupt_taken); // beq
-//     EXPECT_EQ(0x24, nextPC.getNextPC());
-//     A = 0xf;
-//     B = 0xf;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[1], A, B, mtvec, interrupt_taken); // bne
-//     EXPECT_EQ(0x28, nextPC.getNextPC());
-    
-//     // fix bltu / bgeu
-//     A = 0x80000000;
-//     B = 0xf;
-//     offset = 10;
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(0x2c, nextPC.getNextPC());
-
-//     A = 0xf;
-//     B = 0x80000000;
-//     expected_addr = 0x2c + (10 << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xf;
-//     B = 0xff;
-//     offset = 2;
-//     expected_addr = expected_addr + (offset << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xff;
-//     B = 0xf;
-//     expected_addr = expected_addr + (1 << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xffffffff;
-//     B = 0xfffffffe;
-//     offset = 4;
-//     expected_addr += (1 << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xfffffffe;
-//     B = 0xffffffff;
-//     expected_addr += (offset << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xf;
-//     B = 0xf;
-//     expected_addr += (1 << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[4], A, B, mtvec, interrupt_taken); // bltu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     expected_addr += (offset << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[5], A, B, mtvec, interrupt_taken); // bgeu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xff;
-//     B = 0xf;
-//     expected_addr += (offset << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[5], A, B, mtvec, interrupt_taken); // bgeu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xffffffff;
-//     B = 0x0;
-//     expected_addr += (offset << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[5], A, B, mtvec, interrupt_taken); // bgeu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     A = 0xf;
-//     B = 0xff;
-//     expected_addr += (1 << 2);
-//     nextPC.calculateNextPC(offset, 0b1100011, funct3_b[5], A, B, mtvec, interrupt_taken); // bgeu
-//     EXPECT_EQ(expected_addr, nextPC.getNextPC());
-
-//     // jal
-//     nextPC.setCurrentPC(0x4);
-//     offset = 10;
-//     nextPC.calculateNextPC(offset, 0b1101111, 0, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(44, nextPC.getNextPC());
-//     offset = -2;
-//     nextPC.calculateNextPC(offset, 0b1101111, 0, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(36, nextPC.getNextPC());
-//     offset = 4;
-//     nextPC.calculateNextPC(offset, 0b1101111, 0, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(52, nextPC.getNextPC());
-
-//     // jalr
-//     A = 8; // rs1 pointing to byte 8 (beginning of 2nd instruction)
-//     offset = 4; // jump to byte 8 + (4 << 2) ---- 6th instruction
-//     nextPC.calculateNextPC(offset, 0b1100111, 0, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(24, nextPC.getNextPC());
-
-//     // ecall
-//     interrupt_taken = 1;
-//     nextPC.calculateNextPC(offset, 0b1110011, 0, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(mtvec, nextPC.getNextPC());
-
-//     // csr instruction
-//     interrupt_taken = 0;
-//     nextPC.calculateNextPC(offset, 0b1110011, 0b001, A, B, mtvec, interrupt_taken);
-//     EXPECT_EQ(mtvec + 4, nextPC.getNextPC());
-// }
+    std::vector<uint32_t> address = {0x0000ffff, 0x0000ffff, 0x000000ff, 0x000000ff};
+    std::vector<uint32_t> data    = {0x00000020, 0,          0x0000000a, 0};
+    std::vector<uint32_t> mem_op  = {WRITE_IO,   READ,       WRITE,      READ};
+    int previously_written_value;
+    for (size_t i = 0; i < mem_op.size(); i++) {
+        switch(mem_op[i]) {
+            case WRITE_IO:
+                dram.set_control_signals(0, 1, 4, 1);
+                dram.write_io(address[i], data[i]);
+                previously_written_value = data[i];
+                break;
+            case WRITE:
+                dram.set_control_signals(0, 1, 4, 0);
+                dram.write_data(address[i], data[i]);
+                previously_written_value = data[i];
+                break;
+            case READ:
+                dram.set_control_signals(1, 0, 4, 0);
+                EXPECT_EQ(previously_written_value, dram.read_data(address[i]));
+                break;
+        }
+    }
+}
 
 int main(int argc, char* argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

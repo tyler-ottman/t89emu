@@ -55,23 +55,19 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     int instrType = getInstrType();
     int funct3;
     T immediate = 0;
-    uint32_t leftImm;
-    uint32_t rightImm;
-    int MSB;
     switch (instrType)
     {       // multiplexor
     case 0: // lui
         immediate = instruction & 0xfffff000;
         break;
     case 1: // auipc
-        immediate = instruction >> 12;
+        immediate = instruction & 0xfffff000;
         break;
     case 2: // jal
         // Not complient with RISC-V architect standards
-        immediate = instruction >> 12;
+        immediate = (instruction >> 12) & 0x000fffff;
         // Check if jump is backwards
-        MSB = (immediate >> 11) & 0b1;
-        if (MSB) {
+        if ((immediate >> 19) & 0b1) {
             // Backwards branch
             immediate |= 0xfff00000;
         }
@@ -81,11 +77,9 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 4: // B-type
         // Not complient with RISC-V architect standards
-        leftImm = (instruction >> 25) & 0b1111111;
-        rightImm = (instruction >> 7) & 0b11111;
-        immediate = (leftImm << 5) + rightImm;
-        MSB = (instruction >> 31) & 0b1;
-        if(MSB) {
+        immediate = ((instruction >> 20) & (0b1111111 << 5)) + ((instruction >> 7) & 0b11111);
+        if (instruction >> 31) {
+            // MSB of immediate is 1 (store backwards)
             immediate |= 0xfffff000;
         }
         break;
@@ -94,6 +88,10 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 6: // Stores
         immediate = ((instruction >> 20) & (0b1111111 << 5)) + ((instruction >> 7) & 0b11111);
+        if (instruction >> 31) {
+            // MSB of immediate is 1 (store backwards)
+            immediate |= 0xfffff000;
+        }
         break;
     case 7: // Immediate Arithmetic
         immediate = instruction >> 20;

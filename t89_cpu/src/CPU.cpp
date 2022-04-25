@@ -121,10 +121,6 @@ void CPU::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate)
 		std::cout << "Jump to handler at: " << pc.getPC() << std::endl << std::endl;
 		break;
 	}
-	// std::cout << "Register: Write " << rf.read_rd() << " to register " << rd << std::endl;
-	// std::cout << "Memory written to: " << dram.read_data(alu_output) << std::endl;;
-	// std::cout << "CSR written to: " << csr.get_csr(csr_addr) << std::endl;
-	// std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
 }
 
 void CPU::query_external_interrupt()
