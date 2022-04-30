@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 		debug = (atoi(argv[1]) == 1) ? 1 : 0;
 	}
 
-	CPU t89(instructionsBGE, debug);
+	CPU t89(instructionsRIS, debug);
 	if (t89.Construct(200, 200, 2, 2))
 		t89.Start();
 
