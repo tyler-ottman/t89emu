@@ -4,6 +4,22 @@
 
 #define INSTRUCTION_LENGTH 10
 
+enum Instruction_Type {
+    UPPER_IMMEDIATE,
+    JUMP,
+    BRANCH,
+    LOAD,
+    STORE,
+    IMMEDIATE,
+    REGISTER,
+    CSR
+};
+
+struct Instruction {
+    enum Instruction_Type instr_type;
+    int* instr_fields;
+};
+
 struct reg_pair {
     char* name;
     char* pseudo_name;
