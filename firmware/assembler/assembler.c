@@ -94,13 +94,50 @@ void initialize() {
     }
 }
 
+void tokenize(char* asm_file_name) {
+    // char* line
+    char *buffer = (char*)malloc(INSTRUCTION_LENGTH * sizeof(char));
+    size_t buffer_size = 500;
+    char *line = (char*)malloc(500 * sizeof(char));
+    FILE *fd = fopen(asm_file_name, "r");
+    if (fd == NULL) {
+        printf("Error: could not open %s", asm_file_name);
+        exit(EXIT_FAILURE);
+    }
+
+    // Read each line
+    while(getline(&buffer, &buffer_size, fd) != -1) {
+        char* comment = strchr(buffer, ';');
+        if (comment != NULL) {
+            // Remove Comments
+            int index = comment - buffer;
+            printf("Before: %s\n", buffer);
+            strncpy(line, &buffer[0], index);
+            printf("After: %s\n", line);
+        } else {
+            // No comments
+            strncpy(line, &buffer[0], strlen(buffer));
+        }
+
+        // Determine if instruction, directive, section, label
+        if (isInstruction(buffer)) {
+            
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     // Argument Validation
     if (argc == 1) {
         printf("Error: asm file not found\n");
         exit(EXIT_FAILURE);
     }
+
+    // Initialize register and instruction names
     initialize();
+
+    // Tokenize instructions
+    tokenize(argv[1]);
 
     exit(EXIT_SUCCESS);
 }
