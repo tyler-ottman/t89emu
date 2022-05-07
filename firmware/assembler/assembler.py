@@ -48,16 +48,34 @@ class Assembler:
                         self.tokens.append(token_builder)
                     token_builder = ""
                 elif char == ',':
-                    self.tokens.append(token_builder)
+                    if len(token_builder) != 0:
+                        self.tokens.append(token_builder)
                     self.tokens.append(",")
                     token_builder = ""
+                elif char == '(':
+                    if len(token_builder) != 0:
+                        self.tokens.append(token_builder)
+                    self.tokens.append("(")
+                    token_builder = ""
+                elif char == ')':
+                    if len(token_builder) != 0:
+                        self.tokens.append(token_builder)
+                    token_builder = ""
+                    self.tokens.append(")")
                 else:
                     token_builder += char
             if len(token_builder) != 0:
                 self.tokens.append(token_builder)
             token_builder = ""
         print(self.tokens)
-            
+
+    def parser(self):
+        sections = [""]
+        # Verify meaning of assembly
+        # while len(self.tokens) != 0:
+            # Query what line i
+        
+
 def main():
     # Check if assembly file in command line argumentss
     if len(sys.argv) != 2:
@@ -69,6 +87,9 @@ def main():
 
     # Tokenize assembly file
     asm.tokenize()
+
+    # Verify semantics
+    # asm.parse()
 
 if __name__ == "__main__":
     main()
