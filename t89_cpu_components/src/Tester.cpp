@@ -325,6 +325,10 @@ TEST(ImmediateGenerator, immediates) {
     immediate = {0xfff, 0xaaa, 0xcba};
     for (size_t i = 0; i < opcode.size(); i++) {
         instruction = (immediate[i] << 20) | opcode[i];
+        if (instruction >> 31) {
+            immediate[i] |= 0xfffff000;
+        }
+        std::cout << opcode[i] << std::endl;
         EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
     }
 

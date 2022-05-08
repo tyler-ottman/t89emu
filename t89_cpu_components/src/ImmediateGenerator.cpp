@@ -85,6 +85,10 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 5:                            // Loads
         immediate = instruction >> 20; // 12 bit immediate
+        if (instruction >> 31) {
+            // MSB of immediate is 1 (store backwards)
+            immediate |= 0xfffff000;
+        }
         break;
     case 6: // Stores
         immediate = ((instruction >> 20) & (0b1111111 << 5)) + ((instruction >> 7) & 0b11111);
@@ -95,6 +99,11 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 7: // Immediate Arithmetic
         immediate = instruction >> 20;
+        std::cout << "immediate " << immediate << std::endl;
+        if (instruction >> 31) {
+            // MSB of immediate is 1 (negative immediate)
+            immediate |= 0xfffff000;
+        }
         funct3 = (instruction >> 12) & 0b111;
         if (funct3 == 0b001 || funct3 == 0b101) {
             immediate = immediate & 0b11111;        // slli, srli, srai
