@@ -99,7 +99,6 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 7: // Immediate Arithmetic
         immediate = instruction >> 20;
-        std::cout << "immediate " << immediate << std::endl;
         if (instruction >> 31) {
             // MSB of immediate is 1 (negative immediate)
             immediate |= 0xfffff000;

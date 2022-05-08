@@ -5,4 +5,4 @@ make
 make tester
 cd ../t89_cpu
 make
-make test_driver
+make emulate

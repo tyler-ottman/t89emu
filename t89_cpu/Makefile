@@ -18,6 +18,9 @@ all: directories $(TARGET_NAME)
 test_driver: $(SRC_DIR)/t89_driver.cpp $(LIB_DIR)/cpulib.a
 	$(CXX) $(SRC_DIR)/t89_driver.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/cpulib.a $(LDFLAGS) -o test_driver
 
+emulate: $(SRC_DIR)/emulate.cpp $(LIB_DIR)/cpulib.a
+	$(CXX) $(SRC_DIR)/emulate.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/cpulib.a $(LDFLAGS) -o emulate
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
@@ -38,3 +41,4 @@ clean:
 	rm -rf $(TARGET_NAME)
 	rm -rf $(LIB_DIR)
 	rm -rf ./test_driver
+	rm -rf ./emulate
