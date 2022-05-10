@@ -78,12 +78,13 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
             immediate |= 0xfffff000;
         break;
     case 4: // B-type
-        // Not complient with RISC-V architect standards
-        immediate = ((instruction >> 20) & (0b1111111 << 5)) + ((instruction >> 7) & 0b11111);
-        if (instruction >> 31) {
-            // MSB of immediate is 1 (store backwards)
-            immediate |= 0xfffff000;
-        }
+		immediate = ((instruction >> 20) & 0x0000800) | // imm[12]
+			        ((instruction << 3)  & 0x0000400) | // imm[11]
+			        ((instruction >> 21) & 0x00003f0) | // imm[10:5]
+			        ((instruction >> 8)  & 0x000000f);  // imm[4:1]
+		if (((immediate >> 11) & 0x1) == 1) // sign extend if negative offset
+			immediate |= 0xfffff000;
+		immediate <<= 1; // shift offset left by 1
         break;
     case 5:                            // Loads
         immediate = instruction >> 20; // 12 bit immediate
