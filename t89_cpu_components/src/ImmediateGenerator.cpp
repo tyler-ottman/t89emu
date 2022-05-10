@@ -64,13 +64,13 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         immediate = instruction & 0xfffff000;
         break;
     case 2: // jal
-        // Not complient with RISC-V architect standards
-        immediate = (instruction >> 12) & 0x000fffff;
-        // Check if jump is backwards
-        if ((immediate >> 19) & 0b1) {
-            // Backwards branch
-            immediate |= 0xfff00000;
-        }
+		immediate = ((instruction >> 12) & 0x00080000) | // imm[20]
+		            ((instruction >> 1)  & 0x0007f800) | // imm[19:12]
+		            ((instruction >> 10) & 0x00000400) | // imm[11]
+		            ((instruction >> 21) & 0x000003ff);  // imm[10:1]
+		if (((immediate >> 19) & 0b1) == 1) // sign extend if negative offset
+			immediate |= 0xfff00000;
+		immediate <<= 1; // Shift immediate left by 1 bit
         break;
     case 3:                            // jalr
         immediate = instruction >> 20; // 12 bit immediate

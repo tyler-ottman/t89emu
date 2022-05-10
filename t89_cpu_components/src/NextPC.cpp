@@ -95,8 +95,7 @@ void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec,
     int branch = 0;
     switch (instr_type)
     {
-    case 0:                            // jal signal
-        // this->nextPC += (offset << 2); // use adder and shifter in hardware
+    case 0: // jal signal
         this->nextPC += offset;
         break;
     case 1: // jalr signal

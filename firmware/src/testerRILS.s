@@ -74,13 +74,3 @@ _start:
     sw a1, 32(a2)
     lui a2, 0xffff0
     lw a3, 0(a2)
-
-    /* instructionsBNE2 */
-# instructionsBNE2:
-#     addi a2, x0, 0x1
-#     addi a3, x0, 0x3
-# loop:
-#     bne a2, a3, end_loop
-#     addi a2, a2, 0x1
-#     jal x0, loop
-# end_loop:

@@ -11,9 +11,9 @@ BIN_DIR = ./bin
 # INCLUDE += -I $(INC_DIR)
 CFLAGS += -g -nostdlib
 
-TARGET_NAME = tester
+TARGET_NAME = testerJAL
 
-TARGET_OBJS = $(OBJ_DIR)/tester.o
+TARGET_OBJS = $(OBJ_DIR)/$(TARGET_NAME).o
 
 all: directories $(BIN_DIR)/$(TARGET_NAME)
 
