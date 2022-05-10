@@ -74,6 +74,12 @@ void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, u
 		std::cout << " rd: " << rd;
 		std::cout << " opcode: " << opcode << std::endl;
 		break;
+	case 0b1100111: // jalr
+		std::cout << "immediate: " << immediate;
+		std::cout << " rd: " << rd;
+		std::cout << " rs: " << rs1;
+		std::cout << " opcode: " << opcode << std::endl;
+		break;
 	case 0b1110011: // ecall/csr
 		if (funct3 == 0) {
 			std::cout << "ecall" << std::endl;
@@ -114,6 +120,9 @@ void CPU::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate)
 		break;
 	case 0b0010111: // auipc
 		std::cout << "Wrote " << pc.getPC() - 4 + immediate << " to register " << rd << std::endl << std::endl;
+		break;
+	case 0b1100111: // jalr
+		std::cout << "Next PC: " << pc.getPC() << ". Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
 		break;
 	case 0b1110011: // ecall/csr
 		std::cout << "mcause: " << csr.get_csr(4) << std::endl;

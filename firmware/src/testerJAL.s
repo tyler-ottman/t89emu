@@ -4,8 +4,9 @@ _start:
     addi a3, x0, 0x3
 loop:
     # jal end_loop
+    jalr x0, 16(x0)
     addi a2, a2, 0x1
     nop
     nop
-    jal x0, loop
+    jalr x0, -8(x0)
 end_loop:

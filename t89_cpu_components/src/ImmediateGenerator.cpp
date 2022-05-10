@@ -72,8 +72,10 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
 			immediate |= 0xfff00000;
 		immediate <<= 1; // Shift immediate left by 1 bit
         break;
-    case 3:                            // jalr
-        immediate = instruction >> 20; // 12 bit immediate
+    case 3: // jalr
+        immediate = (instruction >> 20) & 0xfff; // 12 bit immediate
+        if (((immediate >> 11) & 0b1) == 1) // sign extend if negative offset
+            immediate |= 0xfffff000;
         break;
     case 4: // B-type
         // Not complient with RISC-V architect standards
