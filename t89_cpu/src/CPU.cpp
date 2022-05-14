@@ -9,16 +9,6 @@ uint32_t IO_addr; // Address of device
 int interrupt_assert;
 int debug;
 
-ALU<uint32_t> alu;
-ALUControlUnit aluc;
-ControlUnit ctrl;
-CSR csr;
-ImmediateGenerator<uint32_t> immgen;
-Memory dram;
-NextPC<uint32_t> nextpc;
-ProgramCounter pc;
-RegisterFile<uint32_t> rf;
-
 void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
 	std::cout << "Current Instruction: " << cur_instruction << std::endl;

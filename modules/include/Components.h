@@ -1,39 +1,30 @@
-#ifndef ALU_H
-#define ALU_H
 #include <stdint.h>
 #include <unordered_map>
 
-template <typename T>
+#ifndef ALU_H
+#define ALU_H
+
 class ALU
 {
 public:
     ALU();
-    ~ALU();
-    void printOperands(void);
-    T exec(T, T, int);
+    uint32_t exec(uint32_t, uint32_t, int);
+    void printOperands();
 
 private:
-    T A;
-    T B;
-    T *A_bits;
-    T *B_bits;
+    uint32_t A;
+    uint32_t B;
     int size_of_operand;
-    void setOperands(T, T);
-    T getNum(T*);
-    void fullAdder(T, T, T, T*);
-    T invertNum(T);
-    void bitShiftRight(T);
-    void bitShiftLeft();
-    T add();
-    T sub();
-    T _or();
-    T _and();
-    T _xor();
-    T srl();
-    T sra();
-    T sll();
-    T slt();
-    T sltu();
+    uint32_t _add();
+    uint32_t _sub();
+    uint32_t _or();
+    uint32_t _and();
+    uint32_t _xor();
+    uint32_t _srl();
+    uint32_t _sra();
+    uint32_t _sll();
+    uint32_t _slt();
+    uint32_t _sltu();
 };
 
 #endif // ALU_H

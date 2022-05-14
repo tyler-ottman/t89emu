@@ -11,7 +11,7 @@ BIN_DIR = ./bin
 # INCLUDE += -I $(INC_DIR)
 CFLAGS += -g -nostdlib
 
-TARGET_NAME = testerBranch
+TARGET_NAME = instructionsBranch
 
 TARGET_OBJS = $(OBJ_DIR)/$(TARGET_NAME).o
 

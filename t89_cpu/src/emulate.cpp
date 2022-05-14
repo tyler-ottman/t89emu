@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
     // Read binary and flash to DRAM
-    std::ifstream input("../firmware/bin/testerBranch.bin", std::ios::binary);
+    std::ifstream input("../firmware/bin/instructionsBranch.bin", std::ios::binary);
     std::vector<char> bytes(
          (std::istreambuf_iterator<char>(input)),
          (std::istreambuf_iterator<char>()));

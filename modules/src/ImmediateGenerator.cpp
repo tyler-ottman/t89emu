@@ -44,7 +44,6 @@ T ImmediateGenerator<T>::getNum(T *arr, int size)
     return sum;
 }
 
-// Support 64-bit in the future
 template <typename T>
 ImmediateGenerator<T>::ImmediateGenerator() {}
 
@@ -56,7 +55,7 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
     int funct3;
     T immediate = 0;
     switch (instrType)
-    {       // multiplexor
+    {
     case 0: // lui
         immediate = instruction & 0xfffff000;
         break;
@@ -79,14 +78,14 @@ T ImmediateGenerator<T>::getImmediate(T instruction)
         break;
     case 4: // B-type
 		immediate = ((instruction >> 20) & 0x0000800) | // imm[12]
-			        ((instruction << 3)  & 0x0000400) | // imm[11]
+	                ((instruction << 3)  & 0x0000400) | // imm[11]
 			        ((instruction >> 21) & 0x00003f0) | // imm[10:5]
 			        ((instruction >> 8)  & 0x000000f);  // imm[4:1]
 		if (((immediate >> 11) & 0x1) == 1) // sign extend if negative offset
 			immediate |= 0xfffff000;
 		immediate <<= 1; // shift offset left by 1
         break;
-    case 5:                            // Loads
+    case 5: // Loads
         immediate = instruction >> 20; // 12 bit immediate
         if (instruction >> 31) {
             // MSB of immediate is 1 (store backwards)

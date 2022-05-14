@@ -14,7 +14,7 @@ private:
 	int interrupt_assert;
 	int debug;
 
-	ALU<uint32_t> alu;
+	ALU alu;
 	ALUControlUnit aluc;
 	ControlUnit ctrl;
 	CSR csr;

@@ -141,7 +141,6 @@ int ALUControlUnit::getALUoperation(int ALUop, int funct7, int funct3)
         ALU_operation = get_r_type(funct3, funct7);
         break;
     }
-
     return ALU_operation;
 }
 
