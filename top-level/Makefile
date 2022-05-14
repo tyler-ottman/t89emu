@@ -13,7 +13,7 @@ INCLUDE += -I $(INC_DIR) -I../modules/include
 TARGET_NAME = $(LIB_DIR)/cpulib.a
 TARGET_OBJS = $(OBJ_DIR)/CPU.o
 
-all: directories $(TARGET_NAME)
+all: directories $(TARGET_NAME) emulate
 
 emulate: $(SRC_DIR)/emulate.cpp $(LIB_DIR)/cpulib.a
 	$(CXX) $(SRC_DIR)/emulate.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/cpulib.a $(LDFLAGS) -o emulate

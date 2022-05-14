@@ -6,8 +6,12 @@
 
 int main(int argc, char *argv[])
 {
+    if (argc != 2 && argc != 3) {
+        std::cerr << "Invalid Arguments" << std::endl;
+        exit(EXIT_FAILURE);
+    }
     // Read binary and flash to DRAM
-    std::ifstream input("../firmware/bin/instructionsBranch.bin", std::ios::binary);
+    std::ifstream input(argv[1], std::ios::binary);
     std::vector<char> bytes(
          (std::istreambuf_iterator<char>(input)),
          (std::istreambuf_iterator<char>()));
@@ -15,8 +19,8 @@ int main(int argc, char *argv[])
     
     // Start simulation
 	int debug = 0;
-	if (argc == 2)
-		debug = (atoi(argv[1]) == 1) ? 1 : 0;
+	if (argc == 3)
+		debug = (atoi(argv[2]) == 1) ? 1 : 0;
 
     // Convert to big endian and create flash image
     std::multimap<uint32_t, uint32_t> dram_flash;

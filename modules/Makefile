@@ -3,7 +3,7 @@ SRC_DIR = ./src
 INC_DIR = ./include
 LIB_DIR = ./lib
 
-CFLAGS = -Wall -lgtest -pthread
+CFLAGS = -Wall
 CXX = g++
 INCLUDE = -I $(INC_DIR)
 
@@ -13,7 +13,7 @@ TARGET_OBJS = $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/ControlUnit.o $(OBJ_DIR)/Ne
 all: directories $(TARGET_NAME)
 
 tester: $(SRC_DIR)/Tester.cpp $(LIB_DIR)/modules.a
-	$(CXX) $(SRC_DIR)/Tester.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/modules.a -o tester
+	$(CXX) $(SRC_DIR)/Tester.cpp $(CFLAGS) -lgtest -pthread $(INCLUDE) $(LIB_DIR)/modules.a -o tester
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@

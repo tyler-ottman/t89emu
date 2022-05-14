@@ -291,26 +291,20 @@ TEST(ImmediateGenerator, immediates) {
     ImmediateGenerator<uint32_t> imm;
     uint32_t instruction;
 
-    // 20-bit immediate instructions
-    std::vector<uint32_t> opcode =    {LUI,     AUIPC,   JAL,     JAL};
-    std::vector<uint32_t> immediate = {0xabcdf, 0xfdcba, 0x7bbff, 0x8bbff};
+    // Upper Immediate Instructions (jal here)
+    std::vector<uint32_t> opcode =    {LUI,     AUIPC};
+    std::vector<uint32_t> immediate = {0xabcdf, 0xfdcba};
     for (size_t i = 0; i < opcode.size(); i++) {
         if (opcode[i] == AUIPC || opcode[i] == LUI) {
             immediate[i] = immediate[i] << 12;
             instruction = immediate[i] | opcode[i];
-        } else {
-            instruction = (immediate[i] << 12) | opcode[i];
-            if (instruction >> 31) {
-                // Backwards jump
-                immediate[i] |= 0xfff00000;
-            }
         }
         EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
     }
-    // B-type and store
-    opcode =                     {BTYPE    , STORE,     BTYPE,     STORE};
-    std::vector<int> left_imm  = {0b0001011, 0b0111111, 0b1001011, 0b1111111};
-    std::vector<int> right_imm = {0b11000  , 0b11111,   0b11000,   0b11111};
+    // Stores (B-Type here)
+    opcode =                     {STORE,     STORE};
+    std::vector<int> left_imm  = {0b0111111, 0b1111111};
+    std::vector<int> right_imm = {0b11111,   0b11111};
     for (size_t i = 0; i < opcode.size(); i++) {
         instruction = (left_imm[i] << 25) + (right_imm[i] << 7) + opcode[i];
         immediate[i] = ((left_imm[i] << 5) + (right_imm[i]));

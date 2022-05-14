@@ -1,8 +1,6 @@
 #!/bin/bash
 echo "Building CPU emulator..."
-cd ../t89_cpu_components
+cd ../modules
 make
-make tester
-cd ../t89_cpu
+cd ../top-level
 make
-make emulate

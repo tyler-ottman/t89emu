@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Cleaning CPU emulator"
-cd ../t89_cpu_components
+cd ../modules
 make clean
-cd ../t89_cpu
+cd ../top-level
 make clean
