@@ -100,7 +100,7 @@ void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec,
         break;
     case 1: // jalr signal
         this->nextPC = A + offset;
-        std::cout << "got here: " << this->nextPC << std::endl;
+        // std::cout << "got here: " << this->nextPC << std::endl;
         break;
     case 2: // B-type signal
         branch = branch_alu(A, B, funct3);

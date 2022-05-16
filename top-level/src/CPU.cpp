@@ -9,6 +9,8 @@ uint32_t IO_addr; // Address of device
 int interrupt_assert;
 int debug;
 
+#define VRAM 0x40000000
+
 void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
 	std::cout << "Current Instruction: " << cur_instruction << std::endl;
@@ -310,6 +312,20 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 		debug_post_execute(opcode, rd, immediate);
 	}
 	/******************DEBUG********************/
+
+	// Update VRAM
+	uint32_t pixel;
+	uint8_t x;
+	uint8_t y;
+	for (int i = 0; i < ScreenWidth() * ScreenHeight(); i++) {
+		pixel = dram.read_data(VRAM + 4 * i);
+		uint8_t red = (pixel >> 24) & 0xff;
+		uint8_t green = (pixel >> 16) & 0xff;
+		uint8_t blue = (pixel >> 8) & 0xff;
+		x = i % ScreenWidth();
+		y = i / ScreenHeight();
+		Draw(x, y, olc::Pixel(red, green, blue));
+	}
 
 	return true;
 }
