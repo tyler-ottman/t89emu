@@ -266,9 +266,16 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 	 ******************EXECUTE*******************
 	 *******************************************/
 	// First ALU operand multiplexor
-	uint32_t A = (PC_select == 1) ? pc_addr : rf.read_rs1();
-	uint32_t B;
+	uint32_t A;;
+	if (PC_select == 0) {
+		A = rf.read_rs1();
+	} else if (PC_select == 1) {
+		A = pc_addr; // jal, jalr, b-type
+	} else {
+		A = 0; // lui
+	}
 
+	uint32_t B;
 	// Second ALU operand multiplexor
 	if (ALUSrc == 0)
 		B = 4; // +4
@@ -289,12 +296,13 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 
 	// Write-back data
 	uint32_t rf_data_writeback;
-	if (MemToReg == 0)
+	if (MemToReg == 0) {
 		rf_data_writeback = alu_output; // Write ALU output
-	else if (MemToReg == 1)
+	} else if (MemToReg == 1) {
 		rf_data_writeback = data_out; // Write Data Memory
-	else
+	} else {
 		rf_data_writeback = csr_rd; // Write CSR register
+	}
 
 	rf.write(rf_data_writeback, rd);			// Write to Register File if applicable
 	dram.write_data(alu_output, rf.read_rs2()); // Write to Data Memory if applicable
@@ -314,13 +322,13 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 	// Update VRAM
 	uint32_t pixel;
 	uint32_t pixel_addr;
-	uint8_t x;
-	uint8_t y;
+	uint32_t x;
+	uint32_t y;
 	if ((pixel_addr = dram.get_changed_pixel()) != 0) {
 		pixel = dram.read_data(pixel_addr);
 		pixel_addr -= VRAM_START;
 		x = (pixel_addr/4) % WIDTH;
-		y = (pixel_addr/4) / HEIGHT;
+		y = (pixel_addr/4) / WIDTH;
 		uint8_t red = (pixel >> 24) & 0xff;
 		uint8_t green = (pixel >> 16) & 0xff;
 		uint8_t blue = (pixel >> 8) & 0xff;

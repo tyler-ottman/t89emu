@@ -2,8 +2,8 @@
 #include <unordered_map>
 
 #define VRAM_START 0x40000000    // Beginning of VRAM
-#define WIDTH 100
-#define HEIGHT 100
+#define WIDTH 50
+#define HEIGHT 50
 #define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
 
 #ifndef ALU_H

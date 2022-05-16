@@ -2,8 +2,6 @@
 #include <math.h>
 #include "Components.h"
 
-template <typename T>T instruction;
-int instr_opcode;
 
 template <typename T>
 int ImmediateGenerator<T>::getInstrType()

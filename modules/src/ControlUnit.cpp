@@ -32,7 +32,7 @@ void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int sup
     int MemtoReg[10]   = {0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00, 0b10};
     int MemRead[10]    = {0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00, 0b00};
     int MemWrite[10]   = {0b00, 0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00};
-    int PC_Select[10]  = {0b00, 0b01, 0b01, 0b01, 0b00, 0b00, 0b00, 0b00, 0b00, 0b00};
+    int PC_Select[10]  = {0b10, 0b01, 0b01, 0b01, 0b00, 0b00, 0b00, 0b00, 0b00, 0b00};
 
     // 0: lui
     // 1: auipc

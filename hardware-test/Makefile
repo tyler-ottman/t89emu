@@ -11,7 +11,7 @@ BIN_DIR = ./bin
 # INCLUDE += -I $(INC_DIR)
 CFLAGS += -g -nostdlib
 
-TARGET_NAME = testerBranch
+TARGET_NAME = upperImmTest
 
 TARGET_OBJS = $(OBJ_DIR)/$(TARGET_NAME).o
 
@@ -19,7 +19,7 @@ all: directories $(BIN_DIR)/$(TARGET_NAME)
 
 $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
 	$(CC) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME) $(CFLAGS)
-	$(OBJCOPY) -O binary $(BIN_DIR)/$(TARGET_NAME) $(BIN_DIR)/$(TARGET_NAME).bi
+	$(OBJCOPY) -O binary $(BIN_DIR)/$(TARGET_NAME) $(BIN_DIR)/$(TARGET_NAME).bin
 
 $(OBJ_DIR)/$(TARGET_NAME).o: $(SRC_DIR)/$(TARGET_NAME).s
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/$(TARGET_NAME).s -o $(TARGET_OBJS)
