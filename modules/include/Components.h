@@ -1,6 +1,11 @@
 #include <stdint.h>
 #include <unordered_map>
 
+#define VRAM_START 0x40000000    // Beginning of VRAM
+#define WIDTH 100
+#define HEIGHT 100
+#define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
+
 #ifndef ALU_H
 #define ALU_H
 
@@ -200,6 +205,7 @@ private:
     int MemWriteData;
     int size;
     int IO_WR_enable;
+    uint32_t changed_pixel;
 
 public:
     Memory();
@@ -207,6 +213,7 @@ public:
     void write_data(uint32_t addr, uint32_t data);
     void write_io(uint32_t, uint32_t);
     uint32_t read_data(uint32_t addr);
+    uint32_t get_changed_pixel();
 };
 
 #endif // MEMORY_H

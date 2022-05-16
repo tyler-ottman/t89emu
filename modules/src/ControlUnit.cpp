@@ -2,19 +2,6 @@
 #include <stdlib.h>
 #include "Components.h"
 
-int opcode;
-int RegWrite;
-int ALUSrc;
-int MemtoReg;
-int MemRead;
-int MemWrite;
-int PC_Select;
-int CSR_enable;
-int trap;
-int ALUop;
-
-uint32_t mcause = 0;
-
 int ControlUnit::getInstructionType()
 {
     int instr_type;
@@ -94,7 +81,9 @@ void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int sup
     }
 }
 
-ControlUnit::ControlUnit(){}
+ControlUnit::ControlUnit(){
+    this->mcause = 0;
+}
 
 int ControlUnit::get_RegWrite()
 {

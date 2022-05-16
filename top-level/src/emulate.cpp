@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     }
     std::cout << std::hex << "Starting\n";
 	CPU t89(dram_flash, debug);
-	if (t89.Construct(200, 200, 2, 2))
+	if (t89.Construct(WIDTH, HEIGHT, 4, 4))
 		t89.Start();
 
 	exit(EXIT_SUCCESS);

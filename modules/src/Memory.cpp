@@ -2,15 +2,8 @@
 #include <unordered_map>
 #include "Components.h"
 
-uint32_t data_out;                           // Data output
-uint32_t instr_out;                          // Instrution output
-// std::unordered_map<uint32_t, uint32_t> dram; // 16 GB memory module
-int MemRead2;
-int MemWrite2;
-int size;
-int IO_WR_enable;
-
 Memory::Memory() {}
+
 void Memory::set_control_signals(int MemReadData, int MemWriteData, int size, int IO_WR_enable)
 {
     this->MemReadData = MemReadData;
@@ -23,6 +16,10 @@ void Memory::write_data(uint32_t addr, uint32_t data)
 {
     if (this->MemWriteData) {
         dram[addr] = data;
+        if ((addr >= VRAM_START) && (addr <= (VRAM_START + VRAM_LEN))) {
+            // VGA module to update pixel in next cycle
+            this->changed_pixel = addr;
+        }
     }
 }
 
@@ -42,6 +39,12 @@ uint32_t Memory::read_data(uint32_t addr)
     }
     // Something found at address
     return dram[addr];
+}
+
+uint32_t Memory::get_changed_pixel() {
+    uint32_t rtn = this->changed_pixel;
+    this->changed_pixel = 0x00000000; // reset changed pixel state
+    return rtn;
 }
 
 class Memory;

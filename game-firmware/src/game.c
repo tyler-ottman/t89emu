@@ -1,12 +1,17 @@
 #define VRAM_START 0x40000000
 volatile unsigned int *VIDEO_MEMORY = (unsigned int*)(VRAM_START);
 
-// Code set up for 200x200 pixel monitor with VGA reading from 0x40000000
-int main(void) {
-    for (int i = 0; i < 100*100; i++) {
-        VIDEO_MEMORY[i] = 0x00ff0000;
-    }
+#define WIDTH 100
+#define HEIGHT 100
 
-    while(1) {}
+void colorScreen(volatile unsigned int* video_mem, unsigned int color) {
+    for (int i = 0; i < WIDTH * HEIGHT; i++)
+        video_mem[i] = color;
+}
+
+// Code set up for WIDTHxHEIGHT pixel monitor with VGA reading from 0x40000000
+int main(void) {
+    colorScreen(VIDEO_MEMORY, 0x00ff0000);
+    while(1){}
     return 0;
 }

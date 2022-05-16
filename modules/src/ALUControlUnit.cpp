@@ -1,9 +1,6 @@
 #include <iostream>
 #include "Components.h"
 
-int i_type;
-int r_type;
-
 int ALUControlUnit::get_i_type(int funct3, int funct7)
 {
     int i_type;
