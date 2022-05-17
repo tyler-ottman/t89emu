@@ -63,14 +63,15 @@ _start:
     and a2, a2, a1
     lui a2, 0xffff0
     addi a5, x0, 0xff
-    sw a5, 0(a2)
+    # sw a5, 0(a2)
     addi a5, x0, 0x10
-    sw a5, 4(a2)
-    lw a3, 0(a2)
-    lw a3, 4(a2)
+    # sw a5, 4(a2)
+    # lw a3, 0(a2)
+    # lw a3, 4(a2)
     addi a2, x0, -32
     lui a3, 0xfffef
     or a2, a2, a3
-    sw a1, 32(a2)
+    # sw a1, 32(a2)
     lui a2, 0xffff0
-    lw a3, 0(a2)
+    # lw a3, 0(a2)
+    jal x0, _start
