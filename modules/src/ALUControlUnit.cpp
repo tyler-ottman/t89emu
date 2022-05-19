@@ -107,38 +107,14 @@ ALUControlUnit::ALUControlUnit() {}
 
 int ALUControlUnit::getALUoperation(int ALUop, int funct7, int funct3)
 {
-    int ALU_operation;
-    switch (ALUop)
-    {
-    case 0: // lui (add)
-        ALU_operation = 0;
-        break;
-    case 1: // auipc (add)
-        ALU_operation = 0;
-        break;
-    case 2: // jal (add)
-        ALU_operation = 0;
-        break;
-    case 3: // jalr (add)
-        ALU_operation = 0;
-        break;
-    case 4: // B-Type (sub)
-        ALU_operation = 1;
-        break;
-    case 5: // Loads (add)
-        ALU_operation = 0;
-        break;
-    case 6: // Stores (add)
-        ALU_operation = 0;
-        break;
-    case 7: // I-Type (varies)
-        ALU_operation = get_i_type(funct3, funct7);
-        break;
-    case 8: // R-Type (varies)
-        ALU_operation = get_r_type(funct3, funct7);
-        break;
-    }
-    return ALU_operation;
+    if (ALUop == 7) // I-Type (ALU operation varies)
+        return get_i_type(funct3, funct7);
+    else if (ALUop == 8) // R-Type (ALU operation varies)
+        return get_r_type(funct3, funct7);
+    else if (ALUop == 4) // B-Type (Subtract operation)
+        return 1;
+    // lui, auipc, jal, jalr, loads, stores (Add operation)
+    return 0;
 }
 
 class ALUControlUnit;

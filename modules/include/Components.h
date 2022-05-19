@@ -1,10 +1,22 @@
 #include <stdint.h>
 #include <unordered_map>
+#include <vector>
 
 #define VRAM_START 0x40000000    // Beginning of VRAM
 #define WIDTH 50
 #define HEIGHT 50
 #define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
+
+#define ADD  0
+#define SUB  1
+#define OR   2
+#define AND  3
+#define XOR  4
+#define SRL  5
+#define SRA  6
+#define SLL  7
+#define SLT  8
+#define SLTU 9
 
 #ifndef ALU_H
 #define ALU_H
@@ -14,22 +26,12 @@ class ALU
 public:
     ALU();
     uint32_t exec(uint32_t, uint32_t, int);
-    void printOperands();
 
 private:
-    uint32_t A;
-    uint32_t B;
     int size_of_operand;
-    uint32_t _add();
-    uint32_t _sub();
-    uint32_t _or();
-    uint32_t _and();
-    uint32_t _xor();
-    uint32_t _srl();
-    uint32_t _sra();
-    uint32_t _sll();
-    uint32_t _slt();
-    uint32_t _sltu();
+    uint32_t MSB;
+    uint32_t isPositiveA;
+    uint32_t isPositiveB;
 };
 
 #endif // ALU_H
@@ -138,12 +140,11 @@ template <typename T>
 class ImmediateGenerator
 {
 private:
-    T instruction;
-    int instr_opcode;
-    int getInstrType();
-    T *getBinaryArray(T);
-    T getNum(T *, int);
-
+    T getInstrType();
+    std::vector<T> opcodes;
+    T immediate;
+    T funct3;
+    T opcode;
 public:
     // Support 64-bit in the future
     ImmediateGenerator();

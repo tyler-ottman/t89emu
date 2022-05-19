@@ -16,12 +16,6 @@ x12-17	    a2-7
 x18-27	    s2-11
 x28-31	    t3-6
 */
-template <typename T>T* registers;
-int rs1;
-int rs2;
-int rd;
-int Reg_Write;
-
 template <typename T>
 RegisterFile<T>::RegisterFile()
 {
@@ -35,7 +29,6 @@ void RegisterFile<T>::set_control_lines(int rs1, int rs2, int Reg_Write)
     this->rs1 = rs1;
     this->rs2 = rs2;
     this->Reg_Write = Reg_Write;
-
 }
 
 template <typename T>
