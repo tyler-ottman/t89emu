@@ -24,10 +24,10 @@ void colorScreen(volatile unsigned int* video_mem, unsigned int color) {
 }
 
 void colorGradient(volatile unsigned int* video_mem) {
-    int color = 0;
+    int color = 1;
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
         video_mem[i] = color;
-        color += 256;
+        color <<= 1;
     }
 }
 

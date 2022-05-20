@@ -298,8 +298,8 @@ TEST(ImmediateGenerator, immediates) {
         if (opcode[i] == AUIPC || opcode[i] == LUI) {
             immediate[i] = immediate[i] << 12;
             instruction = immediate[i] | opcode[i];
+            EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
         }
-        EXPECT_EQ(immediate[i], imm.getImmediate(instruction));
     }
     // Stores (B-Type here)
     opcode =                     {STORE,     STORE};

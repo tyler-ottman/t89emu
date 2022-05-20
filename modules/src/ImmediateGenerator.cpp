@@ -9,8 +9,7 @@ T ImmediateGenerator<T>::getInstrType()
     for (size_t i = 0; i < this->opcodes.size(); i++)
         if (this->opcodes[i] == this->opcode)
             return i;
-    std::cerr << "Invalid Opcode Error" << std::endl;
-    exit(EXIT_FAILURE);
+    return 0;
 }
 
 template <typename T>

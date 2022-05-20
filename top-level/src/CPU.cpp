@@ -266,7 +266,7 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 	 ******************EXECUTE*******************
 	 *******************************************/
 	// First ALU operand multiplexor
-	uint32_t A;;
+	uint32_t A;
 	if (PC_select == 0) {
 		A = rf.read_rs1();
 	} else if (PC_select == 1) {

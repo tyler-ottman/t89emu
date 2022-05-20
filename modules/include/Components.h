@@ -42,10 +42,8 @@ private:
 class ALUControlUnit
 {
 private:
-    int i_type;
-    int r_type;
-    int get_i_type(int, int);
-    int get_r_type(int, int);
+    std::vector<int> i_operations;
+    std::vector<int> r_operations;
 
 public:
     ALUControlUnit();

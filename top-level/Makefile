@@ -3,7 +3,7 @@ SRC_DIR = ./src
 INC_DIR = ./include
 LIB_DIR = ./lib
 
-CFLAGS = -Wall -std=c++17 -g
+CFLAGS = -Wall -std=c++17 -g -O3
 # LDFLAGS += -L../modules/lib -lmodules.a -lX11 -lGL -lpthread -lpng -lstdc++fs
 LDFLAGS = ../modules/lib/modules.a -lX11 -lGL -lpthread -lpng -lstdc++fs
 

@@ -3,7 +3,7 @@ SRC_DIR = ./src
 INC_DIR = ./include
 LIB_DIR = ./lib
 
-CFLAGS = -Wall
+CFLAGS = -Wall -O3
 CXX = g++
 INCLUDE = -I $(INC_DIR)
 
