@@ -7,6 +7,7 @@
 #define HEIGHT 50
 #define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
 
+// ALU operations
 #define ADD  0
 #define SUB  1
 #define OR   2
@@ -17,6 +18,18 @@
 #define SLL  7
 #define SLT  8
 #define SLTU 9
+
+// opcodes
+#define LUI   0b0110111
+#define AUIPC 0b0010111
+#define JAL   0b1101111
+#define JALR  0b1100111
+#define BTYPE 0b1100011
+#define LOAD  0b0000011
+#define STORE 0b0100011 
+#define ITYPE 0b0010011
+#define RTYPE 0b0110011
+#define ECALL 0b1110011
 
 #ifndef ALU_H
 #define ALU_H
@@ -57,35 +70,11 @@ public:
 
 class ControlUnit
 {
-
 private:
-    int opcode;
-    int RegWrite;
-    int ALUSrc;
-    int MemtoReg;
-    int MemRead;
-    int MemWrite;
-    int PC_Select;
-    int CSR_enable;
-    int trap;
-    uint32_t mcause;
-    int ALUop;
-
-    int getInstructionType();
-
+    std::unordered_map<int, uint32_t> signals;
 public:
     ControlUnit();
-    void setControlLines(int, int, int, int);
-    int get_RegWrite();
-    int get_ALUSrc();
-    int get_MemtoReg();
-    int get_MemRead();
-    int get_MemWrite();
-    int get_PC_Select();
-    int get_CSR_enable();
-    int get_trap();
-    int get_mcause();
-    int get_ALUop();
+    std::vector<uint32_t> getControlLines(int, int, int, int);
 };
 
 #endif // CONTROLUNIT_H
@@ -159,7 +148,6 @@ class NextPC
 {
 private:
     T nextPC;
-    int jal_jalr_branch(T);
     int branch_alu(T, T, T);
 
 public:

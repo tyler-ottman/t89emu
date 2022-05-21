@@ -33,9 +33,9 @@ void colorGradient(volatile unsigned int* video_mem) {
 
 // Code set up for WIDTHxHEIGHT pixel monitor with VGA reading from 0x40000000
 int main(void) {
-    // colorScreen(VIDEO_MEMORY, 0x00ff0000);
+    colorScreen(VIDEO_MEMORY, 0x00ff0000);
     // colorScreen(VIDEO_MEMORY, 0xff000000);
-    colorGradient(VIDEO_MEMORY);
+    // colorGradient(VIDEO_MEMORY);
     while(1){}
     return 0;
 }

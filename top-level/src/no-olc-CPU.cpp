@@ -206,45 +206,54 @@ public:
         // debug_pre_execute(opcode, funct3, funct7, rs1, rs2, rd, immediate, csr_addr, cur_instruction);
 
         // Control Unit Signals
-        ctrl.setControlLines(opcode, external_interrupt, funct3, mode);
-        uint32_t RegWrite = ctrl.get_RegWrite();   // Write to register?
-        uint32_t ALUSrc = ctrl.get_ALUSrc();	   // What to feed to ALU?
-        uint32_t MemToReg = ctrl.get_MemtoReg();   // Read from data memory?
-        uint32_t MemRead = ctrl.get_MemRead();	   // Which value to put in Register File?
-        uint32_t MemWrite = ctrl.get_MemWrite();   // Write to memory?
-        uint32_t ALUop = ctrl.get_ALUop();		   // ALU operation
-        uint32_t PC_select = ctrl.get_PC_Select(); // Select PC or rs1
-        uint32_t trap_taken = ctrl.get_trap();	   // Take a trap?
-        uint32_t mcause = ctrl.get_mcause();	   // Machine cause of trap
-        uint32_t CSR_en = ctrl.get_CSR_enable();   // Write to CSR module?
+        std::vector<uint32_t> signals_bus = ctrl.getControlLines(opcode, external_interrupt, funct3, mode);
+        uint32_t main_bus = signals_bus[0];
+        uint32_t RegWrite  = (main_bus >> 10) & 0b11;
+        uint32_t ALUSrc    = (main_bus >>  8) & 0b11;
+        uint32_t MemToReg  = (main_bus >>  6) & 0b11;
+        uint32_t MemRead   = (main_bus >>  4) & 0b11;
+        uint32_t MemWrite  = (main_bus >>  2) & 0b11;
+        uint32_t PC_select = (main_bus      ) & 0b11;
+        uint32_t trap_taken = signals_bus[1];
+        uint32_t mcause = signals_bus[2];
+        uint32_t CSR_en = signals_bus[3];
 
         // Control Lines - CSR, Register File, ALU
         csr.set_control_lines(CSR_en, trap_taken, mcause, pc_addr);		   // CSR Control
         rf.set_control_lines(rs1, rs2, RegWrite);						   // Register File Control
         dram.set_control_signals(MemRead, MemWrite, 4, this->IO_we);	   // Memory Control
-        uint32_t alu_opcode = aluc.getALUoperation(ALUop, funct7, funct3); // ALU Control
+        uint32_t alu_opcode = aluc.getALUoperation(opcode, funct7, funct3); // ALU Control
 
         /********************************************
          ******************EXECUTE*******************
         *******************************************/
         // First ALU operand multiplexor
-        uint32_t A;;
-        if (PC_select == 0) {
+        uint32_t A;
+        switch (PC_select) {
+        case 0:
             A = rf.read_rs1();
-        } else if (PC_select == 1) {
+            break;
+        case 1:
             A = pc_addr; // jal, jalr, b-type
-        } else {
+            break;
+        default:
             A = 0; // lui
+            break;
         }
 
         uint32_t B;
         // Second ALU operand multiplexor
-        if (ALUSrc == 0)
-            B = 4; // +4
-        else if (ALUSrc == 1)
-            B = rf.read_rs2(); // Register Source 2
-        else
-            B = immediate; // Immediate
+        switch (ALUSrc) {
+        case 0: // +4
+            B = 4;
+            break;
+        case 1: // Register Source 2
+            B = rf.read_rs2();
+            break;
+        default: // Immediate
+            B = immediate;
+            break;
+        }
 
         // Execute operation on operands
         uint32_t alu_output = alu.exec(A, B, alu_opcode);

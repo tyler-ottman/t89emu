@@ -223,48 +223,354 @@ TEST(ALUControlUnit, R_type) {
 
 // Control Unit
 TEST(ControlUnit, opcodes) {
-    ControlUnit signals;
+    ControlUnit ctrl;
+
+    int interrupt = 0;
+    int funct3 = 0;
+    int supervisor_mode = 0;
+
+    // lui
+    std::vector<uint32_t> signals_bus = ctrl.getControlLines(LUI, interrupt, funct3, supervisor_mode);
+    uint32_t RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    uint32_t ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    uint32_t MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    uint32_t MemRead   = (signals_bus[0] >>  4) & 0b11;
+    uint32_t MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    uint32_t PC_select = (signals_bus[0]      ) & 0b11;
+    uint32_t trap_taken = signals_bus[1];
+    uint32_t mcause = signals_bus[2];
+    uint32_t CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(2, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(2, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // auipc
+    signals_bus = ctrl.getControlLines(AUIPC, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(2, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(1, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // jal
+    signals_bus = ctrl.getControlLines(JAL, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(1, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // jalr
+    signals_bus = ctrl.getControlLines(JALR, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(1, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // b-type
+    signals_bus = ctrl.getControlLines(BTYPE, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(1, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // Load
+    signals_bus = ctrl.getControlLines(LOAD, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(2, ALUSrc);
+    EXPECT_EQ(1, MemtoReg);
+    EXPECT_EQ(1, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // store
+    signals_bus = ctrl.getControlLines(STORE, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(2, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(1, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // itype
+    signals_bus = ctrl.getControlLines(ITYPE, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(2, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // r-type
+    signals_bus = ctrl.getControlLines(RTYPE, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(1, RegWrite);
+    EXPECT_EQ(1, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // ecall
+    supervisor_mode = 1;
+    funct3 = 0;
+    signals_bus = ctrl.getControlLines(ECALL, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(1, trap_taken);
+    EXPECT_EQ(0x00000008, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // Machine Hardware Interrupt
+    interrupt = 2;
+    signals_bus = ctrl.getControlLines(AUIPC, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(1, trap_taken);
+    EXPECT_EQ(0x8000000b, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // Machine Timer Interrupt
+    interrupt = 1;
+    signals_bus = ctrl.getControlLines(AUIPC, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(0, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(1, trap_taken);
+    EXPECT_EQ(0x80000007, mcause);
+    EXPECT_EQ(0, CSR_en);
+
+    // Write to CSR
+    interrupt = 0;
+    funct3 = 0b001;
+    signals_bus = ctrl.getControlLines(ECALL, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(2, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(1, CSR_en);
+
+    // Write to CSR in user mode
+    supervisor_mode = 0;
+    signals_bus = ctrl.getControlLines(ECALL, interrupt, funct3, supervisor_mode);
+    RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    MemtoReg  = (signals_bus[0] >>  6) & 0b11;
+    MemRead   = (signals_bus[0] >>  4) & 0b11;
+    MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    PC_select = (signals_bus[0]      ) & 0b11;
+    trap_taken = signals_bus[1];
+    mcause = signals_bus[2];
+    CSR_en = signals_bus[3];
+    EXPECT_EQ(0, RegWrite);
+    EXPECT_EQ(0, ALUSrc);
+    EXPECT_EQ(2, MemtoReg);
+    EXPECT_EQ(0, MemRead);
+    EXPECT_EQ(0, MemWrite);
+    EXPECT_EQ(0, PC_select);
+    EXPECT_EQ(0, trap_taken);
+    EXPECT_EQ(0, mcause);
+    EXPECT_EQ(0, CSR_en);
+
     // lui, auipc, jal, jalr, b-type, load, store, i-type, r-type, ecall
-    int opcodes[10] =      {LUI,       AUIPC,     JAL,       JALR,      BTYPE,     LOAD,      STORE,     ITYPE,     RTYPE,     ECALL    };
-    int controlLines[10] = {0b1100000, 0b1100001, 0b1000001, 0b1000001, 0b0010000, 0b1101100, 0b0100010, 0b1100000, 0b1010000, 0b0000000};
-    int index = 0;
-    for (int x : opcodes) {
-        int regWrite = controlLines[index] >> 6;
-        int ALUsrc = (controlLines[index] >> 4) & 3;
-        int MemToReg = (controlLines[index] >> 3) & 1;
-        int MemRead = (controlLines[index] >> 2) & 1;
-        int MemWrite = (controlLines[index] >> 1) & 1;
-        int PC_select = (controlLines[index] & 1);
-        int CSR_enable = 0;
-        index++;
-        signals.setControlLines(x, 0, 0, 0);
-        EXPECT_EQ(regWrite, signals.get_RegWrite());
-        EXPECT_EQ(ALUsrc, signals.get_ALUSrc());
-        EXPECT_EQ(MemToReg, signals.get_MemtoReg());
-        EXPECT_EQ(MemRead, signals.get_MemRead());
-        EXPECT_EQ(MemWrite, signals.get_MemWrite());
-        EXPECT_EQ(PC_select, signals.get_PC_Select());
-        EXPECT_EQ(CSR_enable, signals.get_CSR_enable());
-    }
+    // int opcodes[10] =      {LUI,       AUIPC,     JAL,       JALR,      BTYPE,     LOAD,      STORE,     ITYPE,     RTYPE,     ECALL    };
+    // int controlLines[10] = {0b1100000, 0b1100001, 0b1000001, 0b1000001, 0b0010000, 0b1101100, 0b0100010, 0b1100000, 0b1010000, 0b0000000};
+    // int index = 0;
+    // for (int x : opcodes) {
+    //     int regWrite = controlLines[index] >> 6;
+    //     int ALUsrc = (controlLines[index] >> 4) & 3;
+    //     int MemToReg = (controlLines[index] >> 3) & 1;
+    //     int MemRead = (controlLines[index] >> 2) & 1;
+    //     int MemWrite = (controlLines[index] >> 1) & 1;
+    //     int PC_select = (controlLines[index] & 1);
+    //     int CSR_enable = 0;
+    //     index++;
+    //     signals.setControlLines(x, 0, 0, 0);
+    //     EXPECT_EQ(regWrite, signals.get_RegWrite());
+    //     EXPECT_EQ(ALUsrc, signals.get_ALUSrc());
+    //     EXPECT_EQ(MemToReg, signals.get_MemtoReg());
+    //     EXPECT_EQ(MemRead, signals.get_MemRead());
+    //     EXPECT_EQ(MemWrite, signals.get_MemWrite());
+    //     EXPECT_EQ(PC_select, signals.get_PC_Select());
+    //     EXPECT_EQ(CSR_enable, signals.get_CSR_enable());
+    // }
 
-    // setControlLines(int opcode, int csr_interrupt, int funct3, int supervisor_mode)
-    signals.setControlLines(0b1110011, 0, 0b001, 1); // csrrw
-    EXPECT_EQ(1, signals.get_CSR_enable());
+    // // setControlLines(int opcode, int csr_interrupt, int funct3, int supervisor_mode)
+    // signals.setControlLines(0b1110011, 0, 0b001, 1); // csrrw
+    // EXPECT_EQ(1, signals.get_CSR_enable());
 
-    signals.setControlLines(0b1110011, 0, 0b010, 0); // csrrs
-    EXPECT_EQ(0, signals.get_CSR_enable());
+    // signals.setControlLines(0b1110011, 0, 0b010, 0); // csrrs
+    // EXPECT_EQ(0, signals.get_CSR_enable());
 
-    signals.setControlLines(0b0110011, 1, 0b000, 0); // machine timer interrupt
-    EXPECT_EQ(0x80000007, signals.get_mcause());
-    EXPECT_EQ(1, signals.get_trap());
+    // signals.setControlLines(0b0110011, 1, 0b000, 0); // machine timer interrupt
+    // EXPECT_EQ(0x80000007, signals.get_mcause());
+    // EXPECT_EQ(1, signals.get_trap());
 
-    signals.setControlLines(0b0110011, 2, 0b000, 0); // machine external interrupt
-    EXPECT_EQ(0x8000000b, signals.get_mcause());
-    EXPECT_EQ(1, signals.get_trap());
+    // signals.setControlLines(0b0110011, 2, 0b000, 0); // machine external interrupt
+    // EXPECT_EQ(0x8000000b, signals.get_mcause());
+    // EXPECT_EQ(1, signals.get_trap());
 
-    signals.setControlLines(0b1110011, 0, 0b000, 0); // user mode ecall
-    EXPECT_EQ(1, signals.get_trap());
-    EXPECT_EQ(0x8, signals.get_mcause());
+    // signals.setControlLines(0b1110011, 0, 0b000, 0); // user mode ecall
+    // EXPECT_EQ(1, signals.get_trap());
+    // EXPECT_EQ(0x8, signals.get_mcause());
 }
 
 // Register File

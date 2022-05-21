@@ -2,136 +2,46 @@
 #include <stdlib.h>
 #include "Components.h"
 
-int ControlUnit::getInstructionType()
-{
-    int instr_type;
-    int index = 0;
-    // lui, auipc, jal, jalr, B-type, loads, stores, i-type, r-type, ecall/csr
-    int opcodes[10] = {0b0110111, 0b0010111, 0b1101111, 0b1100111, 0b1100011, 0b0000011, 0b0100011, 0b0010011, 0b0110011, 0b1110011};
-    while(index != 10) {
-        if (this->opcode == opcodes[index]) {
-            instr_type = index;
-            break;
-        }
-        index++;
-    }
-    if (index == 10) {
-        // invalid opcode
-        std::cerr << "Invalid Opcode Argument" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return instr_type;
-}
-
-void ControlUnit::setControlLines(int opcode, int interrupt, int funct3, int supervisor_mode)
-{
-    this->opcode = opcode;
-    // lui, auipc, jal, jalr, b-type, load, store, i-type, r-type, csr
-    int RegWrite[10]   = {0b01, 0b01, 0b01, 0b01, 0b00, 0b01, 0b00, 0b01, 0b01, 0b00};
-    int ALUSrc[10]     = {0b10, 0b10, 0b00, 0b00, 0b01, 0b10, 0b10, 0b10, 0b01, 0b00};
-    int MemtoReg[10]   = {0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00, 0b10};
-    int MemRead[10]    = {0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00, 0b00};
-    int MemWrite[10]   = {0b00, 0b00, 0b00, 0b00, 0b00, 0b00, 0b01, 0b00, 0b00, 0b00};
-    int PC_Select[10]  = {0b10, 0b01, 0b01, 0b01, 0b00, 0b00, 0b00, 0b00, 0b00, 0b00};
-
-    // 0: lui
-    // 1: auipc
-    // 2: jal
-    // 3: jalr
-    // 4: b-type
-    // 5: load
-    // 6: store
-    // 7: i-type
-    // 8: r-type
-    // 9: ecall/csr
-    int instr_type = getInstructionType();
-
-    this->RegWrite = RegWrite[instr_type];
-    this->ALUSrc = ALUSrc[instr_type];
-    this->MemtoReg = MemtoReg[instr_type];
-    this->MemRead = MemRead[instr_type];
-    this->MemWrite = MemWrite[instr_type];
-    this->PC_Select = PC_Select[instr_type];
-    this->CSR_enable = 0; // csrrs / ecall / all other instructions
-    this->ALUop = instr_type;
-    if(funct3 == 0b001 && instr_type == 9 && supervisor_mode)
-        this->CSR_enable = 1; // csrrw
-    this->trap = 0;
-
-    // Check for trap
-    if ((instr_type == 9 && funct3 == 0b000) || interrupt) {
-        this->trap = 1;
-        this->RegWrite = 0;
-        this->ALUSrc = 0;
-        this->MemtoReg = 0;
-        this->MemRead = 0;
-        this->MemWrite = 0;
-        this->PC_Select = 0;
-        this->CSR_enable = 0;
-        this->ALUop = 0;
-
-        // update trap cause
-        if (instr_type == 9) // ecall from user mode
-            this->mcause = 0x00000008;
-        else if (interrupt == 1) // machine timer interrupt
-            this->mcause = 0x80000007;
-        else if (interrupt == 2) // machine external interrupt
-            this->mcause = 0x8000000b;
-        return;
-    }
-}
-
 ControlUnit::ControlUnit(){
-    this->mcause = 0;
+    // Each signal is 2-bit width
+    // RegWrite - Enable writing to Register File
+    // ALUSrc - Select 4, rs2, or immediate to feed into B of ALU
+    // MemtoReg - Select output of ALU or output of memory to send to Register File
+    // MemRead - Read data from memory
+    // MemWrite - Write data to memory
+    // PC_select - Select rs1, PC, or 0 to feed to A of ALU
+    signals[LUI]   = 0b011000000010;
+    signals[AUIPC] = 0b011000000001;
+    signals[JAL]   = 0b010000000001;
+    signals[JALR]  = 0b010000000001;
+    signals[BTYPE] = 0b000100000000;
+    signals[LOAD]  = 0b011001010000;
+    signals[STORE] = 0b001000000100;
+    signals[ITYPE] = 0b011000000000;
+    signals[RTYPE] = 0b010100000000;
+    signals[ECALL] = 0b000010000000;
 }
 
-int ControlUnit::get_RegWrite()
+std::vector<uint32_t> ControlUnit::getControlLines(int opcode, int interrupt, int funct3, int supervisor_mode)
 {
-    return this->RegWrite;
-}
+    if (opcode == ECALL && funct3 == 0b000) {
+        //      signals,        trap, mcause,     CSR_enable
+        return {0b000000000000, 1,    0x00000008, 0};
+    } else if (interrupt != 0 && supervisor_mode) { // Hardware/Timer Interrupt (Machine Mode)
+        switch(interrupt) {
+            // All signals disabled, trap high
+            case 1: // Machine Timer Interrupt
+                return {0b000000000000, 1, 0x80000007, 0};
+            case 2: // Machine External Interrupt
+                return {0b000000000000, 1, 0x8000000b, 0};
+        }
+    }
 
-int ControlUnit::get_ALUSrc()
-{
-    return this->ALUSrc;
-}
-
-int ControlUnit::get_MemtoReg()
-{
-    return this->MemtoReg;
-}
-
-int ControlUnit::get_MemRead()
-{
-    return this->MemRead;
-}
-
-int ControlUnit::get_MemWrite()
-{
-    return this->MemWrite;
-}
-
-int ControlUnit::get_PC_Select()
-{
-    return this->PC_Select;
-}
-
-int ControlUnit::get_CSR_enable()
-{
-    return this->CSR_enable;
-}
-
-int ControlUnit::get_trap()
-{
-    return this->trap;
-}
-
-int ControlUnit::get_mcause()
-{
-    return this->mcause;
-}
-
-int ControlUnit::get_ALUop() {
-    return this->ALUop;
+    if(opcode == ECALL && supervisor_mode && funct3 == 0b001)
+        return {signals[ECALL], 0, 0, 1}; // CSRRW
+    
+    // Normal instructions
+    return {signals[opcode], 0, 0, 0};
 }
 
 class ControlUnit;

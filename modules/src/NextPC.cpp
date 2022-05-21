@@ -1,46 +1,22 @@
 #include <iostream>
 #include "Components.h"
 
-template <typename T>T nextPC;
-
 template <typename T>
-int NextPC<T>::jal_jalr_branch(T opcode)
-{
-    //              jal,       jalr,      B-type,    ecall/csr
-    T opcodes[4] = {0b1101111, 0b1100111, 0b1100011, 0b1110011};
-    for (int i = 0; i < 4; i++) {
-        if (opcode == opcodes[i]) {
-            return i;
-        }
-    }
-    // All other types of instructions
-    return 4;
-}
-
-template <typename T>
-int NextPC<T>::branch_alu(T A, T B, T funct3)
-{
+int NextPC<T>::branch_alu(T A, T B, T funct3) {
     T ALU_in =  A - B; // Same hardware as main ALU
-    switch (funct3)
-    {
+    switch (funct3) {
     case 0b000: // beq
         if (!ALU_in)
-        {
             return 1;
-        }
         return 0;
     case 0b001: // bne
         if (ALU_in)
-        {
             return 1;
-        }
         return 0;
     case 0b100: // blt
         if ((ALU_in >> 31))
-        {
             // MSB is 1 --> negative
             return 1;
-        }
         return 0;
     case 0b101: // bge
         return (ALU_in >> 31) == 0;
@@ -91,31 +67,27 @@ void NextPC<T>::setCurrentPC(T currentPC) {
 template <typename T>
 void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec, T interrupt_taken)
 {
-    int instr_type = jal_jalr_branch(opcode);
     int branch = 0;
-    switch (instr_type)
+    switch (opcode)
     {
-    case 0: // jal signal
+    case JAL: // jal signal
         this->nextPC += offset;
         break;
-    case 1: // jalr signal
+    case JALR: // jalr signal
         this->nextPC = A + offset;
         // std::cout << "got here: " << this->nextPC << std::endl;
         break;
-    case 2: // B-type signal
+    case BTYPE: // B-type signal
         branch = branch_alu(A, B, funct3);
-        if (branch)
-        {
+        if (branch) {
             // this->nextPC += (offset << 2);
             this->nextPC += offset;
-        }
-        else
-        {
+        } else {
             // no branch
             this->nextPC += 4;
         }
         break;
-    case 3: // ECALL / csrrw
+    case ECALL: // ECALL / csrrw
         // inspect funct3 field
         if (funct3 == 0b000) {
             // ECALL
@@ -125,7 +97,7 @@ void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec,
         // csr instruction
         this->nextPC += 4;
         break;
-    case 4: // Next instruction
+    default: // Next instruction
         this->nextPC += 4;
         break;
     }
@@ -141,4 +113,4 @@ T NextPC<T>::getNextPC()
     return this->nextPC;
 }
 
-template class NextPC<u_int32_t>;
+template class NextPC<uint32_t>;

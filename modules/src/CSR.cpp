@@ -19,10 +19,6 @@
 // 0x006: modep             - Previous Mode of CPU before trap
 // 0x007: mtimecmp_low      - Machine Time Compare (lower 32 bits)
 // 0x008: mtimecmp_high     - Machine Time Compare (upper 32 bits)
-uint32_t* csr_register;
-
-uint32_t csr_we;
-uint32_t trap_taken;
 
 CSR::CSR(){
     csr_register = (uint32_t*) calloc(CSR_REG_SIZE, sizeof(uint32_t));

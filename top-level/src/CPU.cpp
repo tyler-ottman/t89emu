@@ -11,6 +11,7 @@ int debug;
 
 void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
+	std::cout << opcode << std::endl;
 	std::cout << "Current Instruction: " << cur_instruction << std::endl;
 	switch (opcode)
 	{
@@ -244,23 +245,35 @@ bool CPU::OnUserUpdate(float fElapsedTime)
 	/******************DEBUG********************/
 
 	// Control Unit Signals
-	ctrl.setControlLines(opcode, external_interrupt, funct3, mode);
-	uint32_t RegWrite = ctrl.get_RegWrite();   // Write to register?
-	uint32_t ALUSrc = ctrl.get_ALUSrc();	   // What to feed to ALU?
-	uint32_t MemToReg = ctrl.get_MemtoReg();   // Read from data memory?
-	uint32_t MemRead = ctrl.get_MemRead();	   // Which value to put in Register File?
-	uint32_t MemWrite = ctrl.get_MemWrite();   // Write to memory?
-	uint32_t ALUop = ctrl.get_ALUop();		   // ALU operation
-	uint32_t PC_select = ctrl.get_PC_Select(); // Select PC or rs1
-	uint32_t trap_taken = ctrl.get_trap();	   // Take a trap?
-	uint32_t mcause = ctrl.get_mcause();	   // Machine cause of trap
-	uint32_t CSR_en = ctrl.get_CSR_enable();   // Write to CSR module?
+	// ctrl.setControlLines(opcode, external_interrupt, funct3, mode);
+	// uint32_t RegWrite = ctrl.get_RegWrite();   // Write to register?
+	// uint32_t ALUSrc = ctrl.get_ALUSrc();	   // What to feed to ALU?
+	// uint32_t MemToReg = ctrl.get_MemtoReg();   // Read from data memory?
+	// uint32_t MemRead = ctrl.get_MemRead();	   // Which value to put in Register File?
+	// uint32_t MemWrite = ctrl.get_MemWrite();   // Write to memory?
+	// uint32_t ALUop = ctrl.get_ALUop();		   // ALU operation
+	// uint32_t PC_select = ctrl.get_PC_Select(); // Select PC or rs1
+	// uint32_t trap_taken = ctrl.get_trap();	   // Take a trap?
+	// uint32_t mcause = ctrl.get_mcause();	   // Machine cause of trap
+	// uint32_t CSR_en = ctrl.get_CSR_enable();   // Write to CSR module?
+
+	// Control Unit Signals
+	std::vector<uint32_t> signals_bus = ctrl.getControlLines(opcode, external_interrupt, funct3, mode);
+    uint32_t RegWrite  = (signals_bus[0] >> 10) & 0b11;
+    uint32_t ALUSrc    = (signals_bus[0] >>  8) & 0b11;
+    uint32_t MemToReg  = (signals_bus[0] >>  6) & 0b11;
+    uint32_t MemRead   = (signals_bus[0] >>  4) & 0b11;
+    uint32_t MemWrite  = (signals_bus[0] >>  2) & 0b11;
+    uint32_t PC_select = (signals_bus[0]      ) & 0b11;
+    uint32_t trap_taken = signals_bus[1];
+    uint32_t mcause = signals_bus[2];
+    uint32_t CSR_en = signals_bus[3];
 
 	// Control Lines - CSR, Register File, ALU
 	csr.set_control_lines(CSR_en, trap_taken, mcause, pc_addr);		   // CSR Control
 	rf.set_control_lines(rs1, rs2, RegWrite);						   // Register File Control
 	dram.set_control_signals(MemRead, MemWrite, 4, this->IO_we);	   // Memory Control
-	uint32_t alu_opcode = aluc.getALUoperation(ALUop, funct7, funct3); // ALU Control
+	uint32_t alu_opcode = aluc.getALUoperation(opcode, funct7, funct3); // ALU Control
 
 	/********************************************
 	 ******************EXECUTE*******************

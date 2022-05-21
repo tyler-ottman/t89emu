@@ -52,8 +52,7 @@ T RegisterFile<T>::read_rd()
 template <typename T>
 void RegisterFile<T>::write(T data, int rd)
 {   
-    if (rd == 0) {
-        this->rd = 0;    
+    if (rd == 0) { 
         return;
     }
     if (this->Reg_Write) {
