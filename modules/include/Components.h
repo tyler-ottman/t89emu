@@ -7,18 +7,6 @@
 #define HEIGHT 50
 #define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
 
-// ALU operations
-#define ADD  0
-#define SUB  1
-#define OR   2
-#define AND  3
-#define XOR  4
-#define SRL  5
-#define SRA  6
-#define SLL  7
-#define SLT  8
-#define SLTU 9
-
 // opcodes
 #define LUI   0b0110111
 #define AUIPC 0b0010111
@@ -34,17 +22,21 @@
 #ifndef ALU_H
 #define ALU_H
 
+#define ADD  0
+#define SUB  1
+#define OR   2
+#define AND  3
+#define XOR  4
+#define SRL  5
+#define SRA  6
+#define SLL  7
+#define SLT  8
+#define SLTU 9
+
 class ALU
 {
 public:
-    ALU();
-    uint32_t exec(uint32_t, uint32_t, int);
-
-private:
-    int size_of_operand;
-    uint32_t MSB;
-    uint32_t isPositiveA;
-    uint32_t isPositiveB;
+    uint32_t execute(uint32_t, uint32_t, int);
 };
 
 #endif // ALU_H
@@ -98,24 +90,15 @@ public:
 #ifndef REGISTERFILE_H
 #define REGISTERFILE_H
 
-template <typename T>
 class RegisterFile
 {
-
 private:
-    T *registers;
-    int rs1;
-    int rs2;
-    int rd;
-    int Reg_Write;
+    uint32_t* registers;
 
 public:
     RegisterFile();
-    void set_control_lines(int, int, int);
-    T read_rs1();
-    T read_rs2();
-    T read_rd();
-    void write(T, int);
+    uint32_t read(int);
+    void write(uint32_t, int);
 };
 
 #endif // REGISTERFILE_H
@@ -123,19 +106,10 @@ public:
 #ifndef IMMEDIATEGENERATOR_H
 #define IMMEDIATEGENERATOR_H
 
-template <typename T>
 class ImmediateGenerator
 {
-private:
-    T getInstrType();
-    std::vector<T> opcodes;
-    T immediate;
-    T funct3;
-    T opcode;
 public:
-    // Support 64-bit in the future
-    ImmediateGenerator();
-    T getImmediate(T);
+    uint32_t getImmediate(uint32_t);
 };
 
 #endif // IMMEDIATEGENERATOR_H
@@ -182,25 +156,31 @@ public:
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#define BYTE 1
+#define HALFWORD 2
+#define WORD 4
+
 class Memory
 {
 private:
-    uint32_t data_out;
-    uint32_t instr_out;
     std::unordered_map<uint32_t, uint32_t> dram;
-    int MemReadData;
-    int MemWriteData;
-    int size;
-    int IO_WR_enable;
     uint32_t changed_pixel;
 
 public:
-    Memory();
-    void set_control_signals(int, int, int, int);
-    void write_data(uint32_t addr, uint32_t data);
-    void write_io(uint32_t, uint32_t);
-    uint32_t read_data(uint32_t addr);
+    void write(uint32_t, uint32_t, int);
+    uint32_t read(uint32_t, int);
     uint32_t get_changed_pixel();
+};
+
+#endif // MEMORY_H
+
+#ifndef MEMCONTROLUNIT_H
+#define MEMCONTROLUNIT_H
+
+class MemControlUnit
+{
+public:
+    int get_mem_size(uint32_t);
 };
 
 #endif // MEMORY_H

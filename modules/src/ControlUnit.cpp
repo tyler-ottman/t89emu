@@ -24,7 +24,8 @@ ControlUnit::ControlUnit(){
 
 std::vector<uint32_t> ControlUnit::getControlLines(int opcode, int interrupt, int funct3, int supervisor_mode)
 {
-    if (opcode == ECALL && funct3 == 0b000) {
+    if (opcode == ECALL && funct3 == 0b000) { // ECALL
+        
         //      signals,        trap, mcause,     CSR_enable
         return {0b000000000000, 1,    0x00000008, 0};
     } else if (interrupt != 0 && supervisor_mode) { // Hardware/Timer Interrupt (Machine Mode)
