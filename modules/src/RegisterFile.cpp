@@ -18,7 +18,6 @@ x28-31	    t3-6
 */
 RegisterFile::RegisterFile()
 {
-    // 32 registers, x0 - x31
     this->registers = (uint32_t*)calloc(32, sizeof(uint32_t));
 }
 
@@ -28,8 +27,7 @@ uint32_t RegisterFile::read(int reg) {
 
 void RegisterFile::write(uint32_t data, int reg)
 {   
-    if (reg != 0)
-        this->registers[reg] = data;
+    this->registers[reg] = (reg != 0) ? data : 0;
 }
 
 class RegisterFile;

@@ -53,9 +53,10 @@ uint32_t Memory::read(uint32_t address, int size)
                 case 0b00: return (data & 0x0000ffff);
                 case 0b10: return (data & 0xffff0000) >> 16;
             }
-        default: // WORD
+        case WORD: // WORD
             return data;
     }
+    return data;
 }
 
 // Remove when new GUI supported
