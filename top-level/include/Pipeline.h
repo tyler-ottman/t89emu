@@ -1,14 +1,16 @@
-// #define OLC_PGE_APPLICATION
+#include <stdint.h>
+
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
-#include "olcPixelGameEngine.h"
 #include "Components.h"
+// #define OLC_PGE_APPLICATION
+#include "olcPixelGameEngine.h"
 
 class Pipeline : public olc::PixelGameEngine {
 private:
 	int interrupt_assert;
-	int debug;
+	int debug_mode;
 	uint32_t IO_BUS;
 	uint32_t IO_ADDR;
 
@@ -21,11 +23,10 @@ private:
 	NextPC nextpc;
 	ProgramCounter pc;
 	RegisterFile rf;
-	Debug debug;
-
-	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-	void debug_post_execute(uint32_t, uint32_t, uint32_t);
 	void query_external_interrupt();
+	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+
 
 public:
 	Pipeline(std::multimap<uint32_t, uint32_t>, int);
@@ -34,14 +35,3 @@ public:
 };
 
 #endif // PIPELINE_H
-
-#ifndef DEBUG_H
-#define DEBUG_H
-
-class Debug {
-public:
-	void debug_post_execute(uint32_t, uint32_t, uint32_t);
-	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-}
-
-#endif // DEBUG_H

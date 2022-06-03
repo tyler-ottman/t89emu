@@ -1,4 +1,4 @@
-#include "CPU.h"
+#include "Pipeline.h"
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
         dram_flash.insert(std::make_pair((uint32_t)(RAM_START + 4*i), data));
     }
     // std::cout << std::hex << "Starting\n";
-	CPU t89(dram_flash, debug);
+	Pipeline t89(dram_flash, debug);
 	if (t89.Construct(WIDTH, HEIGHT, 2, 2))
 		t89.Start();
 
