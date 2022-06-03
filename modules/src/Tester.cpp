@@ -238,26 +238,26 @@ TEST(ImmediateGenerator, immediates) {
     EXPECT_EQ(0x001, imm.getImmediate(instruction));
 }
 
-TEST(CSR, csr_test) {
-    CSR csr;
-    // csr_we, trap_taken, mcause, pc
-    csr.set_control_lines(1, 0, 0, 0); // csrrw
-    csr.update_csr(0x000, 1);
-    EXPECT_EQ(1, csr.get_csr(0x000));
+// TEST(CSR, csr_test) {
+//     CSR csr;
+//     // csr_we, trap_taken, mcause, pc
+//     csr.set_control_lines(1, 0, 0, 0); // csrrw
+//     csr.update_csr(0x000, 1);
+//     EXPECT_EQ(1, csr.get_csr(0x000));
 
-    csr.set_control_lines(0, 0, 0, 0); // csrrs
-    csr.update_csr(0x000, 0);
-    EXPECT_EQ(1, csr.get_csr(0x000));
+//     csr.set_control_lines(0, 0, 0, 0); // csrrs
+//     csr.update_csr(0x000, 0);
+//     EXPECT_EQ(1, csr.get_csr(0x000));
 
-    // Trap Taken (time interrupt when pc at 0x0000ffff)
-    uint32_t pc = 0x0000ffff;
-    uint32_t mcause = 0x80000007;
-    csr.set_control_lines(0, 1, mcause, pc);
-    EXPECT_EQ(mcause, csr.get_csr(0x004));
-    EXPECT_EQ(pc, csr.get_csr(0x002));
-    EXPECT_EQ(0, csr.get_csr(0x000));
-    EXPECT_EQ(0, csr.get_csr(0x001));
-}
+//     // Trap Taken (time interrupt when pc at 0x0000ffff)
+//     uint32_t pc = 0x0000ffff;
+//     uint32_t mcause = 0x80000007;
+//     csr.set_control_lines(0, 1, mcause, pc);
+//     EXPECT_EQ(mcause, csr.get_csr(0x004));
+//     EXPECT_EQ(pc, csr.get_csr(0x002));
+//     EXPECT_EQ(0, csr.get_csr(0x000));
+//     EXPECT_EQ(0, csr.get_csr(0x001));
+// }
 
 #define WRITE 0
 #define WRITE_IO 1
