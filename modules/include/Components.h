@@ -136,13 +136,31 @@ public:
 #ifndef CSR_H
 #define CSR_H
 
+// CSR Machine Mode Addresses
+enum class CSRMMode {
+    mstatus     = 0x300, // Machine Status Register
+    mtvec       = 0x305, // Machine Trap Vector
+    mie         = 0x304, // Machine Interrupt Enable
+    mip         = 0x344, // Machine Interrupt Pending
+    mcause      = 0x342, // Machine Cause
+    mepc        = 0x341, // Machine Exception Program Counter
+    mscratch    = 0x340, // Machine Scratch
+    mtval       = 0x343  // Machine Bad Address or Instruction
+};
+
 class CSR
 {
 
 private:
-    uint32_t* csr_register;
-    uint32_t csr_we;
-    uint32_t trap_taken;
+    uint32_t mstatus;
+    uint32_t mtvec;
+    uint32_t mie;
+    uint32_t mip;
+    uint32_t mcause;
+    uint32_t mepc;
+    uint32_t mscratch;
+    uint32_t mtval;
+    uint32_t mcycles;
 
 public:
     CSR();

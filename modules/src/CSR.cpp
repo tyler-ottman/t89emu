@@ -10,22 +10,16 @@
 #define MODE 5
 #define MODEP 6
 
-// 0x000: mie               - Machine Interrupt Enable
-// 0x001: mpi               - Machine Pending Interrupt Enable
-// 0x002: mepc              - Machine Exception Program Counter
-// 0x003: mtvec             - Machine Trap Vector
-// 0x004: mcause            - Machine Cause (of trap)
-// 0x005: mode              - Mode of CPU (user/supervisor/machine)
-// 0x006: modep             - Previous Mode of CPU before trap
-// 0x007: mtimecmp_low      - Machine Time Compare (lower 32 bits)
-// 0x008: mtimecmp_high     - Machine Time Compare (upper 32 bits)
-
 CSR::CSR(){
-    csr_register = (uint32_t*) calloc(CSR_REG_SIZE, sizeof(uint32_t));
-    csr_register[MTVEC] = 0xf0000000;
-    csr_register[MODE] = 2; // Machine Initially in machine mode (load OS code)
-    this->csr_we = 0;
-    this->trap_taken = 0;
+    this->mstatus = 0;
+    this->mtvec = 0; // To be decided
+    this->mie = 0;
+    this->mip = 0;
+    this->mcause = 0;
+    this->mepc = 0;
+    this->mscratch = 0;
+    this->mtval = 0;
+    this->mcycles = 0;
 }
 
 // Decide when to write to CSR, what happens on interrupt
