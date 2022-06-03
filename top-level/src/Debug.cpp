@@ -5,65 +5,17 @@ void Debug::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7,
 {
 	std::cout << opcode << std::endl;
 	std::cout << "Current Instruction: " << cur_instruction << std::endl;
-	switch (opcode)
-	{
-	case 0b0110111: // lui
-		std::cout << "immediate: " << immediate;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b0010011: // I-type
-		std::cout << "immediate: " << immediate;
-		std::cout << " rs1: " << rs1;
-		std::cout << " funct3: " << funct3;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b0110011: // R-type
-		std::cout << "rs2: " << rs2;
-		std::cout << " rs1: " << rs1;
-		std::cout << " funct3: " << funct3;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b0000011: // Load
-		std::cout << "immediate: " << immediate;
-		std::cout << " rs1: " << rs1;
-		std::cout << " funct3: " << funct3;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b0100011: // Store
-		std::cout << "immediate: " << immediate;
-		std::cout << " rs2: " << rs2;
-		std::cout << " rs1: " << rs1;
-		std::cout << " funct3: " << funct3;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b1100011: // B-Type
-		std::cout << "immediate: " << immediate;
-		std::cout << " rs2: " << rs2;
-		std::cout << " rs1: " << rs1;
-		std::cout << " funct3: " << funct3;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b1101111: // jal
-		std::cout << "immediate: " << immediate;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b0010111: // auipc
-		std::cout << "immediate: " << immediate;
-		std::cout << " rd: " << rd;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b1100111: // jalr
-		std::cout << "immediate: " << immediate;
-		std::cout << " rd: " << rd;
-		std::cout << " rs: " << rs1;
-		std::cout << " opcode: " << opcode << std::endl;
-		break;
-	case 0b1110011: // ecall/csr
+	switch (opcode) {
+	case LUI: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case ITYPE: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case RTYPE: std::cout << "rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case LOAD: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case STORE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
+	case BTYPE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
+	case JAL: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case AUIPC: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case JALR: std::cout << "immediate: " << immediate << " rd: " << rd << " rs: " << rs1 << " opcode: " << opcode << std::endl; break;
+	case ECALL: // ecall/csr
 		if (funct3 == 0) {
 			std::cout << "ecall" << std::endl;
 		}
@@ -71,47 +23,19 @@ void Debug::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7,
 	}
 }
 
-void Debug::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate)
+void Debug::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rd_data, uint32_t rs2_data, uint32_t rs1_data, uint32_t pc_addr)
 {
-	switch (opcode)
-	{
-	case 0b0110111: // lui
-		std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
-				  << std::endl;
-		break;
-	case 0b0010011: // I-Type
-		std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
-				  << std::endl;
-		break;
-	case 0b0110011: // R-type
-		std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
-				  << std::endl;
-		break;
-	case 0b0000011: // Load
-		std::cout << "Wrote " << rf.read_rd() << " to register " << rd << std::endl
-				  << std::endl;
-		break;
-	case 0b0100011: // Store
-		std::cout << "Wrote " << rf.read_rs2() << " to address " << rf.read_rs1() + immediate << std::endl
-				  << std::endl;
-		break;
-	case 0b1100011: // B-Type
-		std::cout << "Next PC: " << pc.getPC() << std::endl << std::endl;
-		break;
-	case 0b1101111: // jal
-		std::cout << "Next PC: " << pc.getPC() << ". Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
-		break;
-	case 0b0010111: // auipc
-		std::cout << "Wrote " << pc.getPC() - 4 + immediate << " to register " << rd << std::endl << std::endl;
-		break;
-	case 0b1100111: // jalr
-		std::cout << "Next PC: " << pc.getPC() << ". Wrote " << rf.read_rd() << " to register " << rd << std::endl << std::endl;
-		break;
-	case 0b1110011: // ecall/csr
-		std::cout << "mcause: " << csr.get_csr(4) << std::endl;
-		std::cout << "mepc: " << csr.get_csr(2) << std::endl;
-		std::cout << "Jump to handler at: " << pc.getPC() << std::endl << std::endl;
-		break;
+	switch (opcode) {
+		case LUI: std::cout << "Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case ITYPE: std::cout << "Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case RTYPE: std::cout << "Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case LOAD: std::cout << "Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case STORE: std::cout << "Wrote " << rs2_data << " to address " << rs1_data + immediate << std::endl << std::endl; break;
+		case BTYPE: std::cout << "Next PC: " << pc_addr << std::endl << std::endl; break;
+		case JAL: std::cout << "Next PC: " << pc_addr << ". Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case AUIPC: std::cout << "Wrote " << pc_addr - 4 + immediate << " to register " << rd << std::endl << std::endl; break;
+		case JALR: std::cout << "Next PC: " << pc_addr << ". Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
+		case ECALL: std::cout << "Jump to handler at: " << pc_addr << std::endl << std::endl; break;
 	}
 }
 
