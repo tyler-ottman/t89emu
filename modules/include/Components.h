@@ -57,20 +57,6 @@ public:
 
 #endif // ALUCONTROLUNIT_H
 
-#ifndef CONTROLUNIT_H
-#define CONTROLUNIT_H
-
-class ControlUnit
-{
-private:
-    std::unordered_map<int, uint32_t> signals;
-public:
-    ControlUnit();
-    std::vector<uint32_t> getControlLines(int, int, int, int);
-};
-
-#endif // CONTROLUNIT_H
-
 #ifndef PROGRAMCOUNTER_H
 #define PROGRAMCOUNTER_H
 
@@ -117,18 +103,14 @@ public:
 #ifndef NEXTPC_H
 #define NEXTPC_H
 
-template <typename T>
 class NextPC
 {
 private:
-    T nextPC;
-    int branch_alu(T, T, T);
-
+    uint32_t nextPC;
+    int branch_alu(uint32_t, uint32_t, uint32_t);
 public:
     NextPC();
-    void setCurrentPC(T);
-    void calculateNextPC(T, T, T, T, T, T, T);
-    T getNextPC();
+    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 };
 
 #endif // NEXTPC_H
@@ -137,16 +119,14 @@ public:
 #define CSR_H
 
 // CSR Machine Mode Addresses
-enum class CSRMMode {
-    mstatus     = 0x300, // Machine Status Register
-    mtvec       = 0x305, // Machine Trap Vector
-    mie         = 0x304, // Machine Interrupt Enable
-    mip         = 0x344, // Machine Interrupt Pending
-    mcause      = 0x342, // Machine Cause
-    mepc        = 0x341, // Machine Exception Program Counter
-    mscratch    = 0x340, // Machine Scratch
-    mtval       = 0x343  // Machine Bad Address or Instruction
-};
+#define MSTATUS     0x300 // Machine Status Register
+#define MTVEC       0x305 // Machine Trap Vector
+#define MIE         0x304 // Machine Interrupt Enable
+#define MIP         0x344 // Machine Interrupt Pending
+#define MCAUSE      0x342 // Machine Cause
+#define MEPC        0x341 // Machine Exception Program Counter
+#define MSCRATCH    0x340 // Machine Scratch
+#define MTVAL       0x343  // Machine Bad Address or Instruction
 
 class CSR
 {
@@ -164,9 +144,8 @@ private:
 
 public:
     CSR();
-    void set_control_lines(uint32_t, uint32_t, uint32_t, uint32_t);
-    void update_csr(uint32_t, uint32_t);
-    uint32_t get_csr(uint32_t);
+    uint32_t read_csr(uint32_t);
+    void write_csr(uint32_t, uint32_t);
 };
 
 #endif // CSR_H
