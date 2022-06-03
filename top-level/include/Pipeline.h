@@ -27,7 +27,6 @@ private:
 	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
-
 public:
 	Pipeline(std::multimap<uint32_t, uint32_t>, int);
 	bool OnUserCreate() override;
