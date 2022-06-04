@@ -45,3 +45,8 @@ loop5:
 loop6:
 	addi a2, a2, 0x1
 	bltu a3, a2, loop6
+
+	addi a5, x0, 0xf
+	addi a6, x0, 0xf
+loop7:
+	beq a5, a6, loop7

@@ -1,8 +1,6 @@
 #include <iostream>
 #include "Components.h"
 
-uint32_t PC;
-
 ProgramCounter::ProgramCounter()
 {
     this->PC = 0;

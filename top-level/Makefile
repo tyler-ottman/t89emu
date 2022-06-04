@@ -10,13 +10,13 @@ LDFLAGS = ../modules/lib/modules.a -lX11 -lGL -lpthread -lpng -lstdc++fs
 CXX = g++
 INCLUDE += -I $(INC_DIR) -I../modules/include
 
-TARGET_NAME = $(LIB_DIR)/cpulib.a
-TARGET_OBJS = $(OBJ_DIR)/CPU.o
+TARGET_NAME = $(LIB_DIR)/pipelinelib.a
+TARGET_OBJS = $(OBJ_DIR)/Pipeline.o
 
 all: directories $(TARGET_NAME) emulate
 
-emulate: $(SRC_DIR)/emulate.cpp $(LIB_DIR)/cpulib.a
-	$(CXX) $(SRC_DIR)/emulate.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/cpulib.a $(LDFLAGS) -o emulate
+emulate: $(SRC_DIR)/emulate.cpp $(LIB_DIR)/pipelinelib.a
+	$(CXX) $(SRC_DIR)/emulate.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/pipelinelib.a $(LDFLAGS) -o emulate
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@

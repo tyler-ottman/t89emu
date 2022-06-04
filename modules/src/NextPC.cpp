@@ -1,116 +1,33 @@
 #include <iostream>
 #include "Components.h"
 
-template <typename T>
-int NextPC<T>::branch_alu(T A, T B, T funct3) {
-    T ALU_in =  A - B; // Same hardware as main ALU
-    switch (funct3) {
-    case 0b000: // beq
-        if (!ALU_in)
-            return 1;
-        return 0;
-    case 0b001: // bne
-        if (ALU_in)
-            return 1;
-        return 0;
-    case 0b100: // blt
-        if ((ALU_in >> 31))
-            // MSB is 1 --> negative
-            return 1;
-        return 0;
-    case 0b101: // bge
-        return (ALU_in >> 31) == 0;
-    case 0b110: // bltu
-        // If a and b are positive
-        if (((A >> 31) == 0) && ((B >> 31) == 0)) {
-            return (ALU_in >> 31) == 1;
-        } else if (((A >> 31) == 1) && ((B >> 31) == 1)) {
-            // a negative, b negative
-            return (ALU_in >> 31) == 1;
-        } else if (((A >> 31) == 0) && ((B >> 31) == 1)) {
-            // a positive, b "negative"
-            return 1;
-        } else {
-            // a "negative", b positive
-            return 0;
-        }
+NextPC::NextPC() {
+    this->nextPC = 0;
+}
 
-    case 0b111: // bgeu
-        // return (ALU_in >> 31) == 0;
-        // If a and b are positive
-        if (((A >> 31) == 0) && ((B >> 31) == 0)) {
-            return (ALU_in >> 31) == 0;
-        } else if (((A >> 31) == 1) && ((B >> 31) == 1)) {
-            // a negative, b negative
-            return (ALU_in >> 31) == 0;
-        } else if (((A >> 31) == 0) && ((B >> 31) == 1)) {
-            // a positive, b "negative"
-            return 0;
-        } else {
-            // a "negative", b positive
-            return 1;
-        }
+int NextPC::branch_alu(uint32_t A, uint32_t B, uint32_t funct3) {
+    uint32_t ALU_out =  A - B; // Same hardware as main ALU
+    switch (funct3) {
+        case 0b000: return !ALU_out; // beq
+        case 0b001: return ALU_out; // bne
+        case 0b100: return (ALU_out >> 31) == 1; // blt
+        case 0b101: return (ALU_out >> 31) == 0; // bge
+        case 0b110: return (A < B); // bltu
+        case 0b111: return (A >= B); // bgeu
     }
     return 0;
 }
 
-template <typename T>
-NextPC<T>::NextPC(){
-    this->nextPC = 0;
-}
-
-template <typename T>
-void NextPC<T>::setCurrentPC(T currentPC) {
-    this->nextPC = currentPC;
-}
-
-template <typename T>
-void NextPC<T>::calculateNextPC(T offset, T opcode, T funct3, T A, T B, T mtvec, T interrupt_taken)
-{
-    int branch = 0;
-    switch (opcode)
-    {
-    case JAL: // jal signal
-        this->nextPC += offset;
-        break;
-    case JALR: // jalr signal
-        this->nextPC = A + offset;
-        // std::cout << "got here: " << this->nextPC << std::endl;
-        break;
-    case BTYPE: // B-type signal
-        branch = branch_alu(A, B, funct3);
-        if (branch) {
-            // this->nextPC += (offset << 2);
-            this->nextPC += offset;
-        } else {
-            // no branch
-            this->nextPC += 4;
-        }
-        break;
-    case ECALL: // ECALL / csrrw
-        // inspect funct3 field
-        if (funct3 == 0b000) {
-            // ECALL
-            this->nextPC = mtvec;
-            break;
-        }
-        // csr instruction
-        this->nextPC += 4;
-        break;
-    default: // Next instruction
-        this->nextPC += 4;
-        break;
+uint32_t NextPC::calculateNextPC(uint32_t offset, uint32_t opcode, uint32_t funct3, uint32_t A, uint32_t B, uint32_t mtvec, uint32_t interrupt_taken) {
+    if (interrupt_taken) {return mtvec;}
+    switch (opcode) {
+        case JAL: this->nextPC += offset; break; // JAL signal
+        case JALR: this->nextPC = A + offset; break; // JALR signal
+        case BTYPE: this->nextPC += branch_alu(A, B, funct3) ? offset : 4; break; // B-type signal
+        case ECALL: this->nextPC += (funct3 == 0b000) ? mtvec : 4; break; // ECALL / CSR
+        default: this->nextPC += 4; break; // All other instructions
     }
-    // Check for external interrupts or exceptions
-    if(interrupt_taken) {
-        this->nextPC = mtvec;
-    }
-}
-
-template <typename T>
-T NextPC<T>::getNextPC()
-{
     return this->nextPC;
 }
 
-template class NextPC<uint32_t>;
+class NextPC;
