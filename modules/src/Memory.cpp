@@ -10,16 +10,16 @@ void Memory::write(uint32_t address, uint32_t data, int size)
     switch(size) {
         case BYTE:
             switch (offset) {
-                case 0b00: this->dram[base_addr] = (old_data & 0xffffff00) | (data); break;
-                case 0b01: this->dram[base_addr] = (old_data & 0xffff00ff) | (data << 8); break;
-                case 0b10: this->dram[base_addr] = (old_data & 0xff00ffff) | (data << 16); break;
-                case 0b11: this->dram[base_addr] = (old_data & 0x00ffffff) | (data << 24); break;
+                case 0b00: this->dram[base_addr] = (old_data & 0x00ffffff) | (data << 24); break;
+                case 0b01: this->dram[base_addr] = (old_data & 0xff00ffff) | (data << 16); break;
+                case 0b10: this->dram[base_addr] = (old_data & 0xffff00ff) | (data << 8); break;
+                case 0b11: this->dram[base_addr] = (old_data & 0xffffff00) | (data); break;
             }
             break;
         case HALFWORD:
             switch (offset) {
-                case 0b00: this->dram[base_addr] = (old_data & 0xffff0000) | (data); break;
-                case 0b10: this->dram[base_addr] = (old_data & 0x0000ffff) | (data << 16); break;
+                case 0b00: this->dram[base_addr] = (old_data & 0x0000ffff) | (data << 16); break;
+                case 0b10: this->dram[base_addr] = (old_data & 0xffff0000) | (data); break;
             }
             break;
         case WORD:
@@ -43,15 +43,15 @@ uint32_t Memory::read(uint32_t address, int size)
     switch(size) {
         case BYTE:
             switch(offset) {
-                case 0b00: return (data & 0x000000ff);
-                case 0b01: return (data & 0x0000ff00) >> 8;
-                case 0b10: return (data & 0x00ff0000) >> 16;
-                case 0b11: return (data & 0xff000000) >> 24;
+                case 0b00: return (data & 0xff000000) >> 24;
+                case 0b01: return (data & 0x00ff0000) >> 16;
+                case 0b10: return (data & 0x0000ff00) >> 8;
+                case 0b11: return (data & 0x000000ff);
             }
         case HALFWORD:
             switch(offset) {
-                case 0b00: return (data & 0x0000ffff);
-                case 0b10: return (data & 0xffff0000) >> 16;
+                case 0b00: return (data & 0xffff0000) >> 16;
+                case 0b10: return (data & 0x0000ffff);
             }
         case WORD: // WORD
             return data;

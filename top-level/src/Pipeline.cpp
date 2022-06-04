@@ -3,8 +3,8 @@
 
 void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
-	std::cout << opcode << std::endl;
-	std::cout << "Current Instruction: " << cur_instruction << std::endl;
+	if(cur_instruction == 0) {exit(1);}
+	std::cout << std::hex << "Current Instruction: " << cur_instruction << std::endl;
 	switch (opcode) {
 	case LUI: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
 	case ITYPE: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
@@ -41,6 +41,7 @@ void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immedia
 
 void Pipeline::query_external_interrupt()
 {
+	this->IO_BUS = 0;
 	// Handle User Input (External Hardware Interrupt)
 	if (GetKey(olc::Key::TAB).bPressed)
 	{
@@ -128,6 +129,7 @@ bool Pipeline::OnUserUpdate(float fElapsedTime)
 			rf.write(alu_output, rd);
 			break;
 		case JALR:
+			A = rf.read(rs1);
 			alu_opcode = aluc.getALUoperation(opcode, 0, 0);
 			alu_output = alu.execute(pc_addr, 4, alu_opcode);
 			rf.write(alu_output, rd);

@@ -54,10 +54,10 @@ int main(int argc, char *argv[])
         dram_flash.insert(std::make_pair((uint32_t)(RAM_START + 4*i), data));
     }
 
-    for (auto data : dram_flash) {
-        std::cout << std::hex << data.first << ", " << data.second << std::endl;
-    }
-    exit(1);
+    // for (auto data : dram_flash) {
+    //     std::cout << std::hex << data.first << ", " << data.second << std::endl;
+    // }
+    // exit(1);
 
     // std::cout << std::hex << "Starting\n";
 	Pipeline t89(dram_flash, debug);

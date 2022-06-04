@@ -24,18 +24,18 @@ _start:
     srai a2, a2, 0x001
     lui a2, 0x40000
     srai a2, a2, 0x001
-    lui a2, 0x80000
+    lui a2, 0x80001
     slti a2, a2, 0x001
     lui a2, 0xfffff
     slti a2, a2, 0x001
-    lui a2, 0x80000
+    lui a2, 0x80001
     sltiu a2, a2, 0x001
     addi a1, x0, 0x001
     sltiu a2, a1, 0x002
     addi x0, x0, 0x001
     addi a2, x0, 0x00e
     add a2, a2, a1
-    lui a2, 0x80000
+    lui a2, 0x80001
     add a2, a2, a1
     addi a2, x0, 0x008
     sub a2, a2, a1
@@ -45,9 +45,9 @@ _start:
     sll a2, a2, a1
     slt a2, a1, a2
     slt a2, a2, x0
-    lui a2, 0x80000
+    lui a2, 0x80001
     slt a2, a2, a1
-    lui a2, 0x80000
+    lui a2, 0x80001
     sltu a2, a2, a1
     lui a2, 0xaaaaa
     lui a1, 0x55555
@@ -56,7 +56,7 @@ _start:
     lui a2, 0x00001
     addi a1, x0, 0x001
     srl a2, a2, a1
-    lui a2, 0x80000
+    lui a2, 0x80001
     sra a2, a2, a1
     addi a1, x0, -1
     or a3, a2, a1
