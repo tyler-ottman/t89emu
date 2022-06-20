@@ -1,2 +1,4 @@
 ./top-level/src/vendor/* linguist-vendored
 ./top-level/include/vendor/* linguist-vendored
+./top-level/src/main.cpp linguist-vendored=false
+./top-level/src/Pipeline_GUI.cpp linguist-vendored=false
