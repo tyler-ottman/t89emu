@@ -1,40 +1,102 @@
-OBJ_DIR = ./obj
-SRC_DIR = ./src
-INC_DIR = ./include
-LIB_DIR = ./lib
+#
+# Cross Platform Makefile
+# Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
+#
+# You will need GLFW (http://www.glfw.org):
+# Linux:
+#   apt-get install libglfw-dev
+# Mac OS X:
+#   brew install glfw
+# MSYS2:
+#   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw
+#
+IMGUI_SRC = ./src/vendor
+IMGUI_INC = ./include/vendor
+TOP_LEVEL_SRC = ./src
+TOP_LEVEL_INC = ./include
+COMPONENTS_LIB = ../modules/lib
+COMPONENTS_INC = ../modules/include
 
-CFLAGS = -Wall -std=c++17 -g -O3
-# LDFLAGS += -L../modules/lib -lmodules.a -lX11 -lGL -lpthread -lpng -lstdc++fs
-LDFLAGS = ../modules/lib/modules.a -lX11 -lGL -lpthread -lpng -lstdc++fs
+OBJ_DIR = ./obj
 
 CXX = g++
-INCLUDE += -I $(INC_DIR) -I../modules/include
+CXXFLAGS = -std=c++11 -I$(IMGUI_INC) -I$(IMGUI_INC)/backends # Vendor Include
+CXXFLAGS += -I$(TOP_LEVEL_INC) # Non-Vendor Include
+CXXFLAGS += -I$(COMPONENTS_INC) # CPU Components library
+CXXFLAGS += -g -Wall -Wformat -O3
+LDFLAGS = $(COMPONENTS_LIB)/modules.a
 
-TARGET_NAME = $(LIB_DIR)/pipelinelib.a
-TARGET_OBJS = $(OBJ_DIR)/Pipeline.o
+TARGET_OBJS = $(OBJ_DIR)/main.o
+TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
+TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
+TARGET_OBJS += $(OBJ_DIR)/Pipeline_GUI.o
 
-all: directories $(TARGET_NAME) emulate
+TARGET_NAME = top-level
 
-emulate: $(SRC_DIR)/emulate.cpp $(LIB_DIR)/pipelinelib.a
-	$(CXX) $(SRC_DIR)/emulate.cpp $(CFLAGS) $(INCLUDE) $(LIB_DIR)/pipelinelib.a $(LDFLAGS) -o emulate
+UNAME_S := $(shell uname -s)
+LINUX_GL_LIBS = -lGL
+LIBS =
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
+##---------------------------------------------------------------------
+## OPENGL ES
+##---------------------------------------------------------------------
+
+## This assumes a GL ES library available in the system, e.g. libGLESv2.so
+# CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
+# LINUX_GL_LIBS = -lGLESv2
+
+##---------------------------------------------------------------------
+## BUILD FLAGS PER PLATFORM
+##---------------------------------------------------------------------
+ifeq ($(UNAME_S), Linux) #LINUX
+	ECHO_MESSAGE = "Linux"
+	LIBS += $(LINUX_GL_LIBS) `pkg-config --static --libs glfw3`
+
+	CXXFLAGS += `pkg-config --cflags glfw3`
+	CFLAGS = $(CXXFLAGS)
+endif
+
+ifeq ($(UNAME_S), Darwin) #APPLE
+	ECHO_MESSAGE = "Mac OS X"
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+	LIBS += -L/usr/local/lib -L/opt/local/lib -L/opt/homebrew/lib
+	#LIBS += -lglfw3
+	LIBS += -lglfw
+
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include -I/opt/homebrew/include
+	CFLAGS = $(CXXFLAGS)
+endif
+
+ifeq ($(OS), Windows_NT)
+	ECHO_MESSAGE = "MinGW"
+	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32
+
+	CXXFLAGS += `pkg-config --cflags glfw3`
+	CFLAGS = $(CXXFLAGS)
+endif
+
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
+all: directories $(TARGET_NAME)
+	@echo Build complete for $(ECHO_MESSAGE)
 
 $(TARGET_NAME): $(TARGET_OBJS)
-	ar rv $(TARGET_NAME) $(TARGET_OBJS)
-	ranlib $(TARGET_NAME)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) $(LIBS)
 
-directories: $(OBJ_DIR) $(LIB_DIR)
+$(OBJ_DIR)/%.o: $(TOP_LEVEL_SRC)/%.cpp # main object file
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/%.o: $(IMGUI_SRC)/%.cpp # ImGui frontend object files
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/%.o: $(IMGUI_SRC)/backends/%.cpp # ImGui backend object files
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+directories: $(OBJ_DIR)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-$(LIB_DIR):
-	mkdir -p $(LIB_DIR)
-
 clean:
-	rm -rf $(OBJ_DIR)
-	rm -rf $(TARGET_NAME)
-	rm -rf $(LIB_DIR)
-	rm -rf ./emulate
+	rm -rf $(TARGET_NAME) $(OBJ_DIR)

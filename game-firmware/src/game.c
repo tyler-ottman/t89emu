@@ -1,12 +1,12 @@
 #define VRAM_START 0x40000000
 volatile unsigned int *VIDEO_MEMORY = (unsigned int*)(VRAM_START);
 
-#define WIDTH (int)50
-#define HEIGHT (int)50
+#define WIDTH (int)512
+#define HEIGHT (int)288
 
-#define RED 0xff000000
-#define GREEN 0x00ff0000
-#define BLUE 0x0000ff00
+#define RED 0xff0000ff
+#define GREEN 0xff00ff00
+#define BLUE 0xffff0000
 
 void colorScreen(volatile unsigned int* video_mem, unsigned int color) {
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
@@ -26,16 +26,17 @@ void colorScreen(volatile unsigned int* video_mem, unsigned int color) {
 void colorGradient(volatile unsigned int* video_mem) {
     int color = 0;
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
-        video_mem[i] = color;
+        video_mem[i] = color | 0xff000000;
         color += 256;
     }
 }
 
 // Code set up for WIDTHxHEIGHT pixel monitor with VGA reading from 0x40000000
 int main(void) {
-    colorScreen(VIDEO_MEMORY, 0x00ff0000);
-    // colorScreen(VIDEO_MEMORY, 0xff000000);
-    colorGradient(VIDEO_MEMORY);
-    while(1){}
+    while(1) {
+        colorScreen(VIDEO_MEMORY, 0xffff0000);
+        // colorScreen(VIDEO_MEMORY, 0xff000000);
+        colorGradient(VIDEO_MEMORY);
+    }
     return 0;
 }

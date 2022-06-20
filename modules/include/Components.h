@@ -167,6 +167,7 @@ public:
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
     uint32_t get_changed_pixel();
+    uint32_t* vram = (uint32_t*)calloc(512*288, sizeof(uint32_t));
 };
 
 #endif // MEMORY_H
