@@ -29,7 +29,7 @@ LDFLAGS = $(COMPONENTS_LIB)/modules.a
 TARGET_OBJS = $(OBJ_DIR)/main.o
 TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
 TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
-TARGET_OBJS += $(OBJ_DIR)/Pipeline_GUI.o
+TARGET_OBJS += $(OBJ_DIR)/pipeline.o
 
 TARGET_NAME = top-level
 
@@ -84,13 +84,13 @@ all: directories $(TARGET_NAME)
 $(TARGET_NAME): $(TARGET_OBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) $(LIBS)
 
-$(OBJ_DIR)/%.o: $(TOP_LEVEL_SRC)/%.cpp # main object file
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
 $(OBJ_DIR)/%.o: $(IMGUI_SRC)/%.cpp # ImGui frontend object files
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/%.o: $(IMGUI_SRC)/backends/%.cpp # ImGui backend object files
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/%.o: $(TOP_LEVEL_SRC)/%.cpp # main object file
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 directories: $(OBJ_DIR)
