@@ -5,57 +5,40 @@
 void Memory::write(uint32_t address, uint32_t data, int size)
 {
     int offset = address & 0b11;
-    uint32_t base_addr = address - offset;
-    uint32_t old_data = dram[base_addr];
-
-    if ((address >= 0x40000000) && (address < (0x40000000 + 4 * 512 * 288))) {
-        base_addr = (address - offset - 0x40000000) / 4;
-        old_data = vram[base_addr];
-        switch(size) {
-        case BYTE:
-            switch (offset) {
-                case 0b00: this->vram[base_addr] = (old_data & 0x00ffffff) | (data << 24); break;
-                case 0b01: this->vram[base_addr] = (old_data & 0xff00ffff) | (data << 16); break;
-                case 0b10: this->vram[base_addr] = (old_data & 0xffff00ff) | (data << 8); break;
-                case 0b11: this->vram[base_addr] = (old_data & 0xffffff00) | (data); break;
-            }
-            break;
-        case HALFWORD:
-            switch (offset) {
-                case 0b00: this->vram[base_addr] = (old_data & 0x0000ffff) | (data << 16); break;
-                case 0b10: this->vram[base_addr] = (old_data & 0xffff0000) | (data); break;
-            }
-            break;
-        case WORD:
-            this->vram[base_addr] = data;
-            break;
-        }
-        return;
+    uint32_t* mem_section;
+    uint32_t base_addr;
+    // Which memory section to be accessed
+    if (address < VIDEO_MEMORY_START) {
+        mem_section = this->instruction_memory; // Instruction Memory
+        base_addr = address - offset - INSTRUCTION_MEMORY_START;
+    } else if (address >= DATA_MEMORY_START) {
+        mem_section = this->data_memory; // Data Memory
+        base_addr = address - offset - DATA_MEMORY_START;
+    } else {
+        mem_section = this->video_memory; // Video Memory
+        base_addr = address - offset - VIDEO_MEMORY_START;
     }
+    base_addr /= WORD;
+    uint32_t old_data = mem_section[base_addr];
 
     switch(size) {
         case BYTE:
             switch (offset) {
-                case 0b00: this->dram[base_addr] = (old_data & 0x00ffffff) | (data << 24); break;
-                case 0b01: this->dram[base_addr] = (old_data & 0xff00ffff) | (data << 16); break;
-                case 0b10: this->dram[base_addr] = (old_data & 0xffff00ff) | (data << 8); break;
-                case 0b11: this->dram[base_addr] = (old_data & 0xffffff00) | (data); break;
+                case 0b00: mem_section[base_addr] = (old_data & 0x00ffffff) | (data << 24); break;
+                case 0b01: mem_section[base_addr] = (old_data & 0xff00ffff) | (data << 16); break;
+                case 0b10: mem_section[base_addr] = (old_data & 0xffff00ff) | (data << 8); break;
+                case 0b11: mem_section[base_addr] = (old_data & 0xffffff00) | (data); break;
             }
             break;
         case HALFWORD:
             switch (offset) {
-                case 0b00: this->dram[base_addr] = (old_data & 0x0000ffff) | (data << 16); break;
-                case 0b10: this->dram[base_addr] = (old_data & 0xffff0000) | (data); break;
+                case 0b00: mem_section[base_addr] = (old_data & 0x0000ffff) | (data << 16); break;
+                case 0b10: mem_section[base_addr] = (old_data & 0xffff0000) | (data); break;
             }
             break;
         case WORD:
-            this->dram[base_addr] = data;
+            mem_section[base_addr] = data;
             break;
-    }
-
-    if ((address >= VRAM_START) && (address <= (VRAM_START + VRAM_LEN))) {
-        // VGA module to update pixel in next cycle
-        this->changed_pixel = address;
     }
 }
 
@@ -63,30 +46,22 @@ void Memory::write(uint32_t address, uint32_t data, int size)
 uint32_t Memory::read(uint32_t address, int size)
 {
     int offset = address & 0b11;
-    uint32_t base_addr = address - offset;
-    uint32_t data = this->dram[base_addr];
+    uint32_t* mem_section;
+    uint32_t base_addr;
 
-    if ((address >= 0x40000000) && (address < (0x40000000 + 4 * 512 * 288))) {
-        base_addr = (address - offset - 0x40000000) / 4;
-        data = vram[base_addr];
-        switch(size) {
-        case BYTE:
-            switch(offset) {
-                case 0b00: return (data & 0xff000000) >> 24;
-                case 0b01: return (data & 0x00ff0000) >> 16;
-                case 0b10: return (data & 0x0000ff00) >> 8;
-                case 0b11: return (data & 0x000000ff);
-            }
-        case HALFWORD:
-            switch(offset) {
-                case 0b00: return (data & 0xffff0000) >> 16;
-                case 0b10: return (data & 0x0000ffff);
-            }
-        case WORD: // WORD
-            return data;
-        }
-        return data;
+    // Which memory section to be accessed
+    if (address < VIDEO_MEMORY_START) {
+        mem_section = this->instruction_memory; // Instruction Memory
+        base_addr = address - offset - INSTRUCTION_MEMORY_START;
+    } else if (address >= DATA_MEMORY_START) {
+        mem_section = this->data_memory; // Data Memory
+        base_addr = address - offset - DATA_MEMORY_START;
+    } else {
+        mem_section = this->video_memory; // Video Memory
+        base_addr = address - offset - VIDEO_MEMORY_START;
     }
+    base_addr /= 4;
+    uint32_t data = mem_section[base_addr];
 
     switch(size) {
         case BYTE:
@@ -105,13 +80,6 @@ uint32_t Memory::read(uint32_t address, int size)
             return data;
     }
     return data;
-}
-
-// Remove when new GUI supported
-uint32_t Memory::get_changed_pixel() {
-    uint32_t rtn = this->changed_pixel;
-    this->changed_pixel = 0x00000000; // reset changed pixel state
-    return rtn;
 }
 
 class Memory;

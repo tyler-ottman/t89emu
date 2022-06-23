@@ -2,11 +2,6 @@
 #include <unordered_map>
 #include <vector>
 
-#define VRAM_START 0x40000000    // Beginning of VRAM
-#define WIDTH 50
-#define HEIGHT 50
-#define VRAM_LEN (4 * WIDTH * HEIGHT) // WIDTHxHEIGHT pixels each 4 bytes
-
 // opcodes
 #define LUI   0b0110111
 #define AUIPC 0b0010111
@@ -157,17 +152,21 @@ public:
 #define HALFWORD 2
 #define WORD 4
 
+#define SCREEN_WIDTH 512
+#define SCREEN_HEIGHT 288
+
+#define INSTRUCTION_MEMORY_START    0x00000000 // Beginning of Instruction Memory
+#define VIDEO_MEMORY_START          0x40000000 // Beginning of Video Memory
+#define DATA_MEMORY_START           0x80000000 // Beginning of Data Memory
+
 class Memory
 {
-private:
-    std::unordered_map<uint32_t, uint32_t> dram;
-    uint32_t changed_pixel;
-
 public:
+    uint32_t instruction_memory[WORD * 32000];      // 128 KB Instruction Memory
+    uint32_t data_memory[WORD * 16000];             // 64 KB Data Memory
+    uint32_t video_memory[WORD * SCREEN_WIDTH * SCREEN_HEIGHT]; // 512x288 Video Memory
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
-    uint32_t get_changed_pixel();
-    uint32_t* vram = (uint32_t*)calloc(512*288, sizeof(uint32_t));
 };
 
 #endif // MEMORY_H
