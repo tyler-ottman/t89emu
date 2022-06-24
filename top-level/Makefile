@@ -29,7 +29,7 @@ LDFLAGS = $(COMPONENTS_LIB)/modules.a
 TARGET_OBJS = $(OBJ_DIR)/main.o
 TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
 TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
-TARGET_OBJS += $(OBJ_DIR)/pipeline.o
+TARGET_OBJS += $(OBJ_DIR)/pipeline.o $(OBJ_DIR)/gui.o
 
 TARGET_NAME = top-level
 

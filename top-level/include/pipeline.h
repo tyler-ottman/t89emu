@@ -8,9 +8,6 @@
 
 #include "Components.h"
 
-// #define ROM_START 0x00000000
-// #define RAM_START 0x80000000
-
 class Pipeline {
 private:
 	int interrupt_assert;

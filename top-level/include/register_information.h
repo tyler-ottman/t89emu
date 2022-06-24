@@ -2,7 +2,7 @@
 #include <string>
 #include <stdint.h>
 
-namespace t89 {
+// namespace t89 {
     std::vector<std::pair<std::string, uint32_t>> registers = {
         std::make_pair("zero", 0),
         std::make_pair("ra", 0),
@@ -37,4 +37,4 @@ namespace t89 {
         std::make_pair("t5", 0),
         std::make_pair("t6", 1)
     };
-}
+// }

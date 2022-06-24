@@ -163,7 +163,8 @@ class Memory
 {
 public:
     uint32_t instruction_memory[WORD * 32000];      // 128 KB Instruction Memory
-    uint32_t data_memory[WORD * 16000];             // 64 KB Data Memory
+    // uint32_t data_memory[WORD * 16000];             // 64 KB Data Memory
+    uint32_t data_memory[1048576];
     uint32_t video_memory[WORD * SCREEN_WIDTH * SCREEN_HEIGHT]; // 512x288 Video Memory
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
