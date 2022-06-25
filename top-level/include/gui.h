@@ -42,5 +42,6 @@ public:
     void render_disassembled_code_section();
     void render_io_panel();
     void render_control_panel();
+    void render_memory_viewer();
     void render_frame();
 };

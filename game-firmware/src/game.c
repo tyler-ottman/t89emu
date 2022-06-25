@@ -68,16 +68,14 @@ int main(void)
 {
     while (1)
     {
-        colorScreen(VIDEO_MEMORY, BLUE);
-        colorScreen(VIDEO_MEMORY, GREEN);
+        // colorScreen(VIDEO_MEMORY, BLUE);
+        // colorScreen(VIDEO_MEMORY, GREEN);
         
-        // for (int i = 0; i < 15; i++)
-        //     colorScreen(VIDEO_MEMORY, RED);
-        // colorScreen(VIDEO_MEMORY, RED);
-        // for (int i = 0; i < 15; i++)
-        //     colorScreen(VIDEO_MEMORY, 0x0);
-        // for (int i = 0; i < 15; i++)
-        //     colorScreen(VIDEO_MEMORY, 0x0);
+        for (int i = 0; i < 30; i++)
+            colorScreen(VIDEO_MEMORY, RED);
+        colorScreen(VIDEO_MEMORY, RED);
+        for (int i = 0; i < 30; i++)
+            colorScreen(VIDEO_MEMORY, 0x0);
         
         // colorGradient(VIDEO_MEMORY);
         // drawImage(VIDEO_MEMORY);

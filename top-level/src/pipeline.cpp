@@ -86,7 +86,6 @@ Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
     // }
 
 	// Load Memory
-	std::cout << "There\n";
 	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
 	{
 		dram.write(it->first, it->second, WORD);

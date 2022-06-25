@@ -41,40 +41,17 @@ static int init_application(char* glsl_version) {
 }
 
 gui::gui(uint32_t* video_mem_pointer) {
-    registers = {
-        std::make_pair("zero", 0),
-        std::make_pair("ra", 0),
-        std::make_pair("sp", 0),
-        std::make_pair("gp", 0),
-        std::make_pair("tp", 0),
-        std::make_pair("t0", 0),
-        std::make_pair("t1", 0),
-        std::make_pair("t2", 0),
-        std::make_pair("s0", 0),
-        std::make_pair("s1", 0),
-        std::make_pair("a0", 0),
-        std::make_pair("a1", 0),
-        std::make_pair("a2", 0),
-        std::make_pair("a3", 0),
-        std::make_pair("a4", 0),
-        std::make_pair("a5", 0),
-        std::make_pair("a6", 0),
-        std::make_pair("a7", 0),
-        std::make_pair("s2", 0),
-        std::make_pair("s3", 0),
-        std::make_pair("s4", 0),
-        std::make_pair("s5", 0),
-        std::make_pair("s6", 0),
-        std::make_pair("s7", 0),
-        std::make_pair("s8", 0),
-        std::make_pair("s9", 0),
-        std::make_pair("s10", 0),
-        std::make_pair("s11", 0),
-        std::make_pair("t3", 0),
-        std::make_pair("t4", 0),
-        std::make_pair("t5", 0),
-        std::make_pair("t6", 1)
+    std::vector<std::string> register_names = {
+        "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+        "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+        "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
     };
+
+    for (const std::string &reg_name : register_names) {
+        registers.push_back(std::make_pair(reg_name, 0));
+    }
+    
     // Initialize Texture ID for LCD Display
     // Get GLSL version
     char glsl_version[13];
@@ -85,7 +62,6 @@ gui::gui(uint32_t* video_mem_pointer) {
     window = glfwCreateWindow(1280, 720, "t89-OS", NULL, NULL);
     if (window == NULL)
         exit(EXIT_FAILURE);
-    std::cout << "Kenobi\n";
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
     // Setup Dear ImGui context
@@ -225,6 +201,117 @@ void gui::render_control_panel() {
     }
     ImGui::Checkbox("Step", &is_step_enabled);
     ImGui::Checkbox("Run", &is_run_enabled);
+    ImGui::End();
+}
+
+// Based on https://github.com/ThomasRinsma/dromaius
+void gui::render_memory_viewer() {
+    uint16_t lineBuffer[16];
+    uint8_t charBuffer[16];
+    static char hexBuf[9] = {0x00};
+    int jumpAddr = -1;
+
+    const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
+    const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
+
+    ImGui::Begin("Memory viewer", nullptr);
+
+    if (ImGui::BeginTable("jumps", 2, ImGuiTableFlags_BordersInnerV))
+    {
+        // Manually Typed Address
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        ImGui::SameLine();
+        if (ImGui::Button("<- jump to addr"))
+            jumpAddr = (int)strtol(hexBuf, NULL, 16);
+
+        // Memory Section Button
+        ImGui::TableNextColumn();
+        ImGui::Text("Jump to: ");
+        ImGui::SameLine();
+        if (ImGui::Button("SP"))
+            jumpAddr = 0; // Jump to SP
+        ImGui::SameLine();
+        if (ImGui::Button("PC"))
+            jumpAddr = 0x00000000; // Jump to PC
+        ImGui::SameLine();
+        if (ImGui::Button("VRAM"))
+            jumpAddr = 0x8000; // Jump to VRAM
+        ImGui::EndTable();
+    }
+
+    ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit;
+    if (ImGui::BeginTable("headers", 4, flags))
+    {
+        ImGui::TableSetupColumn("Region", 0, 60);
+        ImGui::TableSetupColumn("Addr", 0, 60);
+        ImGui::TableSetupColumn("", 0, 330);
+        ImGui::TableSetupColumn("", 0, 150);
+        ImGui::TableHeadersRow();
+        ImGui::EndTable();
+    }
+
+    ImVec2 child_size = ImVec2(0, 0);
+    ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
+
+    // Jump to memory section if clicked
+    if (jumpAddr != -1)
+        ImGui::SetScrollY((jumpAddr >> 4) * TEXT_BASE_HEIGHT);
+
+    if (ImGui::BeginTable("mem", 4, flags))
+    {
+        ImGui::TableSetupColumn("1", 0, 60);
+        ImGui::TableSetupColumn("2", 0, 60);
+        ImGui::TableSetupColumn("3", 0, 330);
+        ImGui::TableSetupColumn("4", 0, 150);
+
+        uint32_t mem_section_len = 1048576; // 128 KB of instruction memory
+        ImGuiListClipper clipper;           //(endAddr - startAddr, ImGui::GetTextLineHeight());
+        clipper.Begin(mem_section_len >> 4);
+        while (clipper.Step())
+        {
+            for (int addr = clipper.DisplayStart; addr < clipper.DisplayEnd; ++addr)
+            {
+                ImGui::TableNextRow();
+
+                // Memory Section Name
+                ImGui::TableNextColumn();
+                ImGui::Text("CODE"); // CHANGE LATER
+
+                // 32-bit Memory Address
+                ImGui::TableNextColumn();
+                ImGui::Text("%07X0", addr); // CHANGE LATER
+
+                for (int i = 0; i < 16; ++i)
+                {
+                    // lineBuffer[i] = emu->memory.readByte((addr << 4) + i); COMMENTED HERE
+                    // lineBuffer[i] = rand() % 0xff;
+                    lineBuffer[i] = i + 0x20;
+                    charBuffer[i] = (lineBuffer[i] >= 0x20 && lineBuffer[i] <= 0x7E) ? lineBuffer[i] : '.';
+                }
+
+                // Memory Section to Hex Bytes
+                ImGui::TableNextColumn();
+                ImGui::Text("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                            lineBuffer[0], lineBuffer[1], lineBuffer[2], lineBuffer[3],
+                            lineBuffer[4], lineBuffer[5], lineBuffer[6], lineBuffer[7],
+                            lineBuffer[8], lineBuffer[9], lineBuffer[10], lineBuffer[11],
+                            lineBuffer[12], lineBuffer[13], lineBuffer[14], lineBuffer[15]);
+
+                // Memory Section to Readable ASCII characters
+                ImGui::TableNextColumn();
+                ImGui::Text("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+                            charBuffer[0], charBuffer[1], charBuffer[2], charBuffer[3],
+                            charBuffer[4], charBuffer[5], charBuffer[6], charBuffer[7],
+                            charBuffer[8], charBuffer[9], charBuffer[10], charBuffer[11],
+                            charBuffer[12], charBuffer[13], charBuffer[14], charBuffer[15]);
+            }
+        }
+
+        ImGui::EndTable();
+    }
+    ImGui::EndChild();
     ImGui::End();
 }
 
