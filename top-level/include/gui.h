@@ -9,7 +9,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-// #include "register_information.h"
 #include "Components.h"
 
 // Defined Buttons
@@ -30,14 +29,17 @@ private:
     std::vector<int> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
     uint32_t* vram;
+    uint32_t* rom;
+    uint32_t* ram;
+    RegisterFile* rf;
     ImVec4 clear_color;
     bool is_step_enabled;
     bool is_run_enabled;
+    void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
 public:
-    
-    gui(uint32_t*);
+    gui(uint32_t*, RegisterFile*, uint32_t*, uint32_t*);
     GLFWwindow* get_window();
-    void render_register_bank(RegisterFile&);
+    void render_register_bank();
     void render_lcd_display();
     void render_disassembled_code_section();
     void render_io_panel();

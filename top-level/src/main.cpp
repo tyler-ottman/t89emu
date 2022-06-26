@@ -31,7 +31,9 @@ int main(int argc, char **argv)
     // Initialize Emulator
     Pipeline t89(argv[1], argv[2], debug);
     uint32_t* vram = t89.dram.video_memory;
-    gui interface(vram);
+    uint32_t* rom = t89.dram.instruction_memory;
+    uint32_t* ram = t89.dram.data_memory;
+    gui interface(vram, &t89.rf, rom, ram);
     GLFWwindow* window = interface.get_window();
 
     bool show_demo_window = true;
@@ -41,9 +43,9 @@ int main(int argc, char **argv)
     {
         // Poll and handle events (inputs, window resize, etc.)
         glfwPollEvents();
-        // for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
-        //     t89.next_instruction();
-        // }
+        for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+            t89.next_instruction();
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -54,7 +56,7 @@ int main(int argc, char **argv)
 
         interface.render_memory_viewer();
         interface.render_control_panel();
-        interface.render_register_bank(t89.rf);
+        interface.render_register_bank();
         interface.render_io_panel();
         interface.render_lcd_display();
         // interface.render_disassembled_code_section();

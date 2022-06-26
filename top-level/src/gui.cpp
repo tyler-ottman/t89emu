@@ -40,7 +40,7 @@ static int init_application(char* glsl_version) {
     return 0;
 }
 
-gui::gui(uint32_t* video_mem_pointer) {
+gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint32_t* instruction_memory, uint32_t* data_memory) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -83,13 +83,17 @@ gui::gui(uint32_t* video_mem_pointer) {
 
     is_step_enabled = true;
     is_run_enabled = false;
+
+    rf = register_file_pointer;
+    rom = instruction_memory;
+    ram = data_memory;
 }
 
 GLFWwindow* gui::get_window() {
     return window;
 }
 
-void gui::render_register_bank(RegisterFile& rf) {
+void gui::render_register_bank() {
     // Register Module
     enum ContentsType
     {
@@ -128,7 +132,7 @@ void gui::render_register_bank(RegisterFile& rf) {
             // Register Value
             ImGui::TableSetColumnIndex(1);
             // registers.at(row).second = rand() % 4294967295;
-            sprintf(buf, "0x%08X", rf.read(row));
+            sprintf(buf, "0x%08X", rf->read(row));
             if (contents_type == CT_Text)
                 ImGui::TextUnformatted(buf);
             else if (contents_type == CT_FillButton)
@@ -206,8 +210,7 @@ void gui::render_control_panel() {
 
 // Based on https://github.com/ThomasRinsma/dromaius
 void gui::render_memory_viewer() {
-    uint16_t lineBuffer[16];
-    uint8_t charBuffer[16];
+    
     static char hexBuf[9] = {0x00};
     int jumpAddr = -1;
 
@@ -229,15 +232,16 @@ void gui::render_memory_viewer() {
         // Memory Section Button
         ImGui::TableNextColumn();
         ImGui::Text("Jump to: ");
-        ImGui::SameLine();
-        if (ImGui::Button("SP"))
-            jumpAddr = 0; // Jump to SP
+        
         ImGui::SameLine();
         if (ImGui::Button("PC"))
-            jumpAddr = 0x00000000; // Jump to PC
+            jumpAddr = 0; // Jump to PC
         ImGui::SameLine();
         if (ImGui::Button("VRAM"))
-            jumpAddr = 0x8000; // Jump to VRAM
+            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to VRAM
+        ImGui::SameLine();
+        if (ImGui::Button("SP"))
+            jumpAddr = INSTRUCTION_MEMORY_SIZE + VIDEO_MEMORY_SIZE; // Jump to SP
         ImGui::EndTable();
     }
 
@@ -265,54 +269,70 @@ void gui::render_memory_viewer() {
         ImGui::TableSetupColumn("2", 0, 60);
         ImGui::TableSetupColumn("3", 0, 330);
         ImGui::TableSetupColumn("4", 0, 150);
-
-        uint32_t mem_section_len = 1048576; // 128 KB of instruction memory
-        ImGuiListClipper clipper;           //(endAddr - startAddr, ImGui::GetTextLineHeight());
-        clipper.Begin(mem_section_len >> 4);
-        while (clipper.Step())
-        {
-            for (int addr = clipper.DisplayStart; addr < clipper.DisplayEnd; ++addr)
-            {
-                ImGui::TableNextRow();
-
-                // Memory Section Name
-                ImGui::TableNextColumn();
-                ImGui::Text("CODE"); // CHANGE LATER
-
-                // 32-bit Memory Address
-                ImGui::TableNextColumn();
-                ImGui::Text("%07X0", addr); // CHANGE LATER
-
-                for (int i = 0; i < 16; ++i)
-                {
-                    // lineBuffer[i] = emu->memory.readByte((addr << 4) + i); COMMENTED HERE
-                    // lineBuffer[i] = rand() % 0xff;
-                    lineBuffer[i] = i + 0x20;
-                    charBuffer[i] = (lineBuffer[i] >= 0x20 && lineBuffer[i] <= 0x7E) ? lineBuffer[i] : '.';
-                }
-
-                // Memory Section to Hex Bytes
-                ImGui::TableNextColumn();
-                ImGui::Text("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
-                            lineBuffer[0], lineBuffer[1], lineBuffer[2], lineBuffer[3],
-                            lineBuffer[4], lineBuffer[5], lineBuffer[6], lineBuffer[7],
-                            lineBuffer[8], lineBuffer[9], lineBuffer[10], lineBuffer[11],
-                            lineBuffer[12], lineBuffer[13], lineBuffer[14], lineBuffer[15]);
-
-                // Memory Section to Readable ASCII characters
-                ImGui::TableNextColumn();
-                ImGui::Text("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-                            charBuffer[0], charBuffer[1], charBuffer[2], charBuffer[3],
-                            charBuffer[4], charBuffer[5], charBuffer[6], charBuffer[7],
-                            charBuffer[8], charBuffer[9], charBuffer[10], charBuffer[11],
-                            charBuffer[12], charBuffer[13], charBuffer[14], charBuffer[15]);
-            }
-        }
+        add_memory_section(INSTRUCTION_MEMORY_SIZE, INSTRUCTION_MEMORY_START, rom, "CODE");
+        add_memory_section(VIDEO_MEMORY_SIZE, VIDEO_MEMORY_START, vram, "VRAM");
+        add_memory_section(DATA_MEMORY_SIZE, DATA_MEMORY_START, ram, "DATA");
 
         ImGui::EndTable();
     }
     ImGui::EndChild();
     ImGui::End();
+}
+
+void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* mem_ptr, std::string mem_section_name) {
+    // uint16_t hex_bytes[16];
+    uint8_t hex_bytes[16];
+    uint8_t ascii_bytes[16];
+    uint32_t address_offset = mem_start >> 4;
+    ImGuiListClipper clipper; //(endAddr - startAddr, ImGui::GetTextLineHeight());
+    clipper.Begin(mem_size >> 4);
+    while (clipper.Step())
+    {
+        for (uint32_t addr = clipper.DisplayStart + address_offset; addr < clipper.DisplayEnd + address_offset; ++addr)
+        {
+            ImGui::TableNextRow();
+
+            // Memory Section Name
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", mem_section_name.c_str()); // CHANGE LATER
+
+            // 32-bit Memory Address
+            ImGui::TableNextColumn();
+            ImGui::Text("%07X0", addr); // CHANGE LATER
+
+            for (int i = 0; i < 4; ++i)
+            {
+                // std::cout << mem_ptr[clipper.DisplayStart + i] << std::endl;
+                // std::cout << addr - address_offset << std::endl;
+                uint32_t temp = (addr - address_offset) << 2;
+                hex_bytes[4*i+0] = (mem_ptr[temp + i] & 0xff000000) >> 24;
+                hex_bytes[4*i+1] = (mem_ptr[temp + i] & 0x00ff0000) >> 16;
+                hex_bytes[4*i+2] = (mem_ptr[temp + i] & 0x0000ff00) >> 8;
+                hex_bytes[4*i+3] = (mem_ptr[temp + i] & 0x000000ff);
+
+            }
+
+            for (int i = 0; i < 16; i++) {
+                ascii_bytes[i] = (hex_bytes[i] >= 0x20 && hex_bytes[i] <= 0x7E) ? hex_bytes[i] : '.';
+            }
+
+            // Memory Section to Hex Bytes
+            ImGui::TableNextColumn();
+            ImGui::Text("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                        hex_bytes[0], hex_bytes[1], hex_bytes[2], hex_bytes[3],
+                        hex_bytes[4], hex_bytes[5], hex_bytes[6], hex_bytes[7],
+                        hex_bytes[8], hex_bytes[9], hex_bytes[10], hex_bytes[11],
+                        hex_bytes[12], hex_bytes[13], hex_bytes[14], hex_bytes[15]);
+
+            // Memory Section to Readable ASCII characters
+            ImGui::TableNextColumn();
+            ImGui::Text("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+                        ascii_bytes[0], ascii_bytes[1], ascii_bytes[2], ascii_bytes[3],
+                        ascii_bytes[4], ascii_bytes[5], ascii_bytes[6], ascii_bytes[7],
+                        ascii_bytes[8], ascii_bytes[9], ascii_bytes[10], ascii_bytes[11],
+                        ascii_bytes[12], ascii_bytes[13], ascii_bytes[14], ascii_bytes[15]);
+        }
+    }
 }
 
 void gui::render_disassembled_code_section() {}

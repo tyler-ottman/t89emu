@@ -159,13 +159,16 @@ public:
 #define VIDEO_MEMORY_START          0x40000000 // Beginning of Video Memory
 #define DATA_MEMORY_START           0x80000000 // Beginning of Data Memory
 
+#define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
+#define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB
+#define VIDEO_MEMORY_SIZE (WORD * SCREEN_WIDTH * SCREEN_HEIGHT) // About 590 KB
+
 class Memory
 {
 public:
-    uint32_t instruction_memory[WORD * 32000];      // 128 KB Instruction Memory
-    // uint32_t data_memory[WORD * 16000];             // 64 KB Data Memory
-    uint32_t data_memory[1048576];
-    uint32_t video_memory[WORD * SCREEN_WIDTH * SCREEN_HEIGHT]; // 512x288 Video Memory
+    uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE];      // 128 KB Instruction Memory
+    uint32_t data_memory[DATA_MEMORY_SIZE];
+    uint32_t video_memory[VIDEO_MEMORY_SIZE]; // 512x288 Video Memory
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
 };

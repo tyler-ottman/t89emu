@@ -48,7 +48,6 @@ Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
 
 	// Memory
     std::multimap<uint32_t, uint32_t> dram_flash;
-
     // Flash text section to Memory
     std::ifstream text_input(code_bin, std::ios::binary);
     std::vector<char> text_section(
@@ -84,7 +83,7 @@ Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
     // for (auto data : dram_flash) {
     //     std::cout << std::hex << data.first << ", " << data.second << std::endl;
     // }
-
+	// std::cout << "There\n";
 	// Load Memory
 	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
 	{
