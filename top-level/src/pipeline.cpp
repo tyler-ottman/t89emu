@@ -83,7 +83,6 @@ Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
     // for (auto data : dram_flash) {
     //     std::cout << std::hex << data.first << ", " << data.second << std::endl;
     // }
-	// std::cout << "There\n";
 	// Load Memory
 	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
 	{
@@ -107,11 +106,11 @@ bool Pipeline::next_instruction()
 	// {
 	// 	return true; // Debug Mode
 	// }
-
+	
 	// Fetch Stage
 	uint32_t pc_addr = pc.getPC();						 // Current PC
 	uint32_t cur_instruction = dram.read(pc_addr, WORD); // Current Instruction
-
+	
 	// Decode Stage
 	uint32_t opcode = cur_instruction & 0b1111111;			   // opcode field
 	uint32_t funct3 = (cur_instruction >> 12) & 0b111;		   // funct3 field
@@ -121,7 +120,7 @@ bool Pipeline::next_instruction()
 	uint32_t rd = (cur_instruction >> 7) & 0b11111;			   // Register Desination
 	uint32_t immediate = immgen.getImmediate(cur_instruction); // Instruction Immediate
 	uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;	   // CSR Address
-
+	
 	/******************DEBUG********************/
 	if (this->debug_mode)
 	{

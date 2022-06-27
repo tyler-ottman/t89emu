@@ -108,7 +108,7 @@ void gui::load_disassembled_code(char* pathname) {
 #endif
 }
 
-gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint32_t* instruction_memory, uint32_t* data_memory, uint32_t* program_counter) {
+gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -144,23 +144,64 @@ gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint3
     clear_color = ImVec4(0.00f, 0.55f, 0.60f, 1.00f); // Background color
     glGenTextures(1, &textureID);
 
-    vram = video_mem_pointer;
     buttons = {TAB, W, A, S, D};
     my_tex_w = SCREEN_WIDTH;
     my_tex_h = SCREEN_HEIGHT;
 
-    is_step_enabled = true;
+    is_step_enabled = false;
     is_run_enabled = false;
 
+    // Initialize Emulator
+    // Pipeline t89(code_bin, data_bin, debug);
+    Pipeline t89_emulator(code_bin, data_bin, debug);
+    this->t89 = &t89_emulator;
+    
+
     // GUI needs pointers to emulator parts to probe values
-    rf = register_file_pointer;
-    rom = instruction_memory;
-    ram = data_memory;
-    pc = program_counter;
+    vram = t89->dram.video_memory;
+    rom = t89->dram.instruction_memory;
+    ram = t89->dram.data_memory;
+    pc_ptr = &t89->pc.PC;
+    rf = &t89->rf;
+    load_disassembled_code(disassembled_file);
+
+    if (!debug) {
+        run_debug_application();
+    } else {
+        // Normal application without debug window
+    }
 }
 
-GLFWwindow* gui::get_window() {
-    return window;
+void gui::run_debug_application() {
+     // // Main loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Poll and handle events (inputs, window resize, etc.)
+        glfwPollEvents();
+        // int num_instructions = 0;
+        if (is_run_enabled) {
+            for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+                t89->next_instruction();
+            }
+        }
+        if (is_step_enabled) {
+            t89->next_instruction();
+        }
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // ImGui::ShowDemoWindow(&show_demo_window);
+
+        render_memory_viewer();
+        render_control_panel();
+        render_register_bank();
+        render_io_panel();
+        render_lcd_display();
+        render_disassembled_code_section();
+        render_frame();
+    }
 }
 
 void gui::render_register_bank() {
@@ -271,6 +312,7 @@ void gui::render_control_panel() {
     ImGui::Checkbox("Step", &is_step_enabled);
     
     ImGui::Checkbox("Run", &is_run_enabled);
+    // std::cout << is_run_enabled << std::endl;
     ImGui::End();
 }
 
@@ -403,12 +445,47 @@ void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* me
 
 void gui::render_disassembled_code_section() {
     ImGui::Begin("Disassembly");
+    static char hexBuf[9] = {0x00};
+    if (ImGui::BeginTable("jumps", 1, ImGuiTableFlags_BordersInnerV))
+    {
+        // Manually Typed Address
+        ImGui::TableNextColumn();
+        ImGui::Text("Breakpoint ");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        ImGui::SameLine();
+        if (ImGui::Button("set")) {
+            std::cout << "Breakpoint set at: " << hexBuf << std::endl;
+            uint32_t breakpoint_address = (uint32_t)strtol(hexBuf, NULL, 16);
+            if (std::find(breakpoints.begin(), breakpoints.end(), breakpoint_address) == breakpoints.end()) {
+                // Breakpoint at address not found, add it
+                breakpoints.push_back(breakpoint_address);
+            }
+            for (const uint32_t &breakpoint : breakpoints) {
+                std::cout << breakpoint << std::endl;
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("remove"))
+            std::cout << "Breakpoint removed\n";
+
+        ImGui::EndTable();
+    }
+    ImVec2 child_size = ImVec2(0, 0);
+    ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
+
     std::string disassbled_section;
     for (int i = 0; i < num_disassembled_instructions; i++) {
         // std::cout << "At PC: " << *pc << ": " << disassembled_module[*pc] << std::endl;
         // disassbled_section.append(disassembled_module[*pc + 4*i] + "\n");
-        disassbled_section.append(disassembled_module[4*i] + "\n");
+        if ((uint32_t)(4 * i) == *pc_ptr) {
+            disassbled_section.append(disassembled_module[4*i] + "***\n");
+        } else {
+            disassbled_section.append(disassembled_module[4*i] + "\n");
+        }
     }
     ImGui::Text("%s", disassbled_section.c_str());
+    ImGui::EndChild();
     ImGui::End();
 }

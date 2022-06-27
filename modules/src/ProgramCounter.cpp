@@ -3,7 +3,7 @@
 
 ProgramCounter::ProgramCounter()
 {
-    this->PC = 0;
+    PC = 0;
 }
 
 void ProgramCounter::setPC(uint32_t nextPC)

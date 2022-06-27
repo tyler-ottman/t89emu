@@ -60,6 +60,7 @@ uint32_t Memory::read(uint32_t address, int size)
         mem_section = this->video_memory; // Video Memory
         base_addr = address - offset - VIDEO_MEMORY_START;
     }
+    
     base_addr /= 4;
     uint32_t data = mem_section[base_addr];
 

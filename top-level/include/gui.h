@@ -7,11 +7,13 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <algorithm>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "Components.h"
+#include "pipeline.h"
 
 // Defined Buttons
 #define TAB 512
@@ -32,21 +34,26 @@ private:
     GLFWwindow *window;
     std::vector<int> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
+    Pipeline* t89;
     uint32_t* vram;
     uint32_t* rom;
     uint32_t* ram;
     RegisterFile* rf;
-    uint32_t* pc;
+    uint32_t* pc_ptr;
     ImVec4 clear_color;
-    bool is_step_enabled;
-    bool is_run_enabled;
+    // bool is_step_enabled;
+    // bool is_run_enabled;
     void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
+    void load_disassembled_code(char* path_name);
     std::unordered_map<uint32_t, std::string> disassembled_module;
     int num_disassembled_instructions = 0;
+    bool is_step_enabled;
+    bool is_run_enabled;
 public:
-    gui(uint32_t*, RegisterFile*, uint32_t*, uint32_t*, uint32_t*);
-    GLFWwindow* get_window();
-    void load_disassembled_code(char* path_name);
+    std::vector<uint32_t> breakpoints;
+    // gui(uint32_t*, RegisterFile*, uint32_t*, uint32_t*, uint32_t*);
+    gui(char*, char*, char*, int);
+    void run_debug_application();
     void render_register_bank();
     void render_lcd_display();
     void render_disassembled_code_section();
