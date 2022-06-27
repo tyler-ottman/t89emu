@@ -1,39 +1,31 @@
-#include <stdio.h>
-// #if defined(IMGUI_IMPL_OPENGL_ES2)
-// #include <GLES2/gl2.h>
-// #endif
-// #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <vector>
 #include <utility>
 #include <string>
-#include <stdint.h>
-#include <cmath>
-#include <cfenv>
+// #include <stdint.h>
 #include <iostream>
-#include <map>
-#include <fstream>
 
 #include "pipeline.h"
 #include "gui.h"
 
 int main(int argc, char **argv)
 {
-    if (argc != 4) {
+    if (argc != 5) {
         std::cerr << "Invalid Arguments\n";
         exit(EXIT_FAILURE);
     }
     
     // Debug Mode
-	int debug = 0;
-	if (argc == 4)
-		debug = (atoi(argv[3]) == 1) ? 1 : 0;
+	int debug = (atoi(argv[4]) == 1) ? 1 : 0;
 
     // Initialize Emulator
     Pipeline t89(argv[1], argv[2], debug);
     uint32_t* vram = t89.dram.video_memory;
     uint32_t* rom = t89.dram.instruction_memory;
     uint32_t* ram = t89.dram.data_memory;
-    gui interface(vram, &t89.rf, rom, ram);
+    gui interface(vram, &t89.rf, rom, ram, &t89.pc.PC);
+    interface.load_disassembled_code(argv[3]);
+    
+    // exit(EXIT_SUCCESS);
     GLFWwindow* window = interface.get_window();
 
     bool show_demo_window = true;
@@ -59,7 +51,7 @@ int main(int argc, char **argv)
         interface.render_register_bank();
         interface.render_io_panel();
         interface.render_lcd_display();
-        // interface.render_disassembled_code_section();
+        interface.render_disassembled_code_section();
         interface.render_frame();
     }
 

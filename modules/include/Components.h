@@ -57,10 +57,8 @@ public:
 
 class ProgramCounter
 {
-private:
-    uint32_t PC;
-
 public:
+    uint32_t PC;
     ProgramCounter();
     void setPC(uint32_t);
     uint32_t getPC();

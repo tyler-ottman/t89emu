@@ -1,5 +1,6 @@
 CXX = riscv32-unknown-elf-gcc
 OBJCOPY = riscv32-unknown-elf-objcopy
+OBJDUMP = riscv32-unknown-elf-objdump
 
 OBJ_DIR = ./obj
 SRC_DIR = ./src
@@ -8,7 +9,7 @@ INC_DIR = ./include
 
 LDFILE = ./t89-linker.ld
 INCLUDE = -I $(INC_DIR)
-CFLGAGS = -ffreestanding -nostdlib
+CFLAGS = -ffreestanding -nostdlib -O2
 LDFLAGS = -T $(LDFILE) -nostartfiles
 OBJCOPY_FLAGS = -O binary
 
@@ -18,9 +19,10 @@ TARGET_OBJS = $(OBJ_DIR)/crt0.o $(OBJ_DIR)/game.o
 all: directories $(BIN_DIR)/$(TARGET_NAME)
 
 $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
-	$(CXX) $(LDFLAGS) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME).elf $(CFLGAGS)
+	$(CXX) $(LDFLAGS) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME).elf $(CFLAGS)
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .text $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).code
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .data $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).data
+	$(OBJDUMP) -d ./bin/game.elf -M no-aliases > ./bin/game.disassembly
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@

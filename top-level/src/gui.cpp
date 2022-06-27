@@ -40,7 +40,75 @@ static int init_application(char* glsl_version) {
     return 0;
 }
 
-gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint32_t* instruction_memory, uint32_t* data_memory) {
+void gui::load_disassembled_code(char* pathname) {
+#ifdef DISASSEMBLER_IMPL_STRING_PARSE
+    // Read Disassembled code
+    std::vector<std::string> disassembled_code;
+    std::fstream fd;
+    std::string str;
+    std::string function_name;
+    bool add_function_name = false;
+    std::string comment = " # ";
+    size_t found;
+    fd.open(pathname);
+    for (int i = 0; i < 5; i++) // Clear lines before assembly
+        std::getline(fd, str);
+    while (std::getline(fd, str)) {
+        found = str.find(" # ");
+        if (str.size() == 0) continue;                          // Empty Lines
+        if (found != std::string::npos) 
+            str = str.substr(0, found);                         // Remove Comments
+        if (str.at(str.size() - 1) == ':') {
+            str = str.substr(str.find("<"), str.find(">"));     // Format Function Name Line
+            function_name = str;
+            add_function_name = true;
+        }
+
+        // Tokenize Lines
+        std::vector<std::string> tokens;
+        std::string token = "";
+        for (const char &c : str) {
+            if (c == ' ' || c == '\t') {
+                if (token.size() != 0) // Ignore Multiple Whitespace
+                    tokens.push_back(token);
+                token = "";
+            } else {
+                token.push_back(c);
+            }
+        }
+        if (token.size() != 0)
+            tokens.push_back(token); // End of line token
+
+        switch(tokens.size()) {
+            case 4: // Instructions No Jump
+            case 5: // Instructions With Jump
+                str = tokens[0] + " " + tokens[2] + " " + tokens[3];
+                if (add_function_name) {
+                    add_function_name = false;
+                    str = str + " " + function_name.substr(0, function_name.size()-1);
+                }
+                num_disassembled_instructions++;
+                disassembled_code.push_back(str);
+                break; // Instruction With Jump      
+        }
+    }
+
+    // Upload disassembled file for disassembly module
+    for (const std::string &disassembled_line: disassembled_code) {
+        // Extract address
+        int find = disassembled_line.find(":");
+        std::string address_string = "0x" + disassembled_line.substr(0, find);
+        uint32_t address = std::stoul(address_string, nullptr, 16); 
+        disassembled_module.insert(std::make_pair(address, disassembled_line));
+    }
+#elif DISASSMELBER_IMPL_HEX
+    // Future Disassembler Implementation
+#else
+    // C De-compiler feature in future
+#endif
+}
+
+gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint32_t* instruction_memory, uint32_t* data_memory, uint32_t* program_counter) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -84,9 +152,11 @@ gui::gui(uint32_t* video_mem_pointer, RegisterFile* register_file_pointer, uint3
     is_step_enabled = true;
     is_run_enabled = false;
 
+    // GUI needs pointers to emulator parts to probe values
     rf = register_file_pointer;
     rom = instruction_memory;
     ram = data_memory;
+    pc = program_counter;
 }
 
 GLFWwindow* gui::get_window() {
@@ -176,11 +246,6 @@ void gui::render_lcd_display() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, my_tex_w, my_tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, vram);
     ImGui::Image((void *)(intptr_t)textureID, ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
     ImGui::End();
-
-    // Current Instruction (Disassembled Output Module)
-    ImGui::Begin("Current Instruction");
-    ImGui::Text("Here it is");
-    ImGui::End();
 }
 
 void gui::render_frame() {
@@ -195,15 +260,16 @@ void gui::render_frame() {
 }
 
 void gui::render_control_panel() {
+    is_step_enabled = false;
     ImGui::Begin("Control Panel");
     if (is_step_enabled == true)
     {
         // Step only enabled for 1 cycle
-        // t89.next_instruction();
         is_step_enabled = false;
         // std::cout << "Vram: " << vram[0] << "\n";
     }
     ImGui::Checkbox("Step", &is_step_enabled);
+    
     ImGui::Checkbox("Run", &is_run_enabled);
     ImGui::End();
 }
@@ -335,4 +401,14 @@ void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* me
     }
 }
 
-void gui::render_disassembled_code_section() {}
+void gui::render_disassembled_code_section() {
+    ImGui::Begin("Disassembly");
+    std::string disassbled_section;
+    for (int i = 0; i < num_disassembled_instructions; i++) {
+        // std::cout << "At PC: " << *pc << ": " << disassembled_module[*pc] << std::endl;
+        // disassbled_section.append(disassembled_module[*pc + 4*i] + "\n");
+        disassbled_section.append(disassembled_module[4*i] + "\n");
+    }
+    ImGui::Text("%s", disassbled_section.c_str());
+    ImGui::End();
+}
