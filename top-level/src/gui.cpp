@@ -120,7 +120,7 @@ gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
         registers.push_back(std::make_pair(reg_name, 0));
     }
     
-    // Initialize Texture ID for LCD Display
+    // Initialize Texture ID for VRAM
     // Get GLSL version
     char glsl_version[13];
     if (init_application(glsl_version))
@@ -165,7 +165,7 @@ gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
     rf = &t89->rf;
     load_disassembled_code(disassembled_file);
 
-    if (!debug) {
+    if (debug) {
         run_debug_application();
     } else {
         // Normal application without debug window
@@ -180,9 +180,14 @@ void gui::run_debug_application() {
         glfwPollEvents();
         // int num_instructions = 0;
         if (is_run_enabled) {
-            for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+            int num_instructions = 0;
+            while ((num_instructions < INSTRUCTIONS_PER_FRAME) && (std::find(breakpoints.begin(), breakpoints.end(), *pc_ptr) == breakpoints.end())) {
                 t89->next_instruction();
+                num_instructions++;
             }
+            // for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+            //     t89->next_instruction();
+            // }
         }
         if (is_step_enabled) {
             t89->next_instruction();
@@ -195,11 +200,12 @@ void gui::run_debug_application() {
         // ImGui::ShowDemoWindow(&show_demo_window);
 
         render_memory_viewer();
-        render_control_panel();
+        
         render_register_bank();
         render_io_panel();
         render_lcd_display();
         render_disassembled_code_section();
+        render_control_panel();
         render_frame();
     }
 }
@@ -275,7 +281,7 @@ void gui::render_io_panel() {
 
 void gui::render_lcd_display() {
     // VRAM Module
-    ImGui::Begin("LCD Display");
+    ImGui::Begin("VRAM Module");
     ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
     ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
     ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
@@ -322,7 +328,7 @@ void gui::render_memory_viewer() {
     static char hexBuf[9] = {0x00};
     int jumpAddr = -1;
 
-    const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
+    // const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
     const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
 
     ImGui::Begin("Memory viewer", nullptr);
@@ -334,7 +340,7 @@ void gui::render_memory_viewer() {
         ImGui::SetNextItemWidth(100);
         ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
         ImGui::SameLine();
-        if (ImGui::Button("<- jump to addr"))
+        if (ImGui::Button("go to addr"))
             jumpAddr = (int)strtol(hexBuf, NULL, 16);
 
         // Memory Section Button
@@ -388,7 +394,6 @@ void gui::render_memory_viewer() {
 }
 
 void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* mem_ptr, std::string mem_section_name) {
-    // uint16_t hex_bytes[16];
     uint8_t hex_bytes[16];
     uint8_t ascii_bytes[16];
     uint32_t address_offset = mem_start >> 4;
@@ -417,7 +422,6 @@ void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* me
                 hex_bytes[4*i+1] = (mem_ptr[temp + i] & 0x00ff0000) >> 16;
                 hex_bytes[4*i+2] = (mem_ptr[temp + i] & 0x0000ff00) >> 8;
                 hex_bytes[4*i+3] = (mem_ptr[temp + i] & 0x000000ff);
-
             }
 
             for (int i = 0; i < 16; i++) {
@@ -444,6 +448,7 @@ void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* me
 }
 
 void gui::render_disassembled_code_section() {
+    const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
     ImGui::Begin("Disassembly");
     static char hexBuf[9] = {0x00};
     if (ImGui::BeginTable("jumps", 1, ImGuiTableFlags_BordersInnerV))
@@ -454,38 +459,59 @@ void gui::render_disassembled_code_section() {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(100);
         ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        uint32_t breakpoint_address = (uint32_t)strtol(hexBuf, NULL, 16);
         ImGui::SameLine();
         if (ImGui::Button("set")) {
-            std::cout << "Breakpoint set at: " << hexBuf << std::endl;
-            uint32_t breakpoint_address = (uint32_t)strtol(hexBuf, NULL, 16);
             if (std::find(breakpoints.begin(), breakpoints.end(), breakpoint_address) == breakpoints.end()) {
                 // Breakpoint at address not found, add it
                 breakpoints.push_back(breakpoint_address);
             }
-            for (const uint32_t &breakpoint : breakpoints) {
-                std::cout << breakpoint << std::endl;
-            }
         }
         ImGui::SameLine();
-        if (ImGui::Button("remove"))
-            std::cout << "Breakpoint removed\n";
-
+        if (ImGui::Button("remove")) {
+            for (auto i = breakpoints.begin(); i != breakpoints.end(); i++) {
+                if (*i == breakpoint_address) {
+                    breakpoints.erase(i);
+                    break;
+                }
+            }
+        }
         ImGui::EndTable();
     }
     ImVec2 child_size = ImVec2(0, 0);
     ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
 
-    std::string disassbled_section;
+    // std::string disassambled_section;
     for (int i = 0; i < num_disassembled_instructions; i++) {
-        // std::cout << "At PC: " << *pc << ": " << disassembled_module[*pc] << std::endl;
-        // disassbled_section.append(disassembled_module[*pc + 4*i] + "\n");
-        if ((uint32_t)(4 * i) == *pc_ptr) {
-            disassbled_section.append(disassembled_module[4*i] + "***\n");
-        } else {
-            disassbled_section.append(disassembled_module[4*i] + "\n");
+        char txt_green[4] = "<--";
+        std::string disassembled_line = disassembled_module[4 * i];
+        // Determine if breakpoint should be printed
+        if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
+            int space_index = disassembled_module[4 * i].find(' ');
+            disassembled_line[space_index] = '*';
         }
+        if ((uint32_t)(4 * i) == *pc_ptr) { // Code at current line, draw green arrow
+            if (is_step_enabled) {
+                ImGui::SetScrollY(((4*i) >> 2) * TEXT_BASE_HEIGHT);
+            }
+            ImGui::Text("%s", disassembled_line.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0,255,0,255));
+            ImGui::SameLine();
+            ImGui::Text("%s", txt_green);
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::Text("%s", disassembled_line.c_str());
+        }
+
+        // Add/Remove Breakpoint symbol
+        if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
+            // Determine if breakpoint needs to be added or removed
+
+        }
+        
     }
-    ImGui::Text("%s", disassbled_section.c_str());
     ImGui::EndChild();
     ImGui::End();
 }
+
+// export PATH=/opt/riscv32/bin:$PATH

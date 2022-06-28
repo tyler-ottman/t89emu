@@ -65,11 +65,15 @@ int main(void)
         // colorScreen(VIDEO_MEMORY, BLUE);
         // colorScreen(VIDEO_MEMORY, GREEN);
         
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
             colorScreen(VIDEO_MEMORY, GREEN);
         // colorScreen(VIDEO_MEMORY, RED);
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
             colorScreen(VIDEO_MEMORY, 0x0);
+        for (int i = 0; i < 10; i++)
+            colorScreen(VIDEO_MEMORY, BLUE);
+        for (int i = 0; i < 10; i++)
+            colorScreen(VIDEO_MEMORY, 0xff00ffff);
         
         // colorGradient(VIDEO_MEMORY);
         // drawImage(VIDEO_MEMORY);

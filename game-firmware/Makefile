@@ -9,7 +9,7 @@ INC_DIR = ./include
 
 LDFILE = ./t89-linker.ld
 INCLUDE = -I $(INC_DIR)
-CFLAGS = -ffreestanding -nostdlib -O2
+CFLAGS = -ffreestanding -nostdlib
 LDFLAGS = -T $(LDFILE) -nostartfiles
 OBJCOPY_FLAGS = -O binary
 

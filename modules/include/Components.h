@@ -164,9 +164,9 @@ public:
 class Memory
 {
 public:
-    uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE];      // 128 KB Instruction Memory
-    uint32_t data_memory[DATA_MEMORY_SIZE];
-    uint32_t video_memory[VIDEO_MEMORY_SIZE]; // 512x288 Video Memory
+    uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE] = { 0 };      // 128 KB Instruction Memory
+    uint32_t data_memory[DATA_MEMORY_SIZE] = { 0 };
+    uint32_t video_memory[VIDEO_MEMORY_SIZE] = { 0 }; // 512x288 Video Memory
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
 };

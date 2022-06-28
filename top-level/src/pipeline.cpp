@@ -122,10 +122,10 @@ bool Pipeline::next_instruction()
 	uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;	   // CSR Address
 	
 	/******************DEBUG********************/
-	if (this->debug_mode)
-	{
-		this->debug_pre_execute(opcode, funct3, funct7, rs1, rs2, rd, immediate, csr_addr, cur_instruction);
-	}
+	// if (this->debug_mode)
+	// {
+	// 	this->debug_pre_execute(opcode, funct3, funct7, rs1, rs2, rd, immediate, csr_addr, cur_instruction);
+	// }
 	/******************DEBUG********************/
 
 	// Execution flow dependent on instrution type
@@ -194,10 +194,10 @@ bool Pipeline::next_instruction()
 	pc.setPC(nextpc.calculateNextPC(immediate, opcode, funct3, A, B, csr.read_csr(MTVEC), trap_taken));
 
 	/******************DEBUG********************/
-	if (this->debug_mode)
-	{
-		this->debug_post_execute(opcode, rd, immediate, rf.read(rd), rf.read(rs2), rf.read(rs1), pc.getPC());
-	}
+	// if (this->debug_mode)
+	// {
+	// 	this->debug_post_execute(opcode, rd, immediate, rf.read(rd), rf.read(rs2), rf.read(rs1), pc.getPC());
+	// }
 	/******************DEBUG********************/
 
 	return true;
