@@ -131,12 +131,10 @@ gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
     if (window == NULL)
         exit(EXIT_FAILURE);
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
+    // glfwSwapInterval(1); // Enable vsync
+    IMGUI_CHECKVERSION();    // Setup Dear ImGui context
     ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    (void)io;
+    
     ImGui::StyleColorsClassic(); // Setup Dear ImGui style
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -197,6 +195,7 @@ void gui::run_debug_application() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // bool show_demo_window = true;
         // ImGui::ShowDemoWindow(&show_demo_window);
 
         render_memory_viewer();

@@ -101,11 +101,6 @@ bool Pipeline::next_instruction()
 		this->interrupt_assert = 0;
 		trap_taken = 1;
 	}
-
-	// if (this->debug_mode)
-	// {
-	// 	return true; // Debug Mode
-	// }
 	
 	// Fetch Stage
 	uint32_t pc_addr = pc.getPC();						 // Current PC
