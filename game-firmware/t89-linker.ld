@@ -9,7 +9,7 @@ MEMORY
 
 SECTIONS
 {
-    /* PROVIDE( __stack_top = ORIGIN(RAM) + LENGTH(RAM)); */
+    PROVIDE( __stack_top = ORIGIN(RAM) + LENGTH(RAM));
 
     /* Boot code, user code, read only data in ROM */
     .text :
@@ -17,6 +17,7 @@ SECTIONS
         . = ALIGN(4);
         _stext = .; /* Start of .text */
         *(.init*)   /* .init section */
+        *(.vectortable*)
         *(.text*)   /* user code */
         _etext = .; /* End of .text */
         

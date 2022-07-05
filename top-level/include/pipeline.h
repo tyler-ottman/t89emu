@@ -17,7 +17,6 @@ private:
 
 	ALU alu;
 	ALUControlUnit aluc;
-	CSR csr;
 	ImmediateGenerator immgen;
 	// Memory dram;
 	MemControlUnit mcu;
@@ -33,6 +32,7 @@ public:
 	RegisterFile rf;
 	Memory dram;
 	ProgramCounter pc;
+	CSR csr;
 };
 
 #endif // PIPELINE_H

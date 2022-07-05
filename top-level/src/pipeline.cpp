@@ -64,25 +64,6 @@ Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
         dram_flash.insert(std::make_pair((uint32_t)(INSTRUCTION_MEMORY_START + 4*i), instruction));
     }
 
-    // Flash data segment
-    std::ifstream data_input(data_bin, std::ios::binary);
-    std::vector<char> data_section(
-         (std::istreambuf_iterator<char>(data_input)),
-         (std::istreambuf_iterator<char>()));
-    data_input.close();
-    int num_data = data_section.size() / 4;    
-    for (int i = 0; i < num_data; i++) {
-        // Preliminary 32-bit instruction
-        uint32_t data = ((data_section[4*i+3] << 24) & 0xff000000) |
-                        ((data_section[4*i+2] << 16) & 0x00ff0000) |
-                        ((data_section[4*i+1] << 8)  & 0x0000ff00) |
-                        ((data_section[4*i+0])       & 0x000000ff);
-        dram_flash.insert(std::make_pair((uint32_t)(DATA_MEMORY_START + 4*i), data));
-    }
-
-    // for (auto data : dram_flash) {
-    //     std::cout << std::hex << data.first << ", " << data.second << std::endl;
-    // }
 	// Load Memory
 	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
 	{
@@ -173,13 +154,25 @@ bool Pipeline::next_instruction()
 			rf.write(alu_output, rd);
 			break;
 		case ECALL:
-			funct3 = (cur_instruction >> 12) & 0b111;
+			// funct3 = (cur_instruction >> 12) & 0b111;
+			
 			switch(funct3) {
 				case 0b000: // ECALL
 					trap_taken = 1;
 					break;
+				case 0b001: // CSRRW
+					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
+					csr.write_csr(csr_addr, rf.read(rs1)); // Store value of rs1 into CSR
+					break;
+				case 0b010: // CSRRS
+					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
+					if (rs1 != 0) csr.write_csr(csr_addr, rf.read(rs1) | csr.read_csr(csr_addr)); // Use rs1 as a bit mask to set CSR bits
+					break;
+				case 0b011: // CSRRC
+					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
+					if (rs1 != 0) csr.write_csr(csr_addr, (!rf.read(rs1)) & csr.read_csr(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
 				default: // CSR instruction
-					// Later
+					// Immediate CSR Instructions not yet supported
 					break;
 			}
 			break;

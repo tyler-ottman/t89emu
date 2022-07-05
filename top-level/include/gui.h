@@ -58,5 +58,6 @@ public:
     void render_io_panel();
     void render_control_panel();
     void render_memory_viewer();
+    void render_csr_bank();
     void render_frame();
 };

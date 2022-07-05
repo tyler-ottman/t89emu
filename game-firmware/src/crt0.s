@@ -1,10 +1,15 @@
 .section .init
 .global _start
 _start:
-    lui sp, 0x8001f
-    addi a5, a5, 1024
-    add sp, sp, -4 # sp = top of RAM = 0x80ffffff
+    la sp, __stack_top                  # Load stack pointer
+    addi sp, sp, -4
+    .option push
+    .option norelax
+	la gp, __global_pointer$            # Load global pointer
+    .option pop
 
-    call load_ram
+    la a0, _interrupt_service_routine   # Load Address of ISR
+    csrw mtvec, a0
 
-    call main
+    call load_ram                       # Load data to RAM
+    call main                           # OS main routine

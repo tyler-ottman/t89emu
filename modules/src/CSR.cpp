@@ -3,7 +3,7 @@
 
 CSR::CSR(){
     this->mstatus = 0;
-    this->mtvec = 0; // To be decided
+    this->mtvec = 0;
     this->mie = 0;
     this->mip = 0;
     this->mcause = 0;

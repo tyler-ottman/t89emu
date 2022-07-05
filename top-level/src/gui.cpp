@@ -201,6 +201,7 @@ void gui::run_debug_application() {
         render_memory_viewer();
         
         render_register_bank();
+        render_csr_bank();
         render_io_panel();
         render_lcd_display();
         render_disassembled_code_section();
@@ -510,6 +511,60 @@ void gui::render_disassembled_code_section() {
         
     }
     ImGui::EndChild();
+    ImGui::End();
+}
+
+void gui::render_csr_bank() {
+    // Register Module
+    enum ContentsType
+    {
+        CT_Text,
+        CT_FillButton
+    };
+    static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+    static bool display_headers = true;
+    static int contents_type = CT_Text;
+
+    std::vector<int> csr_address = {MSTATUS, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
+    std::vector<std::string> csr_name = {"mstatus", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
+
+    ImGui::Begin("CSR");
+    if (ImGui::BeginTable("CSRs", 2, flags))
+    {
+        // Display headers so we can inspect their interaction with borders.
+        // (Headers are not the main purpose of this section of the demo, so we are not elaborating on them too much. See other sections for details)
+        if (display_headers)
+        {
+            ImGui::TableSetupColumn("Register Name");
+            ImGui::TableSetupColumn("Value");
+            ImGui::TableHeadersRow();
+        }
+
+        for (size_t row = 0; row < csr_address.size(); row++)
+        {
+            // CSR Entry
+            ImGui::TableNextRow();
+
+            // CSR Name
+            ImGui::TableSetColumnIndex(0);
+            char buf[32];
+            sprintf(buf, "%s", csr_name.at(row).c_str());
+            if (contents_type == CT_Text)
+                ImGui::TextUnformatted(buf);
+            else if (contents_type == CT_FillButton)
+                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+
+            // CSR Value
+            ImGui::TableSetColumnIndex(1);
+            // registers.at(row).second = rand() % 4294967295;
+            sprintf(buf, "0x%08X", t89->csr.read_csr(csr_address.at(row)));
+            if (contents_type == CT_Text)
+                ImGui::TextUnformatted(buf);
+            else if (contents_type == CT_FillButton)
+                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+        }
+        ImGui::EndTable();
+    }
     ImGui::End();
 }
 

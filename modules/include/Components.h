@@ -123,8 +123,7 @@ public:
 
 class CSR
 {
-
-private:
+public:
     uint32_t mstatus;
     uint32_t mtvec;
     uint32_t mie;
@@ -134,8 +133,6 @@ private:
     uint32_t mscratch;
     uint32_t mtval;
     uint32_t mcycles;
-
-public:
     CSR();
     uint32_t read_csr(uint32_t);
     void write_csr(uint32_t, uint32_t);

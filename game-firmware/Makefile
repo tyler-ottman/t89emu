@@ -9,12 +9,12 @@ INC_DIR = ./include
 
 LDFILE = ./t89-linker.ld
 INCLUDE = -I $(INC_DIR)
-CFLAGS = -ffreestanding -nostdlib
+CFLAGS = -ffreestanding
 LDFLAGS = -T $(LDFILE) -nostartfiles
 OBJCOPY_FLAGS = -O binary
 
 TARGET_NAME = game
-TARGET_OBJS = $(OBJ_DIR)/crt0.o $(OBJ_DIR)/game.o
+TARGET_OBJS = $(OBJ_DIR)/crt0.o $(OBJ_DIR)/bootup.o $(OBJ_DIR)/interrupt.o $(OBJ_DIR)/game.o
 
 all: directories $(BIN_DIR)/$(TARGET_NAME)
 
@@ -23,6 +23,7 @@ $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .text $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).code
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .data $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).data
 	$(OBJDUMP) -d ./bin/game.elf -M no-aliases > ./bin/game.disassembly
+	cat ./bin/game.code ./bin/game.data > ./bin/game.bin
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
