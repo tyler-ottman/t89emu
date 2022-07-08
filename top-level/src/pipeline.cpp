@@ -39,7 +39,7 @@ void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immedia
 	}
 }
 
-Pipeline::Pipeline(char* code_bin, char* data_bin, int debug = 0)
+Pipeline::Pipeline(char* code_bin, int debug = 0)
 {
 	this->interrupt_assert = 0;
 	this->IO_BUS = 0;	 // 32 bit IO bus

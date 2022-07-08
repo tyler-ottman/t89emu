@@ -50,7 +50,7 @@ private:
     std::vector<uint32_t> breakpoints;
 public:
     // gui(uint32_t*, RegisterFile*, uint32_t*, uint32_t*, uint32_t*);
-    gui(char*, char*, char*, int);
+    gui(char*, char*, int);
     void run_debug_application();
     void render_register_bank();
     void render_lcd_display();

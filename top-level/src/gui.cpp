@@ -108,7 +108,7 @@ void gui::load_disassembled_code(char* pathname) {
 #endif
 }
 
-gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
+gui::gui(char* code_bin, char* disassembled_file, int debug) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -151,7 +151,7 @@ gui::gui(char* code_bin, char* data_bin, char* disassembled_file, int debug) {
 
     // Initialize Emulator
     // Pipeline t89(code_bin, data_bin, debug);
-    Pipeline t89_emulator(code_bin, data_bin, debug);
+    Pipeline t89_emulator(code_bin, debug);
     this->t89 = &t89_emulator;
     
 
@@ -492,7 +492,7 @@ void gui::render_disassembled_code_section() {
         }
         if ((uint32_t)(4 * i) == *pc_ptr) { // Code at current line, draw green arrow
             if (is_step_enabled) {
-                ImGui::SetScrollY(((4*i) >> 2) * TEXT_BASE_HEIGHT);
+                ImGui::SetScrollY((((4*i) >> 2) - 7) * TEXT_BASE_HEIGHT);
             }
             ImGui::Text("%s", disassembled_line.c_str());
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0,255,0,255));

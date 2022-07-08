@@ -3,14 +3,14 @@
 
 int main(int argc, char **argv)
 {
-    if (argc != 5) {
+    if (argc != 4) {
         std::cerr << "Invalid Arguments\n";
         exit(EXIT_FAILURE);
     }
     
     // Debug Mode
-	int debug = (atoi(argv[4]) == 1) ? 1 : 0;
-    gui interface(argv[1], argv[2], argv[3], debug);
+	int debug = (atoi(argv[3]) == 1) ? 1 : 0;
+    gui interface(argv[1], argv[2], debug);
 
     return 0;
 }

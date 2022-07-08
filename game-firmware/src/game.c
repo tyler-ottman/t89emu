@@ -1,4 +1,5 @@
 #define VRAM_START 0x40000000
+#define USELESS_VAR 0x50000000
 volatile unsigned int *VIDEO_MEMORY = (unsigned int *)(VRAM_START);
 
 #define WIDTH (int)512
@@ -8,6 +9,7 @@ volatile unsigned int *VIDEO_MEMORY = (unsigned int *)(VRAM_START);
 #define GREEN 0xff00ff00
 #define BLUE 0xffff0000
 
+int c = USELESS_VAR;
 void colorScreen(volatile unsigned int *video_mem, unsigned int color)
 {
     // for (int i = 0; i < WIDTH * HEIGHT; i++) {

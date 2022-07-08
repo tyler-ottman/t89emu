@@ -13,3 +13,6 @@ _start:
 
     call load_ram                       # Load data to RAM
     call main                           # OS main routine
+
+_spin:
+    jal _spin
