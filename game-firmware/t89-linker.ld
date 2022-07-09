@@ -41,7 +41,7 @@ SECTIONS
         _edata = .;
     } > RAM
 
-    .bss (NOLOAD):
+    .bss :
     {
         . = ALIGN(4);
         _sbss = .; /* Start of .bss */
@@ -50,4 +50,6 @@ SECTIONS
         . = ALIGN(4);
         _ebss = .; /* End of .bss */
     } > RAM
+
+    _heapbase = MAX(_edata, _ebss);
 }
