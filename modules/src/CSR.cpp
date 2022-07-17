@@ -2,20 +2,24 @@
 #include "Components.h"
 
 CSR::CSR(){
-    this->mstatus = 0;
-    this->mtvec = 0;
-    this->mie = 0;
-    this->mip = 0;
-    this->mcause = 0;
-    this->mepc = 0;
-    this->mscratch = 0;
-    this->mtval = 0;
-    this->mcycles = 0;
+    // Supported ISA
+    // U extension, S extension, N extension, I extension
+    misa = (1 << 20) | (1 << 18) | (1 << 13) | (1 << 8);
+    mstatus = 0;
+    mtvec = 0;
+    mie = 0;
+    mip = 0;
+    mcause = 0;
+    mepc = 0;
+    mscratch = 0;
+    mtval = 0;
+    mcycles = 0;
 }
 
 uint32_t CSR::read_csr(uint32_t address) {
     switch(address) {
         case MSTATUS:   return this->mstatus;
+        case MISA:      return misa;
         case MTVEC:     return this->mtvec;
         case MIE:       return this->mie;
         case MIP:       return this->mip;
@@ -32,6 +36,7 @@ uint32_t CSR::read_csr(uint32_t address) {
 void CSR::write_csr(uint32_t address, uint32_t data) {
     switch(address) {
         case MSTATUS:   this->mcause = data; break;
+        case MISA:      misa = data; break;
         case MTVEC:     this->mtvec  = data; break;
         case MIE:       this->mie = data; break;
         case MIP:       this->mip = data; break;

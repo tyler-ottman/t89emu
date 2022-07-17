@@ -111,8 +111,15 @@ public:
 #ifndef CSR_H
 #define CSR_H
 
+// Privilege Levels
+#define USER_MODE                   0b00
+#define SUPERVISOR_MODE             0b01
+#define RESERVED                    0b10
+#define MACHINE_MODE                0b11
+
 // CSR Machine Mode Addresses
 #define MSTATUS     0x300 // Machine Status Register
+#define MISA        0x301 // Machine Instruction Set Architecture
 #define MTVEC       0x305 // Machine Trap Vector
 #define MIE         0x304 // Machine Interrupt Enable
 #define MIP         0x344 // Machine Interrupt Pending
@@ -123,7 +130,8 @@ public:
 
 class CSR
 {
-public:
+public: 
+    uint32_t misa;
     uint32_t mstatus;
     uint32_t mtvec;
     uint32_t mie;
@@ -151,8 +159,8 @@ public:
 #define SCREEN_HEIGHT 288
 
 #define INSTRUCTION_MEMORY_START    0x00000000 // Beginning of Instruction Memory
-#define VIDEO_MEMORY_START          0x40000000 // Beginning of Video Memory
-#define DATA_MEMORY_START           0x80000000 // Beginning of Data Memory
+#define DATA_MEMORY_START           0x10000000 // Beginning of Data Memory
+#define VIDEO_MEMORY_START          0x20000000 // Beginning of Video Memory
 
 #define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
 #define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB

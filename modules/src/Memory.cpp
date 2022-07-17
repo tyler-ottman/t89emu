@@ -8,10 +8,10 @@ void Memory::write(uint32_t address, uint32_t data, int size)
     uint32_t* mem_section;
     uint32_t base_addr;
     // Which memory section to be accessed
-    if (address < VIDEO_MEMORY_START) {
+    if (address < DATA_MEMORY_START) {
         mem_section = this->instruction_memory; // Instruction Memory
         base_addr = address - offset - INSTRUCTION_MEMORY_START;
-    } else if (address >= DATA_MEMORY_START) {
+    } else if (address < VIDEO_MEMORY_START) {
         mem_section = this->data_memory; // Data Memory
         base_addr = address - offset - DATA_MEMORY_START;
     } else {
@@ -50,10 +50,10 @@ uint32_t Memory::read(uint32_t address, int size)
     uint32_t base_addr;
 
     // Which memory section to be accessed
-    if (address < VIDEO_MEMORY_START) {
+    if (address < DATA_MEMORY_START) {
         mem_section = this->instruction_memory; // Instruction Memory
         base_addr = address - offset - INSTRUCTION_MEMORY_START;
-    } else if (address >= DATA_MEMORY_START) {
+    } else if (address < VIDEO_MEMORY_START) {
         mem_section = this->data_memory; // Data Memory
         base_addr = address - offset - DATA_MEMORY_START;
     } else {

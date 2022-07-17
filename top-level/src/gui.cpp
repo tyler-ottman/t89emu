@@ -80,6 +80,11 @@ void gui::load_disassembled_code(char* pathname) {
             tokens.push_back(token); // End of line token
 
         switch(tokens.size()) {
+            case 3:
+                str = tokens[0] + " " + tokens[2];
+                num_disassembled_instructions++;
+                disassembled_code.push_back(str);
+                break;
             case 4: // Instructions No Jump
             case 5: // Instructions With Jump
                 str = tokens[0] + " " + tokens[2] + " " + tokens[3];
@@ -139,7 +144,7 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-    clear_color = ImVec4(0.00f, 0.55f, 0.60f, 1.00f); // Background color
+    clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
     glGenTextures(1, &textureID);
 
     buttons = {TAB, W, A, S, D};
@@ -351,11 +356,13 @@ void gui::render_memory_viewer() {
         if (ImGui::Button("PC"))
             jumpAddr = 0; // Jump to PC
         ImGui::SameLine();
-        if (ImGui::Button("VRAM"))
-            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to VRAM
-        ImGui::SameLine();
         if (ImGui::Button("SP"))
             jumpAddr = INSTRUCTION_MEMORY_SIZE + VIDEO_MEMORY_SIZE; // Jump to SP
+        ImGui::SameLine();
+        if (ImGui::Button("VRAM"))
+            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to VRAM
+        
+        
         ImGui::EndTable();
     }
 
@@ -525,8 +532,8 @@ void gui::render_csr_bank() {
     static bool display_headers = true;
     static int contents_type = CT_Text;
 
-    std::vector<int> csr_address = {MSTATUS, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
-    std::vector<std::string> csr_name = {"mstatus", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
+    std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
+    std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags))
