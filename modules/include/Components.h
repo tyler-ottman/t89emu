@@ -118,29 +118,69 @@ public:
 #define MACHINE_MODE                0b11
 
 // CSR Machine Mode Addresses
-#define MSTATUS     0x300 // Machine Status Register
-#define MISA        0x301 // Machine Instruction Set Architecture
-#define MTVEC       0x305 // Machine Trap Vector
-#define MIE         0x304 // Machine Interrupt Enable
-#define MIP         0x344 // Machine Interrupt Pending
-#define MCAUSE      0x342 // Machine Cause
-#define MEPC        0x341 // Machine Exception Program Counter
-#define MSCRATCH    0x340 // Machine Scratch
-#define MTVAL       0x343  // Machine Bad Address or Instruction
+#define MSTATUS     0x300
+#define MISA        0x301
+#define MTVEC       0x305
+#define MIE         0x304
+#define MIP         0x344
+#define MCAUSE      0x342
+#define MEPC        0x341
+#define MSCRATCH    0x340
+#define MTVAL       0x343
+#define MVENDORID   0xF11
+#define MARCHID     0xF12
+#define MIMPID      0xF13
+#define MHARTID     0xF14
 
-class CSR
-{
-public: 
+
+
+
+
+
+
+
+
+#define WRITE_MIE(x) 
+
+class CSR {
+public:
+    // Machine Instruction Set Architecture (I)
     uint32_t misa;
+
+    // Machine Vendor ID (no implementation)
+    uint32_t mvendorid;
+
+    // Machine Architecture ID (no implementation)
+    uint32_t marchid;
+
+    // Machine Implementation ID (no implementation)
+    uint32_t mimpid;
+
+    // Machine Hart ID
+    uint32_t mhartid;
+
+    // Machine Status
     uint32_t mstatus;
+
     uint32_t mtvec;
     uint32_t mie;
     uint32_t mip;
     uint32_t mcause;
     uint32_t mepc;
-    uint32_t mscratch;
+    uint32_t mscratch; // Maybe no implementation
     uint32_t mtval;
     uint32_t mcycles;
+
+    inline void set_mie(int mask) {mstatus = mstatus | ((mask&0b1) << 3);}
+    inline void set_mpie(int mask) {mstatus = mstatus | ((mask&0b1) << 7);}
+    inline void set_mpp(int mask) {mstatus = mstatus | ((mask&0b11) << 11);}
+
+    inline uint32_t get_mie() {return ((mstatus >> 3) & 0b1);}
+    inline uint32_t get_mpie() {return ((mstatus >> 7) & 0b1);}
+    inline uint32_t get_mpp() {return ((mstatus >> 11) & 0b11);}
+
+
+
     CSR();
     uint32_t read_csr(uint32_t);
     void write_csr(uint32_t, uint32_t);

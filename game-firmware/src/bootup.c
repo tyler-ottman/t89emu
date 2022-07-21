@@ -18,6 +18,9 @@ void load_ram(void) {
     while (rom_data < &_ebss) {              // Unitialized data
         *rom_data++ = 0;
     }
+
+    // Enable interrupts
+    
 }
 
 // code from https://sourceware.org/newlib/libc.html#Syscalls
