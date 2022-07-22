@@ -12,8 +12,8 @@ CSR::CSR(){
     mhartid = 0;
     mimpid = 0;
 
-    // Global Interrupts enabled by default
-    mstatus = (1 << 3);
+    // Enable by software
+    mstatus = 0;
 
     // Loaded by software
     mtvec = 0;
@@ -47,7 +47,7 @@ uint32_t CSR::read_csr(uint32_t address) {
 
 void CSR::write_csr(uint32_t address, uint32_t data) {
     switch(address) {
-        case MSTATUS:   mcause = data; break;
+        case MSTATUS:   mstatus = data; break;
         case MISA:      misa = data; break;
         case MTVEC:     mtvec  = data; break;
         case MIE:       mie = data; break;

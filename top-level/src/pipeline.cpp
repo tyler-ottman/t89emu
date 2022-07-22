@@ -166,10 +166,12 @@ bool Pipeline::next_instruction()
 					break;
 				case 0b010: // CSRRS
 					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
+					std::cout << "rs1: " << rs1 << " rd: " << rd <<"\n";
 					if (rs1 != 0) csr.write_csr(csr_addr, rf.read(rs1) | csr.read_csr(csr_addr)); // Use rs1 as a bit mask to set CSR bits
 					break;
 				case 0b011: // CSRRC
 					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
+					std::cout << "csrrc rs1: " << rs1 << " rd: " << rd <<"\n";
 					if (rs1 != 0) csr.write_csr(csr_addr, (!rf.read(rs1)) & csr.read_csr(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
 				default: // CSR instruction
 					// Immediate CSR Instructions not yet supported

@@ -10,6 +10,7 @@ _start:
 
     la a0, _interrupt_service_routine   # Load Address of ISR
     csrw mtvec, a0
+    # csrw 0x305, a0
 
     call load_ram                       # Load data to RAM
     call main                           # OS main routine
