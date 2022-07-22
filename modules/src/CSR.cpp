@@ -15,17 +15,17 @@ CSR::CSR(){
     // Global Interrupts enabled by default
     mstatus = (1 << 3);
 
-    mtvec = 0; // Loaded by software
-    mie = 0; // Enable all interrupts in software
+    // Loaded by software
+    mtvec = 0;
+    
+    // Enable all interrupts in software
+    mie = 0;
     mip = 0;
+
     mcause = 0;
     mepc = 0;
     mscratch = 0;
     mtval = 0;
-
-
-
-    mcycles = 0;
 }
 
 uint32_t CSR::read_csr(uint32_t address) {

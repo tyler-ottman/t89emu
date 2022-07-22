@@ -19,7 +19,7 @@ void load_ram(void) {
         *rom_data++ = 0;
     }
 
-    // Enable interrupts
+    // Enable Software/Timer/External Interrupts
     
 }
 

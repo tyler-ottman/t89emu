@@ -14,9 +14,12 @@ void Memory::write(uint32_t address, uint32_t data, int size)
     } else if (address < VIDEO_MEMORY_START) {
         mem_section = this->data_memory; // Data Memory
         base_addr = address - offset - DATA_MEMORY_START;
-    } else {
+    } else if (address < CSR_MEMORY_START) {
         mem_section = this->video_memory; // Video Memory
         base_addr = address - offset - VIDEO_MEMORY_START;
+    } else {
+        mem_section = this->csr_memory; // CSR Memory
+        base_addr = address - offset - CSR_MEMORY_START;
     }
     base_addr /= WORD;
     uint32_t old_data = mem_section[base_addr];
@@ -56,9 +59,12 @@ uint32_t Memory::read(uint32_t address, int size)
     } else if (address < VIDEO_MEMORY_START) {
         mem_section = this->data_memory; // Data Memory
         base_addr = address - offset - DATA_MEMORY_START;
-    } else {
+    } else if (address < CSR_MEMORY_START) {
         mem_section = this->video_memory; // Video Memory
         base_addr = address - offset - VIDEO_MEMORY_START;
+    } else {
+        mem_section = this->csr_memory; // CSR Memory
+        base_addr = address - offset - CSR_MEMORY_START;
     }
     
     base_addr /= 4;

@@ -132,16 +132,6 @@ public:
 #define MIMPID      0xF13
 #define MHARTID     0xF14
 
-
-
-
-
-
-
-
-
-#define WRITE_MIE(x) 
-
 class CSR {
 public:
     // Machine Instruction Set Architecture (I)
@@ -179,8 +169,6 @@ public:
     inline uint32_t get_mpie() {return ((mstatus >> 7) & 0b1);}
     inline uint32_t get_mpp() {return ((mstatus >> 11) & 0b11);}
 
-
-
     CSR();
     uint32_t read_csr(uint32_t);
     void write_csr(uint32_t, uint32_t);
@@ -201,6 +189,7 @@ public:
 #define INSTRUCTION_MEMORY_START    0x00000000 // Beginning of Instruction Memory
 #define DATA_MEMORY_START           0x10000000 // Beginning of Data Memory
 #define VIDEO_MEMORY_START          0x20000000 // Beginning of Video Memory
+#define CSR_MEMORY_START            0x30000000 // Beginning of CSR Memory Mapped Registers
 
 #define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
 #define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB
@@ -212,6 +201,7 @@ public:
     uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE] = { 0 };      // 128 KB Instruction Memory
     uint32_t data_memory[DATA_MEMORY_SIZE] = { 0 };
     uint32_t video_memory[VIDEO_MEMORY_SIZE] = { 0 }; // 512x288 Video Memory
+    uint32_t csr_memory[4] = { 0 };
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
 };
