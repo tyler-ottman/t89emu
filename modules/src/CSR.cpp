@@ -4,7 +4,7 @@
 CSR::CSR(){
     // Supported ISA
     // I extension
-    misa = (1 << 8);
+    misa = 0;
 
     // Fields not implemented
     mvendorid = 0;
@@ -25,7 +25,12 @@ CSR::CSR(){
     mcause = 0;
     mepc = 0;
     mscratch = 0;
+
+    // Possibly no implementation
     mtval = 0;
+
+    // Initial 0, used for timer interrupt
+    mcycles = 0;
 }
 
 uint32_t CSR::read_csr(uint32_t address) {

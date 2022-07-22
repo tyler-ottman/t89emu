@@ -12,6 +12,8 @@ extern uint32_t _ebss;
 #define MIE_MTIE_MASK 7
 #define MIE_MSIE_MASK 3
 
+#define MISA_I_EXTENSION_MASK 8
+
 // https://five-embeddev.com/code/2020/11/18/csr-access/
 static inline __attribute__((always_inline)) void csr_set_field_mstatus(uint32_t mask) {
     __asm__ volatile ("csrrs x0, mstatus, %0" : "=r"(mask));
@@ -29,6 +31,10 @@ static inline __attribute__((always_inline)) void csr_reset_field_mie(uint32_t m
     __asm__ volatile ("csrrc x0, mie, %0" : "=r"(mask));
 }
 
+static inline __attribute__((always_inline)) void csr_set_field_misa(uint32_t mask) {
+    __asm__ volatile ("csrrs x0, misa, %0" : "=r"(mask));
+}
+
 void load_ram(void) {
     uint32_t* rom_data = &_program_end;     // Points to data to load into RAM from ROM
     uint32_t* ram_ptr = &_sdata;            // Initially point to first RAM address
@@ -41,6 +47,9 @@ void load_ram(void) {
     while (rom_data < &_ebss) {              // Unitialized data
         *rom_data++ = 0;
     }
+
+    // Specify Instruction set architecture
+    csr_set_field_misa(1 << MISA_I_EXTENSION_MASK);
 
     // Enable Global Interrupts in mstatus
     csr_set_field_mstatus(1 << MSTATUS_MIE_MASK);
