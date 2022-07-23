@@ -83,8 +83,13 @@ bool Pipeline::next_instruction()
 		trap_taken = 1;
 	}
 
-	// Increment mcycles
-	csr.mcycles++;
+	// Increment 64-bit memory mapped mcycle
+	if (dram.csr_memory[1] == 0xffffffff) {
+		dram.csr_memory[0]++;
+		dram.csr_memory[1] = 0x00000000;
+	} else {
+		dram.csr_memory[1]++;
+	}
 	
 	// Fetch Stage
 	uint32_t pc_addr = pc.getPC();						 // Current PC

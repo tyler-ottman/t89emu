@@ -38,6 +38,7 @@ private:
     uint32_t* vram;
     uint32_t* rom;
     uint32_t* ram;
+    uint32_t* csr_mem;
     RegisterFile* rf;
     uint32_t* pc_ptr;
     ImVec4 clear_color;

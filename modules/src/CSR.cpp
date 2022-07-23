@@ -28,9 +28,6 @@ CSR::CSR(){
 
     // Possibly no implementation
     mtval = 0;
-
-    // Initial 0, used for timer interrupt
-    mcycles = 0;
 }
 
 uint32_t CSR::read_csr(uint32_t address) {

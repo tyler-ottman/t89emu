@@ -164,6 +164,7 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     vram = t89->dram.video_memory;
     rom = t89->dram.instruction_memory;
     ram = t89->dram.data_memory;
+    csr_mem = t89->dram.csr_memory;
     pc_ptr = &t89->pc.PC;
     rf = &t89->rf;
     load_disassembled_code(disassembled_file);
@@ -530,7 +531,6 @@ void gui::render_csr_bank() {
     };
     static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
     static bool display_headers = true;
-    static int contents_type = CT_Text;
 
     std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
     std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
@@ -556,20 +556,27 @@ void gui::render_csr_bank() {
             ImGui::TableSetColumnIndex(0);
             char buf[32];
             sprintf(buf, "%s", csr_name.at(row).c_str());
-            if (contents_type == CT_Text)
-                ImGui::TextUnformatted(buf);
-            else if (contents_type == CT_FillButton)
-                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+            ImGui::TextUnformatted(buf);
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            // registers.at(row).second = rand() % 4294967295;
             sprintf(buf, "0x%08X", t89->csr.read_csr(csr_address.at(row)));
-            if (contents_type == CT_Text)
-                ImGui::TextUnformatted(buf);
-            else if (contents_type == CT_FillButton)
-                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+            ImGui::TextUnformatted(buf);
         }
+
+        // Display Memory mapped control state registers
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        char buf[32];
+        sprintf(buf, "mcycles");
+        ImGui::TextUnformatted(buf);
+
+        // CSR Value
+        ImGui::TableSetColumnIndex(1);
+        sprintf(buf, "0x%08X\n  %08X", csr_mem[0], csr_mem[1]);
+        ImGui::TextUnformatted(buf);
+
         ImGui::EndTable();
     }
     ImGui::End();

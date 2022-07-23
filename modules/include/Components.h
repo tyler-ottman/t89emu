@@ -159,7 +159,6 @@ public:
     uint32_t mepc;
     uint32_t mscratch; // Maybe no implementation
     uint32_t mtval;
-    uint32_t mcycles;
 
     inline void set_mie(int mask) {mstatus = mstatus | ((mask&0b1) << 3);}
     inline void set_mpie(int mask) {mstatus = mstatus | ((mask&0b1) << 7);}
@@ -218,3 +217,13 @@ public:
 };
 
 #endif // MEMORY_H
+
+#ifndef TRAP_H
+#define TRAP_H
+
+class Trap {
+public:
+
+};
+
+#endif // TRAP_H
