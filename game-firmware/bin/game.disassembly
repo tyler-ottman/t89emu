@@ -1,0 +1,180 @@
+
+./bin/game.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	10100117          	auipc	sp,0x10100
+   4:	00010113          	addi	sp,sp,0 # 10100000 <__stack_top>
+   8:	ffc10113          	addi	sp,sp,-4
+   c:	10000197          	auipc	gp,0x10000
+  10:	7f418193          	addi	gp,gp,2036 # 10000800 <__global_pointer$>
+  14:	00000517          	auipc	a0,0x0
+  18:	14050513          	addi	a0,a0,320 # 154 <_interrupt_service_routine>
+  1c:	30551073          	csrrw	zero,mtvec,a0
+  20:	00c000ef          	jal	ra,2c <load_ram>
+  24:	1fc000ef          	jal	ra,220 <main>
+
+00000028 <_spin>:
+  28:	000000ef          	jal	ra,28 <_spin>
+
+0000002c <load_ram>:
+  2c:	fd010113          	addi	sp,sp,-48
+  30:	02812623          	sw	s0,44(sp)
+  34:	03010413          	addi	s0,sp,48
+  38:	27c00793          	addi	a5,zero,636
+  3c:	fef42623          	sw	a5,-20(s0)
+  40:	100007b7          	lui	a5,0x10000
+  44:	00078793          	addi	a5,a5,0 # 10000000 <VIDEO_MEMORY>
+  48:	fef42423          	sw	a5,-24(s0)
+  4c:	0240006f          	jal	zero,70 <load_ram+0x44>
+  50:	fec42703          	lw	a4,-20(s0)
+  54:	00470793          	addi	a5,a4,4
+  58:	fef42623          	sw	a5,-20(s0)
+  5c:	fe842783          	lw	a5,-24(s0)
+  60:	00478693          	addi	a3,a5,4
+  64:	fed42423          	sw	a3,-24(s0)
+  68:	00072703          	lw	a4,0(a4)
+  6c:	00e7a023          	sw	a4,0(a5)
+  70:	fe842703          	lw	a4,-24(s0)
+  74:	80418793          	addi	a5,gp,-2044 # 10000004 <heap_end.0>
+  78:	fcf76ce3          	bltu	a4,a5,50 <load_ram+0x24>
+  7c:	80418793          	addi	a5,gp,-2044 # 10000004 <heap_end.0>
+  80:	fef42623          	sw	a5,-20(s0)
+  84:	0140006f          	jal	zero,98 <load_ram+0x6c>
+  88:	fec42783          	lw	a5,-20(s0)
+  8c:	00478713          	addi	a4,a5,4
+  90:	fee42623          	sw	a4,-20(s0)
+  94:	0007a023          	sw	zero,0(a5)
+  98:	fec42703          	lw	a4,-20(s0)
+  9c:	80818793          	addi	a5,gp,-2040 # 10000008 <_ebss>
+  a0:	fef764e3          	bltu	a4,a5,88 <load_ram+0x5c>
+  a4:	10000793          	addi	a5,zero,256
+  a8:	fcf42e23          	sw	a5,-36(s0)
+  ac:	3017a073          	csrrs	zero,misa,a5
+  b0:	fcf42e23          	sw	a5,-36(s0)
+  b4:	00000013          	addi	zero,zero,0
+  b8:	00800793          	addi	a5,zero,8
+  bc:	fef42023          	sw	a5,-32(s0)
+  c0:	3007a073          	csrrs	zero,mstatus,a5
+  c4:	fef42023          	sw	a5,-32(s0)
+  c8:	00000013          	addi	zero,zero,0
+  cc:	000017b7          	lui	a5,0x1
+  d0:	88878793          	addi	a5,a5,-1912 # 888 <_erodata+0x60c>
+  d4:	fef42223          	sw	a5,-28(s0)
+  d8:	3047a073          	csrrs	zero,mie,a5
+  dc:	fef42223          	sw	a5,-28(s0)
+  e0:	00000013          	addi	zero,zero,0
+  e4:	00000013          	addi	zero,zero,0
+  e8:	02c12403          	lw	s0,44(sp)
+  ec:	03010113          	addi	sp,sp,48
+  f0:	00008067          	jalr	zero,0(ra)
+
+000000f4 <_sbrk>:
+  f4:	fd010113          	addi	sp,sp,-48
+  f8:	02812623          	sw	s0,44(sp)
+  fc:	03010413          	addi	s0,sp,48
+ 100:	fca42e23          	sw	a0,-36(s0)
+ 104:	100007b7          	lui	a5,0x10000
+ 108:	0047a783          	lw	a5,4(a5) # 10000004 <heap_end.0>
+ 10c:	00079863          	bne	a5,zero,11c <_sbrk+0x28>
+ 110:	100007b7          	lui	a5,0x10000
+ 114:	80818713          	addi	a4,gp,-2040 # 10000008 <_ebss>
+ 118:	00e7a223          	sw	a4,4(a5) # 10000004 <heap_end.0>
+ 11c:	100007b7          	lui	a5,0x10000
+ 120:	0047a783          	lw	a5,4(a5) # 10000004 <heap_end.0>
+ 124:	fef42623          	sw	a5,-20(s0)
+ 128:	100007b7          	lui	a5,0x10000
+ 12c:	0047a703          	lw	a4,4(a5) # 10000004 <heap_end.0>
+ 130:	fdc42783          	lw	a5,-36(s0)
+ 134:	00f70733          	add	a4,a4,a5
+ 138:	100007b7          	lui	a5,0x10000
+ 13c:	00e7a223          	sw	a4,4(a5) # 10000004 <heap_end.0>
+ 140:	fec42783          	lw	a5,-20(s0)
+ 144:	00078513          	addi	a0,a5,0
+ 148:	02c12403          	lw	s0,44(sp)
+ 14c:	03010113          	addi	sp,sp,48
+ 150:	00008067          	jalr	zero,0(ra)
+
+00000154 <_interrupt_service_routine>:
+ 154:	00000013          	addi	zero,zero,0
+ 158:	00000013          	addi	zero,zero,0
+ 15c:	30200073          	mret
+
+00000160 <init_blue_screen>:
+ 160:	fe010113          	addi	sp,sp,-32
+ 164:	00812e23          	sw	s0,28(sp)
+ 168:	02010413          	addi	s0,sp,32
+ 16c:	fe042623          	sw	zero,-20(s0)
+ 170:	0300006f          	jal	zero,1a0 <init_blue_screen+0x40>
+ 174:	100007b7          	lui	a5,0x10000
+ 178:	0007a703          	lw	a4,0(a5) # 10000000 <VIDEO_MEMORY>
+ 17c:	fec42783          	lw	a5,-20(s0)
+ 180:	00279793          	slli	a5,a5,0x2
+ 184:	00f707b3          	add	a5,a4,a5
+ 188:	ffbb4737          	lui	a4,0xffbb4
+ 18c:	70070713          	addi	a4,a4,1792 # ffbb4700 <__stack_top+0xefab4700>
+ 190:	00e7a023          	sw	a4,0(a5)
+ 194:	fec42783          	lw	a5,-20(s0)
+ 198:	00178793          	addi	a5,a5,1
+ 19c:	fef42623          	sw	a5,-20(s0)
+ 1a0:	fec42703          	lw	a4,-20(s0)
+ 1a4:	000247b7          	lui	a5,0x24
+ 1a8:	fcf746e3          	blt	a4,a5,174 <init_blue_screen+0x14>
+ 1ac:	00000013          	addi	zero,zero,0
+ 1b0:	00000013          	addi	zero,zero,0
+ 1b4:	01c12403          	lw	s0,28(sp)
+ 1b8:	02010113          	addi	sp,sp,32
+ 1bc:	00008067          	jalr	zero,0(ra)
+
+000001c0 <init_green_screen>:
+ 1c0:	fe010113          	addi	sp,sp,-32
+ 1c4:	00812e23          	sw	s0,28(sp)
+ 1c8:	02010413          	addi	s0,sp,32
+ 1cc:	fe042623          	sw	zero,-20(s0)
+ 1d0:	0300006f          	jal	zero,200 <init_green_screen+0x40>
+ 1d4:	100007b7          	lui	a5,0x10000
+ 1d8:	0007a703          	lw	a4,0(a5) # 10000000 <VIDEO_MEMORY>
+ 1dc:	fec42783          	lw	a5,-20(s0)
+ 1e0:	00279793          	slli	a5,a5,0x2
+ 1e4:	00f707b3          	add	a5,a4,a5
+ 1e8:	ff010737          	lui	a4,0xff010
+ 1ec:	f0070713          	addi	a4,a4,-256 # ff00ff00 <__stack_top+0xeef0ff00>
+ 1f0:	00e7a023          	sw	a4,0(a5)
+ 1f4:	fec42783          	lw	a5,-20(s0)
+ 1f8:	00178793          	addi	a5,a5,1
+ 1fc:	fef42623          	sw	a5,-20(s0)
+ 200:	fec42703          	lw	a4,-20(s0)
+ 204:	000247b7          	lui	a5,0x24
+ 208:	fcf746e3          	blt	a4,a5,1d4 <init_green_screen+0x14>
+ 20c:	00000013          	addi	zero,zero,0
+ 210:	00000013          	addi	zero,zero,0
+ 214:	01c12403          	lw	s0,28(sp)
+ 218:	02010113          	addi	sp,sp,32
+ 21c:	00008067          	jalr	zero,0(ra)
+
+00000220 <main>:
+ 220:	fe010113          	addi	sp,sp,-32
+ 224:	00112e23          	sw	ra,28(sp)
+ 228:	00812c23          	sw	s0,24(sp)
+ 22c:	02010413          	addi	s0,sp,32
+ 230:	fe042623          	sw	zero,-20(s0)
+ 234:	0140006f          	jal	zero,248 <main+0x28>
+ 238:	f29ff0ef          	jal	ra,160 <init_blue_screen>
+ 23c:	fec42783          	lw	a5,-20(s0)
+ 240:	00178793          	addi	a5,a5,1 # 24001 <_erodata+0x23d85>
+ 244:	fef42623          	sw	a5,-20(s0)
+ 248:	fec42703          	lw	a4,-20(s0)
+ 24c:	00900793          	addi	a5,zero,9
+ 250:	fee7f4e3          	bgeu	a5,a4,238 <main+0x18>
+ 254:	fe042623          	sw	zero,-20(s0)
+ 258:	0140006f          	jal	zero,26c <main+0x4c>
+ 25c:	f65ff0ef          	jal	ra,1c0 <init_green_screen>
+ 260:	fec42783          	lw	a5,-20(s0)
+ 264:	00178793          	addi	a5,a5,1
+ 268:	fef42623          	sw	a5,-20(s0)
+ 26c:	fec42703          	lw	a4,-20(s0)
+ 270:	00900793          	addi	a5,zero,9
+ 274:	fee7f4e3          	bgeu	a5,a4,25c <main+0x3c>
+ 278:	fb9ff06f          	jal	zero,230 <main+0x10>

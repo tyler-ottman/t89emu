@@ -7,13 +7,23 @@ volatile unsigned int *VIDEO_MEMORY = (unsigned int *)(VRAM_START);
 #define HEIGHT 288
 
 #define BLUE_SCREEN 0xffbb4700
+#define GREEN_SCREEN 0xff00ff00
 
-void init_screen() {
+void init_blue_screen() {
     for (int i = 0; i < WIDTH * HEIGHT; i++) VIDEO_MEMORY[i] = BLUE_SCREEN;
+}
+
+void init_green_screen() {
+    for (int i = 0; i < WIDTH * HEIGHT; i++) VIDEO_MEMORY[i] = GREEN_SCREEN;
 }
 
 int main(void)
 {
-    init_screen();
+    unsigned int i;
+    while (1) {
+        for (i = 0; i < 10; i++)  init_blue_screen();
+        for (i = 0; i < 10; i++) init_green_screen();
+    }
+    // init_blue_screen();
     return 0;
 }
