@@ -15,7 +15,7 @@ void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t func
 	case JAL: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
 	case AUIPC: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
 	case JALR: std::cout << "immediate: " << immediate << " rd: " << rd << " rs: " << rs1 << " opcode: " << opcode << std::endl; break;
-	case ECALL: // ecall/csr
+	case PRIV: // ecall/csr
 		if (funct3 == 0) {
 			std::cout << "ecall" << std::endl;
 		}
@@ -35,12 +35,22 @@ void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immedia
 		case JAL: std::cout << "Next PC: " << pc_addr << ". Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
 		case AUIPC: std::cout << "Wrote " << pc_addr - 4 + immediate << " to register " << rd << std::endl << std::endl; break;
 		case JALR: std::cout << "Next PC: " << pc_addr << ". Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
-		case ECALL: std::cout << "Jump to handler at: " << pc_addr << std::endl << std::endl; break;
+		case PRIV: std::cout << "Jump to handler at: " << pc_addr << std::endl << std::endl; break;
 	}
 }
 
 Pipeline::Pipeline(char* code_bin, int debug = 0)
 {
+	rf = new RegisterFile;
+	dram = new Memory;
+	pc = new ProgramCounter;
+	csr = new CSR;
+	alu = new ALU;
+	aluc = new ALUControlUnit;
+	immgen = new ImmediateGenerator;
+	mcu = new MemControlUnit;
+	nextpc = new NextPC;
+
 	this->interrupt_assert = 0;
 	this->IO_BUS = 0;	 // 32 bit IO bus
 	this->IO_ADDR = 0;   // 32-bit IO address
@@ -67,33 +77,41 @@ Pipeline::Pipeline(char* code_bin, int debug = 0)
 	// Load Memory
 	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
 	{
-		dram.write(it->first, it->second, WORD);
+		dram->write(it->first, it->second, WORD);
 	}
 	
+}
+
+Pipeline::~Pipeline() {
+	delete rf;
+	delete dram;
+	delete pc;
+	delete csr;
+	delete alu;
+	delete aluc;
+	delete immgen;
+	delete mcu;
+	delete nextpc; 
 }
 
 bool Pipeline::next_instruction()
 {
 	uint32_t trap_taken = 0;
 	// Micro-Controller
-	if ((csr.read_csr(MIE) == 0x888) && (this->interrupt_assert == 1)) {
+	if ((csr->read_csr(MIE) == 0x888) && (this->interrupt_assert == 1)) {
 		// External Interrupt and MIE enabled
-		dram.write(this->IO_ADDR, this->IO_BUS, WORD); // write IO data to IO port
+		dram->write(this->IO_ADDR, this->IO_BUS, WORD); // write IO data to IO port
 		this->interrupt_assert = 0;
 		trap_taken = 1;
 	}
 
 	// Increment 64-bit memory mapped mcycle
-	if (dram.csr_memory[1] == 0xffffffff) {
-		dram.csr_memory[0]++;
-		dram.csr_memory[1] = 0x00000000;
-	} else {
-		dram.csr_memory[1]++;
-	}
-	
+	dram->csr_memory[0] = (dram->csr_memory[1] == 0xffffffff) ? (dram->csr_memory[0] + 1) : (dram->csr_memory[0]);
+	dram->csr_memory[1]++;
+
 	// Fetch Stage
-	uint32_t pc_addr = pc.getPC();						 // Current PC
-	uint32_t cur_instruction = dram.read(pc_addr, WORD); // Current Instruction
+	uint32_t pc_addr = pc->getPC();						 // Current PC
+	uint32_t cur_instruction = dram->read(pc_addr, WORD); // Current Instruction
 	
 	// Decode Stage
 	uint32_t opcode = cur_instruction & 0b1111111;			   // opcode field
@@ -102,7 +120,7 @@ bool Pipeline::next_instruction()
 	uint32_t rs1 = (cur_instruction >> 15) & 0b11111;		   // Register Source 1
 	uint32_t rs2 = (cur_instruction >> 20) & 0b11111;		   // Register Source 2
 	uint32_t rd = (cur_instruction >> 7) & 0b11111;			   // Register Desination
-	uint32_t immediate = immgen.getImmediate(cur_instruction); // Instruction Immediate
+	uint32_t immediate = immgen->getImmediate(cur_instruction); // Instruction Immediate
 	uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;	   // CSR Address
 	
 	/******************DEBUG********************/
@@ -118,76 +136,117 @@ bool Pipeline::next_instruction()
 	uint32_t B = 0;
 	uint32_t alu_opcode;
 	uint32_t alu_output;
+	uint32_t cause_offset = 0;
 
+	// Check timer interrupt
+	if (csr->get_mie() && csr->get_mtie()) {
+		// Global/Timer Interrupt enabled
+		uint64_t mcycle64 = (((uint64_t)dram->csr_memory[0]) << 32) | (dram->csr_memory[1]);
+		uint64_t mtimecmp64 = (((uint64_t)dram->csr_memory[2]) << 32) | (dram->csr_memory[3]);
+		if (mcycle64 >= mtimecmp64) { // Take trap
+			cause_offset = 7;
+			// Save mepc
+			csr->mepc = pc->PC;
+			// Save MIE to MPIE before trap
+			if (csr->get_mie()) // MIE Enabled, save to MPIE
+				csr->set_mpie();
+			csr->reset_mie();
+			csr->set_mpp(MACHINE_MODE);
+
+			pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, 1, csr->mepc));
+			return true;
+		}
+	}
+	
 	switch(opcode) {
 		case LUI:
-			rf.write(immediate, rd);
+			rf->write(immediate, rd);
 			break;
 		case AUIPC:
-			alu_opcode = aluc.getALUoperation(opcode, 0, 0);
-			alu_output = alu.execute(pc_addr, immediate, alu_opcode);
-			rf.write(alu_output, rd);
+			alu_opcode = aluc->getALUoperation(opcode, 0, 0);
+			alu_output = alu->execute(pc_addr, immediate, alu_opcode);
+			rf->write(alu_output, rd);
 			break;
 		case JAL:
-			alu_opcode = aluc.getALUoperation(opcode, 0, 0);
-			alu_output = alu.execute(pc_addr, 4, alu_opcode);
-			rf.write(alu_output, rd);
+			alu_opcode = aluc->getALUoperation(opcode, 0, 0);
+			alu_output = alu->execute(pc_addr, 4, alu_opcode);
+			rf->write(alu_output, rd);
 			break;
 		case JALR:
-			A = rf.read(rs1);
-			alu_opcode = aluc.getALUoperation(opcode, 0, 0);
-			alu_output = alu.execute(pc_addr, 4, alu_opcode);
-			rf.write(alu_output, rd);
+			A = rf->read(rs1);
+			alu_opcode = aluc->getALUoperation(opcode, 0, 0);
+			alu_output = alu->execute(pc_addr, 4, alu_opcode);
+			rf->write(alu_output, rd);
 			break;
 		case BTYPE:
-			A = rf.read(rs1);
-			B = rf.read(rs2);
+			A = rf->read(rs1);
+			B = rf->read(rs2);
 			break;
 		case LOAD:
-			mem_size = mcu.get_mem_size(funct3);
-			rf.write(dram.read(rf.read(rs1) + immediate, mem_size), rd);
+			mem_size = mcu->get_mem_size(funct3);
+			rf->write(dram->read(rf->read(rs1) + immediate, mem_size), rd);
 			break;
 		case STORE:
-			mem_size = mcu.get_mem_size(funct3);
-			dram.write(rf.read(rs1) + immediate, rf.read(rs2), mem_size);
+			mem_size = mcu->get_mem_size(funct3);
+			dram->write(rf->read(rs1) + immediate, rf->read(rs2), mem_size);
 			break;
 		case ITYPE:
-			alu_opcode = aluc.getALUoperation(opcode, funct7, funct3);
-			alu_output = alu.execute(rf.read(rs1), immediate, alu_opcode);
-			rf.write(alu_output, rd);
+			alu_opcode = aluc->getALUoperation(opcode, funct7, funct3);
+			alu_output = alu->execute(rf->read(rs1), immediate, alu_opcode);
+			rf->write(alu_output, rd);
 			break;
 		case RTYPE:
-			alu_opcode = aluc.getALUoperation(opcode, funct7, funct3);
-			alu_output = alu.execute(rf.read(rs1), rf.read(rs2), alu_opcode);
-			rf.write(alu_output, rd);
+			alu_opcode = aluc->getALUoperation(opcode, funct7, funct3);
+			alu_output = alu->execute(rf->read(rs1), rf->read(rs2), alu_opcode);
+			rf->write(alu_output, rd);
 			break;
-		case ECALL:
-			// funct3 = (cur_instruction >> 12) & 0b111;
-			
+		case PRIV:			
 			switch(funct3) {
-				case 0b000: // ECALL
-					trap_taken = 1;
+				case 0b000: // ECALL / MRET
+					switch (immediate) {
+						case MRET_IMM:
+							// MRET Instruction
+							// Restore MIE field from MPIE
+							if (csr->get_mpie()) { // Set MIE if MPIE is 1
+								csr->set_mie();
+							}
+							// Set MPIE to 1
+							csr->set_mpie();
+							// Set MPP to privilege mode before trap
+							csr->set_mpp(MACHINE_MODE);
+							break;
+						case ECALL_IMM:
+							cause_offset = 27;
+							// Save mepc
+							csr->mepc = pc->PC;
+							// Save MIE to MPIE before trap
+							if (csr->get_mie()) // MIE Enabled, save to MPIE
+								csr->set_mpie();
+							csr->reset_mie();
+							csr->set_mpp(MACHINE_MODE);
+							break;
+					}
 					break;
 				case 0b001: // CSRRW
-					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
-					csr.write_csr(csr_addr, rf.read(rs1)); // Store value of rs1 into CSR
+					rf->write(csr->read_csr(csr_addr), rd); // Write current value of CSR to rd
+					csr->write_csr(csr_addr, rf->read(rs1)); // Store value of rs1 into CSR
 					break;
 				case 0b010: // CSRRS
-					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
-					if (rs1 != 0) csr.write_csr(csr_addr, rf.read(rs1) | csr.read_csr(csr_addr)); // Use rs1 as a bit mask to set CSR bits
+					rf->write(csr->read_csr(csr_addr), rd); // Write current value of CSR to rd
+					if (rs1 != 0) csr->write_csr(csr_addr, rf->read(rs1) | csr->read_csr(csr_addr)); // Use rs1 as a bit mask to set CSR bits
 					break;
 				case 0b011: // CSRRC
-					rf.write(csr.read_csr(csr_addr), rd); // Write current value of CSR to rd
-					if (rs1 != 0) csr.write_csr(csr_addr, (!rf.read(rs1)) & csr.read_csr(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
+					rf->write(csr->read_csr(csr_addr), rd); // Write current value of CSR to rd
+					if (rs1 != 0) csr->write_csr(csr_addr, (!rf->read(rs1)) & csr->read_csr(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
 				default: // CSR instruction
 					// Immediate CSR Instructions not yet supported
 					break;
 			}
 			break;
 	}
-	
+
 	// Update PC
-	pc.setPC(nextpc.calculateNextPC(immediate, opcode, funct3, A, B, csr.read_csr(MTVEC), trap_taken));
+	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, trap_taken, csr->mepc));
 
 	/******************DEBUG********************/
 	// if (this->debug_mode)

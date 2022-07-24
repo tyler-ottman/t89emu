@@ -12,7 +12,11 @@
 #define STORE 0b0100011 
 #define ITYPE 0b0010011
 #define RTYPE 0b0110011
-#define ECALL 0b1110011
+#define PRIV  0b1110011
+
+#define ECALL_IMM   0b000000000000
+#define MRET_IMM    0b001100000010
+#define URET_IMM    0b000000000010
 
 #ifndef ALU_H
 #define ALU_H
@@ -103,7 +107,7 @@ private:
     int branch_alu(uint32_t, uint32_t, uint32_t);
 public:
     NextPC();
-    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 };
 
 #endif // NEXTPC_H
@@ -131,6 +135,14 @@ public:
 #define MARCHID     0xF12
 #define MIMPID      0xF13
 #define MHARTID     0xF14
+
+#define MSTATUS_MIE_MASK 3
+#define MSTATUS_MPIE_MASK 7
+#define MSTATUS_MPP_MASK 11
+
+#define MIE_MEIE_MASK 11
+#define MIE_MTIE_MASK 7
+#define MIE_MSIE_MASK 3
 
 class CSR {
 public:
@@ -160,13 +172,21 @@ public:
     uint32_t mscratch; // Maybe no implementation
     uint32_t mtval;
 
-    inline void set_mie(int mask) {mstatus = mstatus | ((mask&0b1) << 3);}
-    inline void set_mpie(int mask) {mstatus = mstatus | ((mask&0b1) << 7);}
-    inline void set_mpp(int mask) {mstatus = mstatus | ((mask&0b11) << 11);}
+    inline void set_mie() {mstatus |= (1 << MSTATUS_MIE_MASK);}
+    inline void set_mpie() {mstatus |= (1 << MSTATUS_MPIE_MASK);}
+    inline void set_mpp(int mask) {mstatus |= ((mask & 0b11) << MSTATUS_MPP_MASK);}
 
-    inline uint32_t get_mie() {return ((mstatus >> 3) & 0b1);}
-    inline uint32_t get_mpie() {return ((mstatus >> 7) & 0b1);}
-    inline uint32_t get_mpp() {return ((mstatus >> 11) & 0b11);}
+    inline void reset_mie() {mstatus &= ~(1 << MSTATUS_MIE_MASK);}
+    inline void reset_mpie() {mstatus &= ~(1 << MSTATUS_MPIE_MASK);}
+    inline void reset_mpp() {mstatus &= ~(0b11 << MSTATUS_MPP_MASK);}
+
+
+    inline uint32_t get_mie() {return ((mstatus >> MSTATUS_MIE_MASK) & 0b1);}
+    inline uint32_t get_mpie() {return ((mstatus >> MSTATUS_MPIE_MASK) & 0b1);}
+    inline uint32_t get_mpp() {return ((mstatus >> MSTATUS_MPP_MASK) & 0b11);}
+    inline uint32_t get_meie() {return ((mie >> MIE_MEIE_MASK) &0b1);}
+    inline uint32_t get_mtie() {return ((mie >> MIE_MTIE_MASK) &0b1);}
+    inline uint32_t get_msie() {return ((mie >> MIE_MSIE_MASK) &0b1);}
 
     CSR();
     uint32_t read_csr(uint32_t);

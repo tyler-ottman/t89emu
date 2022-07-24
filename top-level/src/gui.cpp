@@ -161,12 +161,12 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     
 
     // GUI needs pointers to emulator parts to probe values
-    vram = t89->dram.video_memory;
-    rom = t89->dram.instruction_memory;
-    ram = t89->dram.data_memory;
-    csr_mem = t89->dram.csr_memory;
-    pc_ptr = &t89->pc.PC;
-    rf = &t89->rf;
+    vram = t89->dram->video_memory;
+    rom = t89->dram->instruction_memory;
+    ram = t89->dram->data_memory;
+    csr_mem = t89->dram->csr_memory;
+    pc_ptr = &t89->pc->PC;
+    rf = t89->rf;
     load_disassembled_code(disassembled_file);
 
     if (debug) {
@@ -560,7 +560,7 @@ void gui::render_csr_bank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X", t89->csr.read_csr(csr_address.at(row)));
+            sprintf(buf, "0x%08X", t89->csr->read_csr(csr_address.at(row)));
             ImGui::TextUnformatted(buf);
         }
 
