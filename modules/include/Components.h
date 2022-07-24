@@ -130,6 +130,7 @@ public:
 #define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
 #define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB
 #define VIDEO_MEMORY_SIZE (WORD * SCREEN_WIDTH * SCREEN_HEIGHT) // About 590 KB
+#define N_CSR_MEMORY_REGISTERS 5
 
 class Memory
 {
@@ -137,7 +138,7 @@ public:
     uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE] = { 0 };      // 128 KB Instruction Memory
     uint32_t data_memory[DATA_MEMORY_SIZE] = { 0 };
     uint32_t video_memory[VIDEO_MEMORY_SIZE] = { 0 }; // 512x288 Video Memory
-    uint32_t csr_memory[4] = { 0 };
+    uint32_t csr_memory[N_CSR_MEMORY_REGISTERS] = { 0 };
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
 };
@@ -173,6 +174,7 @@ public:
 #define MCYCLE_L    (CSR_MEMORY_START + 4)
 #define MTIMECMP_H  (CSR_MEMORY_START + 8)
 #define MTIMECMP_L  (CSR_MEMORY_START + 12)
+#define KEYBOARD    (CSR_MEMORY_START + 16)
 
 #define MSTATUS_MIE_MASK 3
 #define MSTATUS_MPIE_MASK 7

@@ -17,6 +17,7 @@ extern uint32_t _ebss;
 #define CSR_MEMORY_START (uint32_t)0x30000000
 volatile uint32_t* mtimecmp_h = (uint32_t*)(CSR_MEMORY_START + 8);
 volatile uint32_t* mtimecmp_l = (uint32_t*)(CSR_MEMORY_START + 12);
+volatile uint32_t* keyboard_controller = (uint32_t*)(CSR_MEMORY_START + 16);
 
 // https://five-embeddev.com/code/2020/11/18/csr-access/
 static inline __attribute__((always_inline)) void csr_set_field_mstatus(uint32_t mask) {

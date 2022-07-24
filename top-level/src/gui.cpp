@@ -277,9 +277,16 @@ void gui::render_io_panel() {
             continue;
         if (ImGui::IsKeyDown(key))
         {
-            // ImGui::SameLine();
             ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key);
+            // Set Bit Flag in Keyboard CSR
+            for (size_t i = 0; i < buttons.size(); i++) {
+                if (key == buttons.at(i)) {
+                    t89->dram->csr_memory[4] |= (1 << i); // i specifies what bit "key" maps to
+                }
+            }
             break;
+        } else {
+            t89->dram->csr_memory[4] = 0;
         }
     }
     ImGui::End();
@@ -535,7 +542,7 @@ void gui::render_csr_bank() {
     std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
     std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
 
-    std::vector<std::string> csr_mem_name = {"mcycle_h", "mcycle_l", "mtimecmp_h", "mtimecmp_l"};
+    std::vector<std::string> csr_mem_name = {"mcycle_h", "mcycle_l", "mtimecmp_h", "mtimecmp_l", "keyboard"};
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags))
