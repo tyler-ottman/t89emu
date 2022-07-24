@@ -122,13 +122,6 @@ bool Pipeline::next_instruction()
 	uint32_t rd = (cur_instruction >> 7) & 0b11111;			   // Register Desination
 	uint32_t immediate = immgen->getImmediate(cur_instruction); // Instruction Immediate
 	uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;	   // CSR Address
-	
-	/******************DEBUG********************/
-	// if (this->debug_mode)
-	// {
-	// 	this->debug_pre_execute(opcode, funct3, funct7, rs1, rs2, rd, immediate, csr_addr, cur_instruction);
-	// }
-	/******************DEBUG********************/
 
 	// Execution flow dependent on instrution type
 	uint32_t mem_size;
@@ -137,25 +130,24 @@ bool Pipeline::next_instruction()
 	uint32_t alu_opcode;
 	uint32_t alu_output;
 	uint32_t cause_offset = 0;
+	uint64_t mcycle64 = (((uint64_t)dram->csr_memory[0]) << 32) | (dram->csr_memory[1]);
+	uint64_t mtimecmp64 = (((uint64_t)dram->csr_memory[2]) << 32) | (dram->csr_memory[3]);
+	
+	if (mcycle64 >= mtimecmp64) // Pending Timer interrupt
+		csr->set_mtip();
+	else
+		csr->reset_mtip();
 
 	// Check timer interrupt
-	if (csr->get_mie() && csr->get_mtie()) {
-		// Global/Timer Interrupt enabled
-		uint64_t mcycle64 = (((uint64_t)dram->csr_memory[0]) << 32) | (dram->csr_memory[1]);
-		uint64_t mtimecmp64 = (((uint64_t)dram->csr_memory[2]) << 32) | (dram->csr_memory[3]);
-		if (mcycle64 >= mtimecmp64) { // Take trap
-			cause_offset = 7;
-			// Save mepc
-			csr->mepc = pc->PC;
-			// Save MIE to MPIE before trap
-			if (csr->get_mie()) // MIE Enabled, save to MPIE
-				csr->set_mpie();
-			csr->reset_mie();
-			csr->set_mpp(MACHINE_MODE);
-
-			pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, 1, csr->mepc));
-			return true;
-		}
+	if (csr->get_mie() && csr->get_mtie() && csr->get_mtip()) {
+		// Global/Timer Interrupt enabled, pending timer interrupt
+		cause_offset = 7;
+		csr->mepc = pc->PC; // Save PC to mepc
+		if (csr->get_mie()) csr->set_mpie(); // MIE Enabled, save to MPIE
+		csr->reset_mie(); // Set MIE to 0
+		csr->set_mpp(MACHINE_MODE); // Set MPP to previous privilege level
+		pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4 * cause_offset, 1, csr->mepc));
+		return true;
 	}
 	
 	switch(opcode) {
@@ -247,13 +239,6 @@ bool Pipeline::next_instruction()
 
 	// Update PC
 	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, trap_taken, csr->mepc));
-
-	/******************DEBUG********************/
-	// if (this->debug_mode)
-	// {
-	// 	this->debug_post_execute(opcode, rd, immediate, rf.read(rd), rf.read(rs2), rf.read(rs1), pc.getPC());
-	// }
-	/******************DEBUG********************/
 
 	return true;
 }

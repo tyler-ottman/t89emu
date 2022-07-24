@@ -535,6 +535,8 @@ void gui::render_csr_bank() {
     std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
     std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
 
+    std::vector<std::string> csr_mem_name = {"mcycle_h", "mcycle_l", "mtimecmp_h", "mtimecmp_l"};
+
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags))
     {
@@ -547,6 +549,7 @@ void gui::render_csr_bank() {
             ImGui::TableHeadersRow();
         }
 
+        char buf[32];
         for (size_t row = 0; row < csr_address.size(); row++)
         {
             // CSR Entry
@@ -554,7 +557,6 @@ void gui::render_csr_bank() {
 
             // CSR Name
             ImGui::TableSetColumnIndex(0);
-            char buf[32];
             sprintf(buf, "%s", csr_name.at(row).c_str());
             ImGui::TextUnformatted(buf);
 
@@ -565,18 +567,20 @@ void gui::render_csr_bank() {
         }
 
         // Display Memory mapped control state registers
-        ImGui::TableNextRow();
+        for (size_t row = 0; row < csr_mem_name.size(); row++) {
+            // CSR Entry
+            ImGui::TableNextRow();
 
-        ImGui::TableSetColumnIndex(0);
-        char buf[32];
-        sprintf(buf, "mcycles");
-        ImGui::TextUnformatted(buf);
+            // CSR Name
+            ImGui::TableSetColumnIndex(0);
+            sprintf(buf, "%s", csr_mem_name.at(row).c_str());
+            ImGui::TextUnformatted(buf);
 
-        // CSR Value
-        ImGui::TableSetColumnIndex(1);
-        sprintf(buf, "0x%08X\n  %08X", csr_mem[0], csr_mem[1]);
-        ImGui::TextUnformatted(buf);
-
+            // CSR Value
+            ImGui::TableSetColumnIndex(1);
+            sprintf(buf, "0x%08X", t89->dram->csr_memory[row]);
+            ImGui::TextUnformatted(buf);
+        }
         ImGui::EndTable();
     }
     ImGui::End();
