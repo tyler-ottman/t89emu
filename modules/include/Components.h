@@ -12,7 +12,11 @@
 #define STORE 0b0100011 
 #define ITYPE 0b0010011
 #define RTYPE 0b0110011
-#define ECALL 0b1110011
+#define PRIV  0b1110011
+
+#define ECALL_IMM   0b000000000000
+#define MRET_IMM    0b001100000010
+#define URET_IMM    0b000000000010
 
 #ifndef ALU_H
 #define ALU_H
@@ -103,42 +107,10 @@ private:
     int branch_alu(uint32_t, uint32_t, uint32_t);
 public:
     NextPC();
-    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 };
 
 #endif // NEXTPC_H
-
-#ifndef CSR_H
-#define CSR_H
-
-// CSR Machine Mode Addresses
-#define MSTATUS     0x300 // Machine Status Register
-#define MTVEC       0x305 // Machine Trap Vector
-#define MIE         0x304 // Machine Interrupt Enable
-#define MIP         0x344 // Machine Interrupt Pending
-#define MCAUSE      0x342 // Machine Cause
-#define MEPC        0x341 // Machine Exception Program Counter
-#define MSCRATCH    0x340 // Machine Scratch
-#define MTVAL       0x343  // Machine Bad Address or Instruction
-
-class CSR
-{
-public:
-    uint32_t mstatus;
-    uint32_t mtvec;
-    uint32_t mie;
-    uint32_t mip;
-    uint32_t mcause;
-    uint32_t mepc;
-    uint32_t mscratch;
-    uint32_t mtval;
-    uint32_t mcycles;
-    CSR();
-    uint32_t read_csr(uint32_t);
-    void write_csr(uint32_t, uint32_t);
-};
-
-#endif // CSR_H
 
 #ifndef MEMORY_H
 #define MEMORY_H
@@ -151,12 +123,14 @@ public:
 #define SCREEN_HEIGHT 288
 
 #define INSTRUCTION_MEMORY_START    0x00000000 // Beginning of Instruction Memory
-#define VIDEO_MEMORY_START          0x40000000 // Beginning of Video Memory
-#define DATA_MEMORY_START           0x80000000 // Beginning of Data Memory
+#define DATA_MEMORY_START           0x10000000 // Beginning of Data Memory
+#define VIDEO_MEMORY_START          0x20000000 // Beginning of Video Memory
+#define CSR_MEMORY_START            0x30000000 // Beginning of CSR Memory Mapped Registers
 
 #define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
 #define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB
 #define VIDEO_MEMORY_SIZE (WORD * SCREEN_WIDTH * SCREEN_HEIGHT) // About 590 KB
+#define N_CSR_MEMORY_REGISTERS 5
 
 class Memory
 {
@@ -164,11 +138,116 @@ public:
     uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE] = { 0 };      // 128 KB Instruction Memory
     uint32_t data_memory[DATA_MEMORY_SIZE] = { 0 };
     uint32_t video_memory[VIDEO_MEMORY_SIZE] = { 0 }; // 512x288 Video Memory
+    uint32_t csr_memory[N_CSR_MEMORY_REGISTERS] = { 0 };
     void write(uint32_t, uint32_t, int);
     uint32_t read(uint32_t, int);
 };
 
 #endif // MEMORY_H
+
+#ifndef CSR_H
+#define CSR_H
+
+// Privilege Levels
+#define USER_MODE                   0b00
+#define SUPERVISOR_MODE             0b01
+#define RESERVED                    0b10
+#define MACHINE_MODE                0b11
+
+// CSR Machine Mode Addresses
+#define MSTATUS     0x300
+#define MISA        0x301
+#define MTVEC       0x305
+#define MIE         0x304
+#define MIP         0x344
+#define MCAUSE      0x342
+#define MEPC        0x341
+#define MSCRATCH    0x340
+#define MTVAL       0x343
+#define MVENDORID   0xF11
+#define MARCHID     0xF12
+#define MIMPID      0xF13
+#define MHARTID     0xF14
+
+// Memory Mapped CSR Addressed
+#define MCYCLE_H    CSR_MEMORY_START
+#define MCYCLE_L    (CSR_MEMORY_START + 4)
+#define MTIMECMP_H  (CSR_MEMORY_START + 8)
+#define MTIMECMP_L  (CSR_MEMORY_START + 12)
+#define KEYBOARD    (CSR_MEMORY_START + 16)
+
+#define MSTATUS_MIE_MASK 3
+#define MSTATUS_MPIE_MASK 7
+#define MSTATUS_MPP_MASK 11
+
+#define MIE_MEIE_MASK 11
+#define MIE_MTIE_MASK 7
+#define MIE_MSIE_MASK 3
+
+#define MIP_MEIP_MASK 11
+#define MIP_MTIP_MASK 7
+#define MIP_MSIP_MASK 3
+
+class CSR {
+public:
+    // Machine Instruction Set Architecture (I)
+    uint32_t misa;
+
+    // Machine Vendor ID (no implementation)
+    uint32_t mvendorid;
+
+    // Machine Architecture ID (no implementation)
+    uint32_t marchid;
+
+    // Machine Implementation ID (no implementation)
+    uint32_t mimpid;
+
+    // Machine Hart ID
+    uint32_t mhartid;
+
+    // Machine Status
+    uint32_t mstatus;
+
+    uint32_t mtvec;
+    uint32_t mie;
+    uint32_t mip;
+    uint32_t mcause;
+    uint32_t mepc;
+    uint32_t mscratch; // Maybe no implementation
+    uint32_t mtval;
+
+    inline void set_mie() {mstatus |= (1 << MSTATUS_MIE_MASK);}
+    inline void set_mpie() {mstatus |= (1 << MSTATUS_MPIE_MASK);}
+    inline void set_mpp(int mask) {mstatus |= ((mask & 0b11) << MSTATUS_MPP_MASK);}
+    inline void set_meip() {mip |= (1 << MIP_MEIP_MASK);}
+    inline void set_mtip() {mip |= (1 << MIP_MTIP_MASK);}
+    inline void set_msip() {mip |= (1 << MIP_MSIP_MASK);}
+
+    inline void reset_mie() {mstatus &= ~(1 << MSTATUS_MIE_MASK);}
+    inline void reset_mpie() {mstatus &= ~(1 << MSTATUS_MPIE_MASK);}
+    inline void reset_mpp() {mstatus &= ~(0b11 << MSTATUS_MPP_MASK);}
+    inline void reset_meip() {mip &= ~(1 << MIP_MEIP_MASK);}
+    inline void reset_mtip() {mip &= ~(1 << MIP_MTIP_MASK);}
+    inline void reset_msip() {mip &= ~(1 << MIP_MSIP_MASK);}
+
+    inline uint32_t get_mie() {return ((mstatus >> MSTATUS_MIE_MASK) & 0b1);}
+    inline uint32_t get_mpie() {return ((mstatus >> MSTATUS_MPIE_MASK) & 0b1);}
+    inline uint32_t get_mpp() {return ((mstatus >> MSTATUS_MPP_MASK) & 0b11);}
+    inline uint32_t get_meie() {return ((mie >> MIE_MEIE_MASK) &0b1);}
+    inline uint32_t get_mtie() {return ((mie >> MIE_MTIE_MASK) &0b1);}
+    inline uint32_t get_msie() {return ((mie >> MIE_MSIE_MASK) &0b1);}
+    inline uint32_t get_meip() {return ((mip >> MIP_MEIP_MASK) &0b1);}
+    inline uint32_t get_mtip() {return ((mip >> MIP_MTIP_MASK) &0b1);}
+    inline uint32_t get_msip() {return ((mip >> MIP_MSIP_MASK) &0b1);}
+
+    CSR();
+    uint32_t read_csr(uint32_t);
+    void write_csr(uint32_t, uint32_t);
+};
+
+#endif // CSR_H
+
+
 
 #ifndef MEMCONTROLUNIT_H
 #define MEMCONTROLUNIT_H
@@ -180,3 +259,13 @@ public:
 };
 
 #endif // MEMORY_H
+
+#ifndef TRAP_H
+#define TRAP_H
+
+class Trap {
+public:
+
+};
+
+#endif // TRAP_H

@@ -62,8 +62,8 @@ uint32_t ImmediateGenerator::getImmediate(uint32_t instruction)
             immediate = immediate & 0b11111;        // slli, srli, srai
         }
         return immediate;
-    case ECALL: // ecall/csri(w)
-        return instruction >> 20;
+    case PRIV: // ecall/csri(w)
+        return ((instruction >> 20) & 0xfff);
     }
     return immediate;
 }

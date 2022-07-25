@@ -2,27 +2,45 @@
 #include "Components.h"
 
 CSR::CSR(){
-    this->mstatus = 0;
-    this->mtvec = 0;
-    this->mie = 0;
-    this->mip = 0;
-    this->mcause = 0;
-    this->mepc = 0;
-    this->mscratch = 0;
-    this->mtval = 0;
-    this->mcycles = 0;
+    // Supported ISA
+    // I extension
+    misa = 0;
+
+    // Fields not implemented
+    mvendorid = 0;
+    marchid = 0;
+    mhartid = 0;
+    mimpid = 0;
+
+    // Enable by software
+    mstatus = 0;
+
+    // Loaded by software
+    mtvec = 0;
+    
+    // Enable all interrupts in software
+    mie = 0;
+    mip = 0;
+
+    mcause = 0;
+    mepc = 0;
+    mscratch = 0;
+
+    // Possibly no implementation
+    mtval = 0;
 }
 
 uint32_t CSR::read_csr(uint32_t address) {
     switch(address) {
-        case MSTATUS:   return this->mstatus;
-        case MTVEC:     return this->mtvec;
-        case MIE:       return this->mie;
-        case MIP:       return this->mip;
-        case MCAUSE:    return this->mcause;
-        case MEPC:      return this->mepc;
-        case MSCRATCH:  return this->mscratch;
-        case MTVAL:     return this->mtval;
+        case MSTATUS:   return mstatus;
+        case MISA:      return misa;
+        case MTVEC:     return mtvec;
+        case MIE:       return mie;
+        case MIP:       return mip;
+        case MCAUSE:    return mcause;
+        case MEPC:      return mepc;
+        case MSCRATCH:  return mscratch;
+        case MTVAL:     return mtval;
         default:
             std::cerr << "Unknown CSR" << std::endl;
             exit(EXIT_FAILURE);
@@ -31,14 +49,15 @@ uint32_t CSR::read_csr(uint32_t address) {
 
 void CSR::write_csr(uint32_t address, uint32_t data) {
     switch(address) {
-        case MSTATUS:   this->mcause = data; break;
-        case MTVEC:     this->mtvec  = data; break;
-        case MIE:       this->mie = data; break;
-        case MIP:       this->mip = data; break;
-        case MCAUSE:    this->mcause = data; break;
-        case MEPC:      this->mepc = data; break;
-        case MSCRATCH:  this->mscratch = data; break;
-        case MTVAL:     this->mtval = data; break;
+        case MSTATUS:   mstatus = data; break;
+        case MISA:      misa = data; break;
+        case MTVEC:     mtvec  = data; break;
+        case MIE:       mie = data; break;
+        case MIP:       mip = data; break;
+        case MCAUSE:    mcause = data; break;
+        case MEPC:      mepc = data; break;
+        case MSCRATCH:  mscratch = data; break;
+        case MTVAL:     mtval = data; break;
         default:
             std::cerr << "Unknown CSR" << std::endl;
             exit(EXIT_FAILURE);

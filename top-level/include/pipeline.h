@@ -14,25 +14,24 @@ private:
 	int debug_mode;
 	uint32_t IO_BUS;
 	uint32_t IO_ADDR;
-
-	ALU alu;
-	ALUControlUnit aluc;
-	ImmediateGenerator immgen;
-	// Memory dram;
-	MemControlUnit mcu;
-	NextPC nextpc;
-	
 	
 	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
 public:
 	Pipeline(char*, int);
+	~Pipeline();
 	bool next_instruction();
-	RegisterFile rf;
-	Memory dram;
-	ProgramCounter pc;
-	CSR csr;
+
+	RegisterFile* rf;
+	Memory* dram;
+	ProgramCounter* pc;
+	CSR* csr;
+	ALU* alu;
+	ALUControlUnit* aluc;
+	ImmediateGenerator* immgen;
+	MemControlUnit* mcu;
+	NextPC* nextpc;
 };
 
 #endif // PIPELINE_H

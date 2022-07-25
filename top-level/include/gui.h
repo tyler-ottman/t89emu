@@ -38,18 +38,18 @@ private:
     uint32_t* vram;
     uint32_t* rom;
     uint32_t* ram;
+    uint32_t* csr_mem;
     RegisterFile* rf;
     uint32_t* pc_ptr;
     ImVec4 clear_color;
+    int init_application(char*);
     void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
     void load_disassembled_code(char* path_name);
     std::unordered_map<uint32_t, std::string> disassembled_module;
-    int num_disassembled_instructions = 0;
     bool is_step_enabled;
     bool is_run_enabled;
     std::vector<uint32_t> breakpoints;
 public:
-    // gui(uint32_t*, RegisterFile*, uint32_t*, uint32_t*, uint32_t*);
     gui(char*, char*, int);
     void run_debug_application();
     void render_register_bank();
