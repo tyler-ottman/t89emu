@@ -1,4 +1,3 @@
-#define OLC_PGE_APPLICATION
 #include "pipeline.h"
 
 void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
@@ -56,30 +55,21 @@ Pipeline::Pipeline(char* code_bin, int debug = 0)
 	this->IO_ADDR = 0;   // 32-bit IO address
 	this->debug_mode = debug; // Debug mode
 
-	// Memory
-    std::multimap<uint32_t, uint32_t> dram_flash;
-    // Flash text section to Memory
+    // Flash ELF file to ROM
     std::ifstream text_input(code_bin, std::ios::binary);
-    std::vector<char> text_section(
-         (std::istreambuf_iterator<char>(text_input)),
-         (std::istreambuf_iterator<char>()));
+	if (text_input.fail()) {std::cerr << "Could not open" << code_bin << "\n"; exit(EXIT_FAILURE);}
+    std::vector<char> text_section((std::istreambuf_iterator<char>(text_input)),(std::istreambuf_iterator<char>()));
     text_input.close();
-    int num_instructions = text_section.size() / 4;    
-    for (int i = 0; i < num_instructions; i++) {
+
+    size_t num_instructions = text_section.size() / 4;    
+    for (size_t i = 0; i < num_instructions; i++) {
         // Preliminary 32-bit instruction
         uint32_t instruction = ((text_section[4*i+3] << 24) & 0xff000000) |
                                ((text_section[4*i+2] << 16) & 0x00ff0000) |
                                ((text_section[4*i+1] << 8)  & 0x0000ff00) |
                                ((text_section[4*i+0])       & 0x000000ff);
-        dram_flash.insert(std::make_pair((uint32_t)(INSTRUCTION_MEMORY_START + 4*i), instruction));
+		dram->write(INSTRUCTION_MEMORY_START + 4 * i, instruction, WORD);
     }
-
-	// Load Memory
-	for (std::multimap<uint32_t, uint32_t>::iterator it = dram_flash.begin(); it != dram_flash.end(); it++)
-	{
-		dram->write(it->first, it->second, WORD);
-	}
-	
 }
 
 Pipeline::~Pipeline() {
@@ -208,14 +198,18 @@ bool Pipeline::next_instruction()
 							csr->set_mpp(MACHINE_MODE);
 							break;
 						case ECALL_IMM:
-							cause_offset = 27;
-							// Save mepc
-							csr->mepc = pc->PC;
-							// Save MIE to MPIE before trap
-							if (csr->get_mie()) // MIE Enabled, save to MPIE
-								csr->set_mpie();
-							csr->reset_mie();
-							csr->set_mpp(MACHINE_MODE);
+							csr->set_msip();
+							if (csr->get_mie() && csr->get_msie() && csr->get_msip()) {
+								cause_offset = 27;
+								// Save mepc
+								csr->mepc = pc->PC + WORD;
+								// Save MIE to MPIE before trap
+								if (csr->get_mie()) // MIE Enabled, save to MPIE
+									csr->set_mpie();
+								csr->reset_mie();
+								csr->set_mpp(MACHINE_MODE);
+								trap_taken = 1;
+							}
 							break;
 					}
 					break;

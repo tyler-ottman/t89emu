@@ -10,7 +10,7 @@ static void glfw_error_callback(int error, const char *description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-static int init_application(char* glsl_version) {
+int gui::init_application(char* glsl_version) {
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return EXIT_FAILURE;
@@ -37,24 +37,85 @@ static int init_application(char* glsl_version) {
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif
+
+    // Create window with graphics context
+    window = glfwCreateWindow(1280, 720, "t89-OS", NULL, NULL);
+    if (window == NULL)
+        exit(EXIT_FAILURE);
+    glfwMakeContextCurrent(window);
     return 0;
+}
+
+gui::gui(char* code_bin, char* disassembled_file, int debug) {
+    std::vector<std::string> register_names = {
+        "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+        "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+        "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+    };
+
+    for (const std::string &reg_name : register_names) {
+        registers.push_back(std::make_pair(reg_name, 0));
+    }
+    
+    // Get GLSL version
+    char glsl_version[13];
+    if (init_application(glsl_version))
+        exit(EXIT_FAILURE);
+    
+    // glfwSwapInterval(1); // Enable vsync
+    IMGUI_CHECKVERSION();    // Setup Dear ImGui context
+    ImGui::CreateContext();
+    
+    ImGui::StyleColorsClassic(); // Setup Dear ImGui style
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+    clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
+    glGenTextures(1, &textureID); // Initialize Texture ID for VRAM
+
+    buttons = {TAB, W, A, S, D};
+    my_tex_w = SCREEN_WIDTH;
+    my_tex_h = SCREEN_HEIGHT;
+
+    is_step_enabled = false;
+    is_run_enabled = false;
+
+    // Initialize Emulator
+    this->t89 = new Pipeline(code_bin, debug);    
+
+    // GUI needs pointers to emulator parts to probe values
+    vram = t89->dram->video_memory;
+    rom = t89->dram->instruction_memory;
+    ram = t89->dram->data_memory;
+    csr_mem = t89->dram->csr_memory;
+    pc_ptr = &t89->pc->PC;
+    rf = t89->rf;
+    
+    load_disassembled_code(disassembled_file);
+
+    if (debug) {
+        run_debug_application();
+    } else {
+        // Normal application without debug window
+    }
 }
 
 void gui::load_disassembled_code(char* pathname) {
 #ifdef DISASSEMBLER_IMPL_STRING_PARSE
     // Read Disassembled code
     std::vector<std::string> disassembled_code;
-    std::fstream fd;
     std::string str;
     std::string function_name;
     bool add_function_name = false;
-    std::string comment = " # ";
-    size_t found;
-    fd.open(pathname);
+
+    std::fstream fd(pathname);
+    if (fd.fail()) {std::cerr << "Could not open " << pathname << "\n"; exit(EXIT_FAILURE);}
+
     for (int i = 0; i < 5; i++) // Clear lines before assembly
         std::getline(fd, str);
     while (std::getline(fd, str)) {
-        found = str.find(" # ");
+        size_t found = str.find(" # ");
         if (str.size() == 0) continue;                          // Empty Lines
         if (found != std::string::npos) 
             str = str.substr(0, found);                         // Remove Comments
@@ -79,22 +140,14 @@ void gui::load_disassembled_code(char* pathname) {
         if (token.size() != 0)
             tokens.push_back(token); // End of line token
 
-        switch(tokens.size()) {
-            case 3:
-                str = tokens[0] + " " + tokens[2];
-                num_disassembled_instructions++;
-                disassembled_code.push_back(str);
-                break;
-            case 4: // Instructions No Jump
-            case 5: // Instructions With Jump
-                str = tokens[0] + " " + tokens[2] + " " + tokens[3];
-                if (add_function_name) {
-                    add_function_name = false;
-                    str = str + " " + function_name.substr(0, function_name.size()-1);
-                }
-                num_disassembled_instructions++;
-                disassembled_code.push_back(str);
-                break; // Instruction With Jump      
+        size_t tokens_len = tokens.size();
+        if ((tokens_len == 3) || (tokens_len == 4) || (tokens_len == 5)) {
+            str = (tokens_len == 3) ? (tokens[0] + " " + tokens[2]) : (tokens[0] + " " + tokens[2] + " " + tokens[3]);
+            if (add_function_name) {
+                add_function_name = false;
+                str += " " + function_name.substr(0, function_name.size() - 1);
+            }
+            disassembled_code.push_back(str);
         }
     }
 
@@ -111,69 +164,6 @@ void gui::load_disassembled_code(char* pathname) {
 #else
     // C De-compiler feature in future
 #endif
-}
-
-gui::gui(char* code_bin, char* disassembled_file, int debug) {
-    std::vector<std::string> register_names = {
-        "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
-        "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
-        "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
-        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
-    };
-
-    for (const std::string &reg_name : register_names) {
-        registers.push_back(std::make_pair(reg_name, 0));
-    }
-    
-    // Initialize Texture ID for VRAM
-    // Get GLSL version
-    char glsl_version[13];
-    if (init_application(glsl_version))
-        exit(EXIT_FAILURE);
-    
-    // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "t89-OS", NULL, NULL);
-    if (window == NULL)
-        exit(EXIT_FAILURE);
-    glfwMakeContextCurrent(window);
-    // glfwSwapInterval(1); // Enable vsync
-    IMGUI_CHECKVERSION();    // Setup Dear ImGui context
-    ImGui::CreateContext();
-    
-    ImGui::StyleColorsClassic(); // Setup Dear ImGui style
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-    clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
-    glGenTextures(1, &textureID);
-
-    buttons = {TAB, W, A, S, D};
-    my_tex_w = SCREEN_WIDTH;
-    my_tex_h = SCREEN_HEIGHT;
-
-    is_step_enabled = false;
-    is_run_enabled = false;
-
-    // Initialize Emulator
-    // Pipeline t89(code_bin, data_bin, debug);
-    Pipeline t89_emulator(code_bin, debug);
-    this->t89 = &t89_emulator;
-    
-
-    // GUI needs pointers to emulator parts to probe values
-    vram = t89->dram->video_memory;
-    rom = t89->dram->instruction_memory;
-    ram = t89->dram->data_memory;
-    csr_mem = t89->dram->csr_memory;
-    pc_ptr = &t89->pc->PC;
-    rf = t89->rf;
-    load_disassembled_code(disassembled_file);
-
-    if (debug) {
-        run_debug_application();
-    } else {
-        // Normal application without debug window
-    }
 }
 
 void gui::run_debug_application() {
@@ -430,8 +420,6 @@ void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* me
 
             for (int i = 0; i < 4; ++i)
             {
-                // std::cout << mem_ptr[clipper.DisplayStart + i] << std::endl;
-                // std::cout << addr - address_offset << std::endl;
                 uint32_t temp = (addr - address_offset) << 2;
                 hex_bytes[4*i+0] = (mem_ptr[temp + i] & 0xff000000) >> 24;
                 hex_bytes[4*i+1] = (mem_ptr[temp + i] & 0x00ff0000) >> 16;
@@ -496,8 +484,7 @@ void gui::render_disassembled_code_section() {
     ImVec2 child_size = ImVec2(0, 0);
     ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
 
-    // std::string disassambled_section;
-    for (int i = 0; i < num_disassembled_instructions; i++) {
+    for (size_t i = 0; i < disassembled_module.size(); i++) {
         char txt_green[4] = "<--";
         std::string disassembled_line = disassembled_module[4 * i];
         // Determine if breakpoint should be printed

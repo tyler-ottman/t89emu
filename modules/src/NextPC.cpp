@@ -30,9 +30,9 @@ uint32_t NextPC::calculateNextPC(uint32_t offset, uint32_t opcode, uint32_t func
         case JALR: this->nextPC = A + offset; break; // JALR signal
         case BTYPE: this->nextPC += branch_alu(A, B, funct3) ? offset : 4; break; // B-type signal
         case PRIV:
-            if (funct3 == 0) { // ECALL/MRET
+            if ((funct3 == 0) && (offset == MRET_IMM)) { // ECALL/MRET
                 switch(offset) {
-                case ECALL_IMM: this->nextPC = mtvec; break;
+                case ECALL_IMM: this->nextPC += 4; break; // If here then software interrupts are disabled
                 case MRET_IMM:  this->nextPC = mepc; break;
                 }
             } else { // CSR Instruction
