@@ -200,7 +200,7 @@ bool Pipeline::next_instruction()
 						case ECALL_IMM:
 							csr->set_msip();
 							if (csr->get_mie() && csr->get_msie() && csr->get_msip()) {
-								cause_offset = 27;
+								cause_offset = 3;
 								// Save mepc
 								csr->mepc = pc->PC + WORD;
 								// Save MIE to MPIE before trap
