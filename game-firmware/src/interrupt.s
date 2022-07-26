@@ -36,13 +36,13 @@ _vector_table:
 _reserved:
     mret
 
-_machine_software_interrupt:
+_machine_software_interrupt:                # Handle ECALL / Exceptions
     mret
 
-_machine_timer_interrupt:
+_machine_timer_interrupt:                   # Handle Timer Interrupts
     mret
 
-_machine_external_interrupt:
+_machine_external_interrupt:                # Handle External Interrupts
     mret
 
 _instruction_address_misaligned:
