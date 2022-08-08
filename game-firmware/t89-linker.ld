@@ -33,6 +33,7 @@ SECTIONS
     .data :
     {
         PROVIDE( __global_pointer$ = . + (4K / 2) );
+        . = ALIGN(4);
         _sdata = .;
         *(.sdata*)
         *(.sdata2*)

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#define VRAM_START 0x20000000
+#define VRAM_START (unsigned int)0x20000000
 volatile unsigned int *VIDEO_MEMORY = (unsigned int *)(VRAM_START);
 
 #define WIDTH 512

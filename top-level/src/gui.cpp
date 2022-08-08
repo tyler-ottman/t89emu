@@ -92,6 +92,9 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     pc_ptr = &t89->pc->PC;
     rf = t89->rf;
     
+    const char filename[] = "../game-firmware/bin/game.elf";
+    ELF_Parse* elf_parser = new ELF_Parse(filename);
+    std::cout << elf_parser->elf_init_headers() << std::endl;
     load_disassembled_code(disassembled_file);
 
     if (debug) {
@@ -145,9 +148,11 @@ void gui::load_disassembled_code(char* pathname) {
             str = (tokens_len == 3) ? (tokens[0] + " " + tokens[2]) : (tokens[0] + " " + tokens[2] + " " + tokens[3]);
             if (add_function_name) {
                 add_function_name = false;
+                //str = function_name.substr(0, function_name.size() - 1) + "\n" + str;
                 str += " " + function_name.substr(0, function_name.size() - 1);
             }
             disassembled_code.push_back(str);
+            // std::cout << str << "\n";
         }
     }
 
@@ -202,6 +207,7 @@ void gui::run_debug_application() {
         render_lcd_display();
         render_disassembled_code_section();
         render_control_panel();
+        
         render_frame();
     }
 }
@@ -355,10 +361,10 @@ void gui::render_memory_viewer() {
             jumpAddr = 0; // Jump to PC
         ImGui::SameLine();
         if (ImGui::Button("SP"))
-            jumpAddr = INSTRUCTION_MEMORY_SIZE + VIDEO_MEMORY_SIZE; // Jump to SP
+            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to SP
         ImGui::SameLine();
         if (ImGui::Button("VRAM"))
-            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to VRAM
+            jumpAddr = INSTRUCTION_MEMORY_SIZE + DATA_MEMORY_SIZE; // Jump to VRAM
         
         
         ImGui::EndTable();
@@ -389,8 +395,8 @@ void gui::render_memory_viewer() {
         ImGui::TableSetupColumn("3", 0, 330);
         ImGui::TableSetupColumn("4", 0, 150);
         add_memory_section(INSTRUCTION_MEMORY_SIZE, INSTRUCTION_MEMORY_START, rom, "CODE");
-        add_memory_section(VIDEO_MEMORY_SIZE, VIDEO_MEMORY_START, vram, "VRAM");
         add_memory_section(DATA_MEMORY_SIZE, DATA_MEMORY_START, ram, "DATA");
+        add_memory_section(VIDEO_MEMORY_SIZE, VIDEO_MEMORY_START, vram, "VRAM");
 
         ImGui::EndTable();
     }
@@ -485,7 +491,7 @@ void gui::render_disassembled_code_section() {
     ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
 
     for (size_t i = 0; i < disassembled_module.size(); i++) {
-        char txt_green[4] = "<--";
+        const char txt_green[] = "<--";
         std::string disassembled_line = disassembled_module[4 * i];
         // Determine if breakpoint should be printed
         if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
