@@ -14,6 +14,7 @@
 #include "imgui_impl_opengl3.h"
 #include "Components.h"
 #include "pipeline.h"
+#include "risc_elf.h"
 
 // Defined Buttons
 #define TAB 512

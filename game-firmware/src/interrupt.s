@@ -45,6 +45,7 @@ _machine_timer_interrupt:                   # Handle Timer Interrupts
 _machine_external_interrupt:                # Handle External Interrupts
     mret
 
+
 _instruction_address_misaligned:
     mret
 
