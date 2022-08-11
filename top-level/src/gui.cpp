@@ -95,6 +95,8 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     const char filename[] = "../game-firmware/bin/game.elf";
     ELF_Parse* elf_parser = new ELF_Parse(filename);
     std::cout << elf_parser->elf_init_headers() << std::endl;
+    elf_parser->elf_load_sections(t89->dram);
+
     load_disassembled_code(disassembled_file);
 
     if (debug) {

@@ -13,16 +13,18 @@ bool ELF_Parse::elf_allocate_structures() {
 }
 
 bool ELF_Parse::is_legal_elf() {
-	uint32_t elf_magic = (elf_header_info->ident[0x00] << 24) | (elf_header_info->ident[0x01] << 16) | (elf_header_info->ident[0x02] << 8) | (elf_header_info->ident[0x03]);
-	if ((elf_magic != MAGIC) || // Verify magic
-		(elf_header_info->ident[0x04] != 1) || // Verify Size of Architecture (32-bit)
-		(elf_header_info->ident[0x05] != 1) || // Emulator assumes ELF file is little endian (fix in future to handle big endian?)
-		(elf_header_info->ident[0x07] != 0) || // Verify Target Operating system (System V)
-		(elf_header_info->type != 0x0002) || // Verify Object File type (Must be executable)
-		(elf_header_info->machine != 0x00f3) || // Verify Target Instruction Set Architecture
-		(elf_header_info->version != 0x00000001)) {return false;} // Verify ELF Version 
+	if ((elf_header_info->ident[EI_MAG0] != 0x7f) || // Verify Magic
+		(elf_header_info->ident[EI_MAG1] != 'E') ||
+		(elf_header_info->ident[EI_MAG2] != 'L') ||
+		(elf_header_info->ident[EI_MAG3] != 'F') ||
+		(elf_header_info->ident[EI_CLASS] != ELFCLASS32) || // Verify Size of Architecture (32-bit)
+		(elf_header_info->ident[EI_DATA] != ELFDATA2LSB) || // Emulator assumes ELF file is little endian (fix in future to handle big endian?)
+		(elf_header_info->ident[EI_VERSION] != EV_CURRENT) ||
+		(elf_header_info->type != ET_EXEC) || // Verify Object File type (Must be executable)
+		(elf_header_info->machine != EM_RISCV) || // Verify Target Instruction Set Architecture
+		(elf_header_info->version != EV_CURRENT)) {return false;} // Verify ELF Version 
 
-#ifdef DEBUG
+#ifndef DEBUG
 	std::cout << "Entry: " << std::hex << elf_header_info->entry <<
 				 "\nProgram Header Table Start: " << elf_header_info->phoff <<
 				 "\nSection Header Table Start: " << elf_header_info->shoff <<
@@ -90,14 +92,27 @@ bool ELF_Parse::elf_init_headers() {
 }
 
 bool ELF_Parse::elf_load_sections(Memory* dram) {
+	uint32_t rom_addr = 0;
+
 	// Iterate through program table entries
-	for (int idx = 0; idx < elf_header_info->phnum; idx++) {
-		const struct ELF_Program_Header* p_hdr = (const struct ELF_Program_Header*)elf_file_info->elf_data + elf_header_info->phoff + idx * elf_header_info->phentsize;
+	int p_num = elf_header_info->phnum;
+	for (int idx = 0; idx < p_num; idx++) {
+		const struct ELF_Program_Header* p_hdr = (const struct ELF_Program_Header*)(elf_file_info->elf_data + elf_header_info->phoff + idx * elf_header_info->phentsize);
 
 		// Determine if section should be loaded to emulator
 		if (p_hdr->type != PT_LOAD) {continue;}
 
 		// Copy section to memory
-		int section_size = (p_hdr->memsz < p_hdr->filesz) ? p_hdr->memsz : p_hdr->filesz;
+		uint32_t section_size = (p_hdr->memsz < p_hdr->filesz) ? p_hdr->memsz : p_hdr->filesz;
+		uint32_t address_start = p_hdr->paddr; // Starting address of program section
+
+		// Flash section to ROM		
+		for (size_t jdx = 0; jdx < section_size / 4; jdx++) {
+			uint32_t* temp = (uint32_t*)(elf_file_info->elf_data + p_hdr->offset);
+			printf("%08x ", temp[jdx]);
+			// printf("%02x ", word);
+		}
+		printf("\n");
 	}
+	return true;
 }

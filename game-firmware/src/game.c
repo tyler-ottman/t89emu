@@ -17,13 +17,17 @@ void init_green_screen() {
     for (int i = 0; i < WIDTH * HEIGHT; i++) VIDEO_MEMORY[i] = GREEN_SCREEN;
 }
 
+int test_arr[10] = { 0 };
+
 int main(void)
 {
     unsigned int i;
     while (1) {
         for (i = 0; i < 20; i++)  init_blue_screen();
         for (i = 0; i < 20; i++) init_green_screen();
+        break;
     }
     // init_blue_screen();
+
     return 0;
 }
