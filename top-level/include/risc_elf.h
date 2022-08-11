@@ -1,8 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <iostream>
 #include <vector>
+#include <utility>
 
 #include "Components.h"
 
@@ -34,6 +36,10 @@ typedef uint32_t Elf32_Word; // Unsigned large integer
 #define ET_EXEC     2
 #define EM_RISCV    0xf3
 
+#define STT_NOTYPE  0
+#define STT_OBJECT  1
+#define STT_FUNC    2
+
 struct ELF_Header {
     unsigned char   ident[EI_NIDENT]; // Magic Number
     Elf32_Half      type; // Executable - 2
@@ -49,11 +55,6 @@ struct ELF_Header {
     Elf32_Half      shentsize;
     Elf32_Half      shnum;
     Elf32_Half      shstrndx;  
-};
-
-struct ELF_File_Information {
-    uint8_t* elf_data;
-    unsigned int elf_size;
 };
 
 struct ELF_Section_Header {
@@ -80,18 +81,42 @@ struct ELF_Program_Header {
     Elf32_Word      align;
 };
 
+struct ELF_Symbol {
+    Elf32_Word name;
+    Elf32_Addr value;
+    Elf32_Word size;
+    uint8_t info;
+    uint8_t other;
+    Elf32_Half shndx;
+};
+
+struct ELF_File_Information {
+    uint8_t* elf_data;
+    unsigned int elf_size;
+};
+
 class ELF_Parse {
 private:
-    struct ELF_Header* elf_header_info;
-    struct ELF_File_Information* elf_file_info;
-    struct ELF_Program_Header* elf_program_header;
     bool elf_allocate_structures();
     bool is_legal_elf();
+    bool elf_init_headers();
+
+    const ELF_Section_Header* get_section_header(const char*);
+    const ELF_Program_Header* get_program_header(int);
+
+    // Elf Header Information
+    const struct ELF_Header* elf_header_info;
+    const struct ELF_Program_Header* elf_program_header;
+    const struct ELF_Section_Header* elf_section_header;
+    
+    // ELF File Information
+    struct ELF_File_Information* elf_file_info;
     const char* file_name;
     
 public:
     ELF_Parse(const char*);
-    bool elf_init_headers();
+    
     bool elf_load_sections(Memory*);
+    void generate_disassembled_text();
 };
 

@@ -3,13 +3,15 @@
 ELF_Parse::ELF_Parse(const char* filepath) {
 	file_name = filepath;
 	if(!elf_allocate_structures()) {std::cerr << "Error: ELF initialization failed\n"; exit(EXIT_FAILURE);}
+	if(!elf_init_headers()) {std::cerr << "Error: Invalid ELF file.\n"; exit(EXIT_FAILURE);}
 }
 
 bool ELF_Parse::elf_allocate_structures() {
-	elf_header_info = (struct ELF_Header*) malloc(sizeof(struct ELF_Header));
+	elf_header_info = (const struct ELF_Header*) malloc(sizeof(struct ELF_Header));
+	elf_section_header = (const struct ELF_Section_Header*) malloc(sizeof(struct ELF_Section_Header));
+	elf_program_header = (const struct ELF_Program_Header*) malloc(sizeof(struct ELF_Program_Header));
 	elf_file_info = (struct ELF_File_Information*) malloc(sizeof(struct ELF_File_Information));
-	elf_program_header = (struct ELF_Program_Header*) malloc(sizeof(struct ELF_Program_Header));
-	return ((elf_header_info != NULL) && (elf_file_info != NULL) && (elf_program_header != NULL));
+	return ((elf_header_info != NULL) && (elf_file_info != NULL) && (elf_program_header != NULL) && (elf_section_header != NULL));
 }
 
 bool ELF_Parse::is_legal_elf() {
@@ -23,37 +25,6 @@ bool ELF_Parse::is_legal_elf() {
 		(elf_header_info->type != ET_EXEC) || // Verify Object File type (Must be executable)
 		(elf_header_info->machine != EM_RISCV) || // Verify Target Instruction Set Architecture
 		(elf_header_info->version != EV_CURRENT)) {return false;} // Verify ELF Version 
-
-#ifndef DEBUG
-	std::cout << "Entry: " << std::hex << elf_header_info->entry <<
-				 "\nProgram Header Table Start: " << elf_header_info->phoff <<
-				 "\nSection Header Table Start: " << elf_header_info->shoff <<
-				 "\nFlags: " << elf_header_info->flags <<
-				 "\nHeader size: " << elf_header_info->ehsize <<
-				 "\nSize of Program Header Table entry: " << elf_header_info->phentsize <<
-				 "\n# of program header table entries: " << elf_header_info->phnum <<
-				 "\nSize of Section Header Table entry: " << elf_header_info->shentsize <<
-				 "\n# of section header table entries: " << elf_header_info->shnum <<
-				 "\nIndex of Section Table containing section names: " << elf_header_info->shstrndx << "\n";
-
-
-	// Program Header Table Debug
-	std::cout << "\nProgram Header Table";
-	int idx;
-	struct ELF_Program_Header* p_entry = (struct ELF_Program_Header*)malloc(sizeof(struct ELF_Program_Header));
-	for (idx = 0; idx < elf_header_info->phnum; idx++) {
-		std::cout << "\nENTRY: " << idx;
-		p_entry = (struct ELF_Program_Header*)(elf_file_info->elf_data + elf_header_info->phoff + idx * elf_header_info->phentsize);
-		std::cout << "\np_type: " << p_entry->type <<
-				 "\np_offset: " << p_entry->offset <<
-				 "\np_vaddr: " << p_entry->vaddr <<
-				 "\np_paddr: " << p_entry->paddr <<
-				 "\np_filesz: " << p_entry->filesz <<
-				 "\np_memsz: " << p_entry->memsz <<
-				 "\np_flags: " << p_entry->flags <<
-				 "\np_align: " << p_entry->align << "\n";
-	}
-#endif
 	return true;
 }
 
@@ -85,34 +56,80 @@ bool ELF_Parse::elf_init_headers() {
 	// Load ELF Header information to struct
 	elf_header_info = (struct ELF_Header*)elf_file_info->elf_data;
 
-	// Load ELF Program Header information to struct
-	elf_program_header = (struct ELF_Program_Header*)(elf_file_info->elf_data + elf_header_info->phoff);
-
 	return (is_legal_elf());
 }
 
+// Return struct pointer to desired section given section name
+const ELF_Section_Header* ELF_Parse::get_section_header(const char* name) {
+	// 
+
+	// Must use string table section to read name of other sections
+	for (int idx = 0; idx < elf_header_info->shnum; idx++) {
+		// Current Section header idx
+		const struct ELF_Section_Header* s_hdr = (const struct ELF_Section_Header*)(elf_file_info->elf_data + elf_header_info->shoff + idx * elf_header_info->shentsize);
+		
+		// shstrndx header (contains names of all sections), used to get name of section header idx
+		const struct ELF_Section_Header* shstrndx_hdr = (const struct ELF_Section_Header*)(elf_file_info->elf_data + elf_header_info->shoff + elf_header_info->shstrndx * elf_header_info->shentsize);
+		const char* section_name = (const char *)(elf_file_info->elf_data + shstrndx_hdr->offset + s_hdr->name);
+		
+		if (!strncmp(section_name, name, strlen(name))) {return s_hdr;}
+	}
+	return nullptr;
+}
+
+// Return struct pointer to desired section given nth entry in program header table
+const ELF_Program_Header* ELF_Parse::get_program_header(int nentry) {
+	if ((nentry < 0) || ((nentry >= elf_header_info->phnum))) {return nullptr;}
+	const struct ELF_Program_Header* p_hdr = (const struct ELF_Program_Header*)(elf_file_info->elf_data + elf_header_info->phoff + nentry * elf_header_info->phentsize);
+	return p_hdr;
+}
+
+// Flash all loadable sections as contiguous byte array to ROM
 bool ELF_Parse::elf_load_sections(Memory* dram) {
 	uint32_t rom_addr = 0;
 
 	// Iterate through program table entries
 	int p_num = elf_header_info->phnum;
 	for (int idx = 0; idx < p_num; idx++) {
-		const struct ELF_Program_Header* p_hdr = (const struct ELF_Program_Header*)(elf_file_info->elf_data + elf_header_info->phoff + idx * elf_header_info->phentsize);
+		const struct ELF_Program_Header* p_hdr = get_program_header(idx);
 
 		// Determine if section should be loaded to emulator
 		if (p_hdr->type != PT_LOAD) {continue;}
 
-		// Copy section to memory
+		// Starting Address / Size of section
 		uint32_t section_size = (p_hdr->memsz < p_hdr->filesz) ? p_hdr->memsz : p_hdr->filesz;
 		uint32_t address_start = p_hdr->paddr; // Starting address of program section
 
-		// Flash section to ROM		
+		// Flash section to ROM
+		printf("\nMemory Section %d:\n", idx);	
 		for (size_t jdx = 0; jdx < section_size / 4; jdx++) {
 			uint32_t* temp = (uint32_t*)(elf_file_info->elf_data + p_hdr->offset);
 			printf("%08x ", temp[jdx]);
-			// printf("%02x ", word);
 		}
 		printf("\n");
 	}
+
 	return true;
+}
+
+void ELF_Parse::generate_disassembled_text() {
+	// Use String/Symble Headers for reference
+	const struct ELF_Section_Header* strtab_hdr = get_section_header(".strtab");
+	const struct ELF_Section_Header* symtab_hdr = get_section_header(".symtab");
+	
+	// Traverse through Symbol Table to determine which symbols to use
+	const struct ELF_Symbol* start_sym = (const struct ELF_Symbol*)(elf_file_info->elf_data + symtab_hdr->offset);
+	const struct ELF_Symbol* end_sym = (const struct ELF_Symbol*)(elf_file_info->elf_data + symtab_hdr->offset + symtab_hdr->size);
+	printf("\n# of Symbols %d\n", (int)((end_sym - start_sym)));
+
+	const char* strtab_str = (const char*)(elf_file_info->elf_data + strtab_hdr->offset);
+
+	// Find relevant symbols for disassembler
+	int idx = 0;
+	while (start_sym < end_sym) {
+		const char* symbol_name = strtab_str + start_sym->name;
+		printf("%02d: %s\n",idx++, symbol_name);
+		start_sym++;
+	}
+	printf("\n");
 }
