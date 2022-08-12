@@ -22,6 +22,7 @@ int test_arr[10] = { 0 };
 int main(void)
 {
     unsigned int i;
+    char* test = "hello world\n";
     while (1) {
         for (i = 0; i < 20; i++)  init_blue_screen();
         for (i = 0; i < 20; i++) {

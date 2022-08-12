@@ -101,7 +101,7 @@ bool ELF_Parse::elf_load_sections(Memory* dram) {
 		uint32_t address_start = p_hdr->paddr; // Starting address of program section
 
 		// Flash section to ROM
-		printf("\nMemory Section %d:\n", idx);	
+		printf("\nMemory Section %d, size %d\n", idx, (section_size / 4));	
 		for (size_t jdx = 0; jdx < section_size / 4; jdx++) {
 			uint32_t* temp = (uint32_t*)(elf_file_info->elf_data + p_hdr->offset);
 			printf("%08x ", temp[jdx]);

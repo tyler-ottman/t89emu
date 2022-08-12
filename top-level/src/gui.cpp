@@ -96,7 +96,7 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     ELF_Parse* elf_parser = new ELF_Parse(filename);
     elf_parser->elf_load_sections(t89->dram);
     elf_parser->generate_disassembled_text();
-
+    printf("HELLO\n");
     load_disassembled_code(disassembled_file);
 
     if (debug) {
@@ -116,7 +116,7 @@ void gui::load_disassembled_code(char* pathname) {
 
     std::fstream fd(pathname);
     if (fd.fail()) {std::cerr << "Could not open " << pathname << "\n"; exit(EXIT_FAILURE);}
-
+    std::cout << "I GOT HERE\n";
     for (int i = 0; i < 5; i++) // Clear lines before assembly
         std::getline(fd, str);
     while (std::getline(fd, str)) {
@@ -153,12 +153,14 @@ void gui::load_disassembled_code(char* pathname) {
                 //str = function_name.substr(0, function_name.size() - 1) + "\n" + str;
                 str += " " + function_name.substr(0, function_name.size() - 1);
             }
+            printf("%s\n", str.c_str());
             disassembled_code.push_back(str);
             // std::cout << str << "\n";
         }
     }
 
     // Upload disassembled file for disassembly module
+    printf("Disassembled code size: %ld", disassembled_code.size());
     for (const std::string &disassembled_line: disassembled_code) {
         // Extract address
         int find = disassembled_line.find(":");
@@ -207,7 +209,7 @@ void gui::run_debug_application() {
         render_csr_bank();
         render_io_panel();
         render_lcd_display();
-        render_disassembled_code_section();
+        // render_disassembled_code_section();
         render_control_panel();
         
         render_frame();
