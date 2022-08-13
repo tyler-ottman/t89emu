@@ -96,7 +96,6 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     ELF_Parse* elf_parser = new ELF_Parse(filename);
     elf_parser->elf_load_sections(t89->dram);
     elf_parser->generate_disassembled_text();
-    printf("HELLO\n");
     load_disassembled_code(disassembled_file);
 
     if (debug) {
@@ -116,7 +115,6 @@ void gui::load_disassembled_code(char* pathname) {
 
     std::fstream fd(pathname);
     if (fd.fail()) {std::cerr << "Could not open " << pathname << "\n"; exit(EXIT_FAILURE);}
-    std::cout << "I GOT HERE\n";
     for (int i = 0; i < 5; i++) // Clear lines before assembly
         std::getline(fd, str);
     while (std::getline(fd, str)) {
@@ -160,12 +158,13 @@ void gui::load_disassembled_code(char* pathname) {
     }
 
     // Upload disassembled file for disassembly module
-    printf("Disassembled code size: %ld", disassembled_code.size());
+    printf("Disassembled code size: %ld\n", disassembled_code.size());
     for (const std::string &disassembled_line: disassembled_code) {
         // Extract address
         int find = disassembled_line.find(":");
         std::string address_string = "0x" + disassembled_line.substr(0, find);
-        uint32_t address = std::stoul(address_string, nullptr, 16); 
+        uint32_t address = std::stoul(address_string, nullptr, 16);
+        std::cout << disassembled_line << "\n";
         disassembled_module.insert(std::make_pair(address, disassembled_line));
     }
 #elif DISASSMELBER_IMPL_HEX

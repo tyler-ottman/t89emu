@@ -36,9 +36,15 @@ typedef uint32_t Elf32_Word; // Unsigned large integer
 #define ET_EXEC     2
 #define EM_RISCV    0xf3
 
+// Symbol Type
 #define STT_NOTYPE  0
 #define STT_OBJECT  1
 #define STT_FUNC    2
+
+// Program Section Flags
+#define PF_X        0x1 // Execute  
+#define PF_W        0x2 // Write
+#define PF_R        0x4 // Read
 
 struct ELF_Header {
     unsigned char   ident[EI_NIDENT]; // Magic Number
@@ -118,5 +124,6 @@ public:
     
     bool elf_load_sections(Memory*);
     void generate_disassembled_text();
+    void add_disassembled_section(uint8_t*, Elf32_Word);
 };
 

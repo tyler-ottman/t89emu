@@ -61,8 +61,6 @@ bool ELF_Parse::elf_init_headers() {
 
 // Return struct pointer to desired section given section name
 const ELF_Section_Header* ELF_Parse::get_section_header(const char* name) {
-	// 
-
 	// Must use string table section to read name of other sections
 	for (int idx = 0; idx < elf_header_info->shnum; idx++) {
 		// Current Section header idx
@@ -87,13 +85,14 @@ const ELF_Program_Header* ELF_Parse::get_program_header(int nentry) {
 // Flash all loadable sections as contiguous byte array to ROM
 bool ELF_Parse::elf_load_sections(Memory* dram) {
 	uint32_t rom_addr = 0;
+	bool is_executable = 0; // Flag used for disassembler
 
 	// Iterate through program table entries
 	int p_num = elf_header_info->phnum;
 	for (int idx = 0; idx < p_num; idx++) {
 		const struct ELF_Program_Header* p_hdr = get_program_header(idx);
 
-		// Determine if section should be loaded to emulator
+		// Determine if section should be loaded to emulator memory
 		if (p_hdr->type != PT_LOAD) {continue;}
 
 		// Starting Address / Size of section
@@ -101,12 +100,16 @@ bool ELF_Parse::elf_load_sections(Memory* dram) {
 		uint32_t address_start = p_hdr->paddr; // Starting address of program section
 
 		// Flash section to ROM
-		printf("\nMemory Section %d, size %d\n", idx, (section_size / 4));	
-		for (size_t jdx = 0; jdx < section_size / 4; jdx++) {
-			uint32_t* temp = (uint32_t*)(elf_file_info->elf_data + p_hdr->offset);
-			printf("%08x ", temp[jdx]);
+		for (size_t jdx = 0; jdx < section_size; jdx++) {
+			uint8_t* temp = (uint8_t*)(elf_file_info->elf_data + p_hdr->offset);
+			// dram->write()
 		}
 		printf("\n");
+
+		// If seciton if executable, add to disassembler
+		if ((p_hdr->flags & 1) == PF_X) {
+			add_disassembled_section((uint8_t*)(elf_file_info->elf_data + p_hdr->offset), section_size);
+		}
 	}
 
 	return true;
@@ -133,3 +136,4 @@ void ELF_Parse::generate_disassembled_text() {
 	}
 	printf("\n");
 }
+

@@ -30,7 +30,6 @@ int main(void)
         }
         break;
     }
-    
     // init_blue_screen();
 
     return 0;
