@@ -94,7 +94,7 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     
     const char filename[] = "../game-firmware/bin/game.elf";
     ELF_Parse* elf_parser = new ELF_Parse(filename);
-    elf_parser->elf_load_sections(t89->dram);
+    elf_parser->elf_flash_sections(t89->dram);
     elf_parser->generate_disassembled_text();
     load_disassembled_code(disassembled_file);
 
@@ -151,20 +151,19 @@ void gui::load_disassembled_code(char* pathname) {
                 //str = function_name.substr(0, function_name.size() - 1) + "\n" + str;
                 str += " " + function_name.substr(0, function_name.size() - 1);
             }
-            printf("%s\n", str.c_str());
+            // printf("%s\n", str.c_str());
             disassembled_code.push_back(str);
             // std::cout << str << "\n";
         }
     }
 
     // Upload disassembled file for disassembly module
-    printf("Disassembled code size: %ld\n", disassembled_code.size());
     for (const std::string &disassembled_line: disassembled_code) {
         // Extract address
         int find = disassembled_line.find(":");
         std::string address_string = "0x" + disassembled_line.substr(0, find);
         uint32_t address = std::stoul(address_string, nullptr, 16);
-        std::cout << disassembled_line << "\n";
+        // std::cout << disassembled_line << "\n";
         disassembled_module.insert(std::make_pair(address, disassembled_line));
     }
 #elif DISASSMELBER_IMPL_HEX

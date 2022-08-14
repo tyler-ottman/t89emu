@@ -1,0 +1,56 @@
+
+Symbol table '.symtab' contains 53 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 00000000     0 SECTION LOCAL  DEFAULT    1 
+     2: 10000000     0 SECTION LOCAL  DEFAULT    2 
+     3: 10000010     0 SECTION LOCAL  DEFAULT    3 
+     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
+     5: 00000000     0 SECTION LOCAL  DEFAULT    5 
+     6: 00000000     0 FILE    LOCAL  DEFAULT  ABS crt0.o
+     7: 00000000     0 NOTYPE  LOCAL  DEFAULT    1 $x
+     8: 00000028     0 NOTYPE  LOCAL  DEFAULT    1 _spin
+     9: 00000000     0 FILE    LOCAL  DEFAULT  ABS bootup.c
+    10: 0000002c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    11: 10000010     4 OBJECT  LOCAL  DEFAULT    3 heap_end.0
+    12: 00000000     0 FILE    LOCAL  DEFAULT  ABS interrupt.o
+    13: 00000154     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    14: 000001c4     0 NOTYPE  LOCAL  DEFAULT    1 _reserved
+    15: 000001c8     0 NOTYPE  LOCAL  DEFAULT    1 _machine_software_interru
+    16: 000001cc     0 NOTYPE  LOCAL  DEFAULT    1 _machine_timer_interrupt
+    17: 000001d0     0 NOTYPE  LOCAL  DEFAULT    1 _machine_external_interru
+    18: 000001d4     0 NOTYPE  LOCAL  DEFAULT    1 _instruction_address_misa
+    19: 000001d8     0 NOTYPE  LOCAL  DEFAULT    1 _instruction_access_fault
+    20: 000001dc     0 NOTYPE  LOCAL  DEFAULT    1 _illegal_instruction
+    21: 000001e0     0 NOTYPE  LOCAL  DEFAULT    1 _load_address_misaligned
+    22: 000001e4     0 NOTYPE  LOCAL  DEFAULT    1 _load_access_fault
+    23: 000001e8     0 NOTYPE  LOCAL  DEFAULT    1 _store_address_misaligned
+    24: 000001ec     0 NOTYPE  LOCAL  DEFAULT    1 _store_access_fault
+    25: 000001f0     0 NOTYPE  LOCAL  DEFAULT    1 _environment_call_u_mode
+    26: 000001f4     0 NOTYPE  LOCAL  DEFAULT    1 _environment_call_m_mode
+    27: 00000000     0 FILE    LOCAL  DEFAULT  ABS game.c
+    28: 000001f8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    29: 00000154     0 NOTYPE  GLOBAL DEFAULT    1 _vector_table
+    30: 0000002c   220 FUNC    GLOBAL DEFAULT    1 load_ram
+    31: 10000800     0 NOTYPE  GLOBAL DEFAULT    2 __global_pointer$
+    32: 10000004     4 OBJECT  GLOBAL DEFAULT    2 mtimecmp_l
+    33: 000001f8    92 FUNC    GLOBAL DEFAULT    1 init_blue_screen
+    34: 10000014    40 OBJECT  GLOBAL DEFAULT    3 test_arr
+    35: 0000032c     0 NOTYPE  GLOBAL DEFAULT    1 _etext
+    36: 10000010     0 NOTYPE  GLOBAL DEFAULT    3 _sbss
+    37: 0000033c     0 NOTYPE  GLOBAL DEFAULT    1 _program_end
+    38: 0000032c     0 NOTYPE  GLOBAL DEFAULT    1 _srodata
+    39: 10000000     0 NOTYPE  GLOBAL DEFAULT    2 _sdata
+    40: 10000008     4 OBJECT  GLOBAL DEFAULT    2 keyboard_controller
+    41: 10000000     4 OBJECT  GLOBAL DEFAULT    2 mtimecmp_h
+    42: 00000108    76 FUNC    GLOBAL DEFAULT    1 _sbrk
+    43: 1000003c     0 NOTYPE  GLOBAL DEFAULT    3 _ebss
+    44: 10100000     0 NOTYPE  GLOBAL DEFAULT    1 __stack_top
+    45: 00000000     0 NOTYPE  GLOBAL DEFAULT    1 _start
+    46: 00000254    92 FUNC    GLOBAL DEFAULT    1 init_green_screen
+    47: 000002b0   124 FUNC    GLOBAL DEFAULT    1 main
+    48: 10000010     0 NOTYPE  GLOBAL DEFAULT    2 _edata
+    49: 1000003c     0 NOTYPE  GLOBAL DEFAULT  ABS _heapbase
+    50: 00000000     0 NOTYPE  GLOBAL DEFAULT    1 _stext
+    51: 1000000c     4 OBJECT  GLOBAL DEFAULT    2 VIDEO_MEMORY
+    52: 0000033c     0 NOTYPE  GLOBAL DEFAULT    1 _erodata

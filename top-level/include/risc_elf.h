@@ -40,6 +40,11 @@ typedef uint32_t Elf32_Word; // Unsigned large integer
 #define STT_NOTYPE  0
 #define STT_OBJECT  1
 #define STT_FUNC    2
+#define STT_SECTION 3
+#define STT_FILE    4
+#define STT_LOPROC  13
+#define STT_HIPROC  15
+#define ELF32_ST_TYPE(i) ((i)&0xf) 
 
 // Program Section Flags
 #define PF_X        0x1 // Execute  
@@ -101,14 +106,18 @@ struct ELF_File_Information {
     unsigned int elf_size;
 };
 
+struct Disassembled_Entry {
+    bool is_instruction; // Line if either Function/Assembly name or Instruction
+    std::string line;
+};
+
 class ELF_Parse {
 private:
-    bool elf_allocate_structures();
-    bool is_legal_elf();
     bool elf_init_headers();
 
     const ELF_Section_Header* get_section_header(const char*);
     const ELF_Program_Header* get_program_header(int);
+    std::pair<Elf32_Addr, std::string>* find_symbol_at_address(Elf32_Addr);
 
     // Elf Header Information
     const struct ELF_Header* elf_header_info;
@@ -118,12 +127,13 @@ private:
     // ELF File Information
     struct ELF_File_Information* elf_file_info;
     const char* file_name;
-    
+
+    std::vector<std::pair<Elf32_Addr, std::string>> symbols; // Symbol - Address, Name
+    std::vector<const struct ELF_Program_Header*> executable_sections; // Section - Pointer to beginning of section, section size
 public:
     ELF_Parse(const char*);
-    
-    bool elf_load_sections(Memory*);
+    ~ELF_Parse();
+    bool elf_flash_sections(Memory*);
     void generate_disassembled_text();
-    void add_disassembled_section(uint8_t*, Elf32_Word);
 };
 

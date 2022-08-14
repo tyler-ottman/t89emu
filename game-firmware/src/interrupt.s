@@ -1,5 +1,6 @@
 .section .text
 .global _vector_table
+.global random_routine
 _vector_table:
     # Interrupts
     j _reserved                             # Reserved
@@ -72,3 +73,8 @@ _environment_call_u_mode:
 
 _environment_call_m_mode:
     mret
+
+random_routine:
+    nop
+    nop
+    ret
