@@ -108,6 +108,7 @@ struct ELF_File_Information {
 
 struct Disassembled_Entry {
     bool is_instruction; // Line if either Function/Assembly name or Instruction
+    Elf32_Word address;
     std::string line;
 };
 
@@ -118,6 +119,8 @@ private:
     const ELF_Section_Header* get_section_header(const char*);
     const ELF_Program_Header* get_program_header(int);
     std::pair<Elf32_Addr, std::string>* find_symbol_at_address(Elf32_Addr);
+    std::string disassemble_instruction(Elf32_Addr, Elf32_Word);
+    std::string get_csr_name(int);
 
     // Elf Header Information
     const struct ELF_Header* elf_header_info;
@@ -130,6 +133,8 @@ private:
 
     std::vector<std::pair<Elf32_Addr, std::string>> symbols; // Symbol - Address, Name
     std::vector<const struct ELF_Program_Header*> executable_sections; // Section - Pointer to beginning of section, section size
+
+    std::vector<struct Disassembled_Entry> disassembled_code;
 public:
     ELF_Parse(const char*);
     ~ELF_Parse();

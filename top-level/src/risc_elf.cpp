@@ -156,10 +156,7 @@ void ELF_Parse::generate_disassembled_text() {
 			continue;
 		}
 
-		// printf("%08x: %s\n", symbol_addr, symbol_name);
 	}
-	printf("\n");
-
 	// Merge Symbols and Instructions
 	for (const auto &section: executable_sections) {
 		// Starting Address / Size of section
@@ -168,22 +165,170 @@ void ELF_Parse::generate_disassembled_text() {
 
 		// Add current executable section to text
 		for (Elf32_Addr idx = 0; idx < section_size; idx += 4) {
-			std::pair<Elf32_Addr, std::string>* addr_symb = find_symbol_at_address(address_start + idx);
-			if (addr_symb != nullptr) {
-				printf("%s\n", addr_symb->second.c_str());
+			Elf32_Addr cur_addr = address_start + idx;
+			struct Disassembled_Entry disassembled_line; // Used for Disassembler in GUI
+			
+			std::pair<Elf32_Addr, std::string>* addr_symb = find_symbol_at_address(cur_addr);
+			if (addr_symb != nullptr) { // Instruction at current address also has a symbol (function or assembly routine name)
+				disassembled_line.is_instruction = false;
+				disassembled_line.address = cur_addr;
+				disassembled_line.line = "<" + addr_symb->second + ">:";
+				disassembled_code.push_back(disassembled_line);
 			}
 
 			Elf32_Word instruction = *((uint32_t*)(elf_file_info->elf_data + section->offset + idx));
-			printf("%08x\n", instruction);
+			disassembled_line.is_instruction = true;
+			disassembled_line.address = cur_addr;
+			disassembled_line.line = disassemble_instruction(cur_addr, instruction);
+			disassembled_code.push_back(disassembled_line);
+			disassemble_instruction(cur_addr, instruction);
 		}
 	}
-	std::cout << std::endl;
-	// for (const auto &symbol : symbols) {
-	// 	printf("%08x: %s\n", symbol.first, symbol.second.c_str());
-	// }
-	// If seciton if executable, add to disassembler
-	// if ((p_hdr->flags & 1) == PF_X) {
-	// 	add_disassembled_section((uint8_t*)(elf_file_info->elf_data + p_hdr->offset), section_size);
-	// }
+	
+	for (const auto &line : disassembled_code) {
+		if (line.is_instruction) {
+			printf("%08x: %s\n", line.address, line.line.c_str());
+		} else {
+			printf("%s\n", line.line.c_str());
+		}
+	}
+}
 
+
+
+std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instruction) {
+	const std::vector<std::string> instruction_names = {
+		"lui", "auipc", "jal", "jalr", "beq", "bne", "blt", "bge", "bltu", "bgeu",
+		"lb", "lh", "lw", "lbu", "lhu", "sb", "sh", "sw", "addi"
+	};
+	const std::vector<std::string> register_names = {
+        "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+        "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+        "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+    };
+
+	const std::vector<std::string> branch_isntructions = {"beq", "bne", "nan", "nan", "blt", "bge", "bltu", "bgeu"};
+	const std::vector<std::string> load_instructions = {"lb", "lh", "lw", "nan", "lbu", "lhu"};
+	const std::vector<std::string> store_instructions = {"sb", "sh", "sw"};
+	const std::vector<std::string> i_instructions = {"addi", "slli", "slti", "sltiu", "xori", "nan", "ori", "andi"};
+	const std::vector<std::string> srli_srai = {"srli", "srai"};
+	const std::vector<std::string> r_instructions = {"nan", "sll", "slt", "sltu", "xor", "nan", "or", "and"};
+	const std::vector<std::string> csr_instructions = {"nan", "csrrw", "csrrs", "csrrc"};
+
+	ImmediateGenerator* immgen = new ImmediateGenerator;
+
+	int opcode = instruction & 0x7f;
+	uint32_t funct3 = (instruction >> 12) & 0b111;
+	uint32_t funct7 = (instruction >> 25) & 0b1111111;
+	uint32_t rs1 = (instruction >> 15) & 0b11111;
+	uint32_t rs2 = (instruction >> 20) & 0b11111;
+	uint32_t rd = (instruction >> 7) & 0b11111;
+	uint32_t immediate = immgen->getImmediate(instruction);
+	uint32_t csr_addr = (instruction >> 20) & 0xfff;
+
+	char instruction_str[64];
+	switch (opcode) {
+	case LUI:
+		immediate = (immediate >> 12) & 0xfffff;
+		sprintf(instruction_str, "lui\t%s,0x%x", register_names.at(rd).c_str(), immediate);
+		break;
+	case AUIPC:
+		immediate = (immediate >> 12) & 0xfffff;
+		sprintf(instruction_str, "auipc\t%s,0x%x", register_names.at(rd).c_str(), immediate);
+		break;
+	case JAL:
+		sprintf(instruction_str, "jal\t%s,%x", register_names.at(rd).c_str(), (immediate + addr));
+		break;
+	case JALR:
+		sprintf(instruction_str, "jalr\t%s,%d(%s)", register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
+		break;
+	case BTYPE:
+		sprintf(instruction_str, "%s\t%s,%s,%x", branch_isntructions.at(funct3).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str(), (immediate + addr));
+		break;
+	case LOAD:
+		sprintf(instruction_str, "%s\t%s,%d(%s)", load_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
+		break;
+	case STORE:
+		sprintf(instruction_str, "%s\t%s,%d(%s)", store_instructions.at(funct3).c_str(), register_names.at(rs2).c_str(), immediate, register_names.at(rs1).c_str());
+		break;
+	case ITYPE:
+		switch(funct3) {
+		case 0b101: 
+			sprintf(instruction_str, "%s\t%s,%s,0x%x", srli_srai.at(funct7).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), ((immediate >> 20) & 0b11111));
+			break;
+		case 0b001:
+			sprintf(instruction_str, "slli\t%s,%s,0x%x", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
+			break;
+		default:
+			sprintf(instruction_str, "%s\t%s,%s,%d", i_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
+			break;
+		}
+		break;
+	case RTYPE:
+		switch(funct3) {
+		case 0b000: // add / sub
+			switch(funct7) {
+			case 0b0000000: sprintf(instruction_str, "add\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0100000: sprintf(instruction_str, "sub\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			}
+			break;
+		case 0b101: // srl / sra
+			switch(funct7) {
+			case 0b0000000: sprintf(instruction_str, "srl\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0100000: sprintf(instruction_str, "sra\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			}
+			break;
+		default:
+			sprintf(instruction_str, "%s\t%s,%s,%s", r_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+		}
+		break;
+	case PRIV:
+		switch (funct3) {
+		case 0b000: // ECALL / MRET
+			switch (immediate) {
+			case MRET_IMM:
+				sprintf(instruction_str, "mret");
+				break;
+			case ECALL_IMM:
+				sprintf(instruction_str, "ecall");
+				break;
+			}
+			break;
+		default:
+			// CSRRW / CSRRS / CSRRC
+			sprintf(instruction_str, "%s\t%s,%s,%s", csr_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), get_csr_name(csr_addr).c_str(), register_names.at(rs1).c_str());
+			break;
+		}
+		break;
+	default:
+		sprintf(instruction_str, "%08x", instruction);
+	}
+
+	delete immgen;
+	return instruction_str;
+}
+
+std::string ELF_Parse::get_csr_name(int csr_addr)
+{
+    switch (csr_addr) {
+    case 0x0300: return "mstatus";
+    case 0x0301: return "misa";
+    case 0x0304: return "mie";
+    case 0x0305: return "mtvec";
+    case 0x0340: return "mscratch";
+    case 0x0341: return "mepc";
+    case 0x0342: return "mcause";
+    case 0x0343: return "mtval";
+    case 0x0344: return "mip";
+    case 0x0b00: return "mcycle";
+    case 0x0b02: return "minstret";
+    case 0x0b80: return "mcycleh";
+    case 0x0b82: return "minstreth";
+    case 0x0f11: return "mvendorid";
+    case 0x0f12: return "marchid";
+    case 0x0f13: return "mimpid";
+    case 0x0f14: return "mhartid";
+    default: return "CSR_UNKWN";
+    }
 }
