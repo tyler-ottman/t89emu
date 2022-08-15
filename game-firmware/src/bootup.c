@@ -19,6 +19,8 @@ volatile uint32_t* mtimecmp_h = (uint32_t*)(CSR_MEMORY_START + 8);
 volatile uint32_t* mtimecmp_l = (uint32_t*)(CSR_MEMORY_START + 12);
 volatile uint32_t* keyboard_controller = (uint32_t*)(CSR_MEMORY_START + 16);
 
+void random_routine(void);
+
 // https://five-embeddev.com/code/2020/11/18/csr-access/
 static inline __attribute__((always_inline)) void csr_set_field_mstatus(uint32_t mask) {
     __asm__ volatile ("csrrs x0, mstatus, %0" : "=r"(mask));
@@ -55,6 +57,7 @@ void load_ram(void) {
 
     // Set time until next interrupt
     *mtimecmp_l = 0x40000000;
+    random_routine();
 
     // Specify Instruction set architecture
     csr_set_field_misa(1 << MISA_I_EXTENSION_MASK);
