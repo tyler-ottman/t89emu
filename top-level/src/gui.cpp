@@ -46,7 +46,7 @@ int gui::init_application(char* glsl_version) {
     return 0;
 }
 
-gui::gui(char* code_bin, char* disassembled_file, int debug) {
+gui::gui(char* code_bin, int debug) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -97,97 +97,33 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
 
     elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory
     elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
-    
-    
-    load_disassembled_code(disassembled_file);
+
+#ifdef DISASSEMBLER_IMPL_HEX
+    load_disassembled_code();
+#endif
+
+    // C De-Compiler feature in future
+#ifdef CDECOMPILE
+    load_decompiled_code();
+#endif
 
     if (debug) {
         run_debug_application();
     } else {
-        // Normal application without debug window
+        run_main_application();
     }
 }
 
-void gui::load_disassembled_code(char* pathname) {
-#ifdef DISASSEMBLER_IMPL_STRING_PARSE
-    // Read Disassembled code
-    std::vector<std::string> disassembled_code;
-    std::string str;
-    std::string function_name;
-    bool add_function_name = false;
-
-    std::fstream fd(pathname);
-    if (fd.fail()) {std::cerr << "Could not open " << pathname << "\n"; exit(EXIT_FAILURE);}
-    for (int i = 0; i < 5; i++) // Clear lines before assembly
-        std::getline(fd, str);
-    while (std::getline(fd, str)) {
-        size_t found = str.find(" # ");
-        if (str.size() == 0) continue;                          // Empty Lines
-        if (found != std::string::npos) 
-            str = str.substr(0, found);                         // Remove Comments
-        if (str.at(str.size() - 1) == ':') {
-            str = str.substr(str.find("<"), str.find(">"));     // Format Function Name Line
-            function_name = str;
-            add_function_name = true;
-        }
-
-        // Tokenize Lines
-        std::vector<std::string> tokens;
-        std::string token = "";
-        for (const char &c : str) {
-            if (c == ' ' || c == '\t') {
-                if (token.size() != 0) // Ignore Multiple Whitespace
-                    tokens.push_back(token);
-                token = "";
-            } else {
-                token.push_back(c);
-            }
-        }
-        if (token.size() != 0)
-            tokens.push_back(token); // End of line token
-
-        size_t tokens_len = tokens.size();
-        if ((tokens_len == 3) || (tokens_len == 4) || (tokens_len == 5)) {
-            str = (tokens_len == 3) ? (tokens[0] + " " + tokens[2]) : (tokens[0] + " " + tokens[2] + " " + tokens[3]);
-            if (add_function_name) {
-                add_function_name = false;
-                //str = function_name.substr(0, function_name.size() - 1) + "\n" + str;
-                str += " " + function_name.substr(0, function_name.size() - 1);
-            }
-            // printf("%s\n", str.c_str());
-            disassembled_code.push_back(str);
-            // std::cout << str << "\n";
-        }
-    }
-
-    // Upload disassembled file for disassembly module
-    for (const std::string &disassembled_line: disassembled_code) {
-        // Extract address
-        int find = disassembled_line.find(":");
-        std::string address_string = "0x" + disassembled_line.substr(0, find);
-        uint32_t address = std::stoul(address_string, nullptr, 16);
-        // std::cout << disassembled_line << "\n";
-        disassembled_module.insert(std::make_pair(address, disassembled_line));
-    }
-#endif
-#ifdef DISASSMELBER_IMPL_HEX
+void gui::load_disassembled_code() {
      disassembled_code = elf_parser->get_disassembled_code();
-     for (const auto &line : disassembled_code) {
-		if (line.is_instruction) {
-			printf("%08x: %s\n", line.address, line.line.c_str());
-		} else {
-			printf("%s\n", line.line.c_str());
-		}
-	}
-    // Future Disassembler Implementation
-#endif
-#ifdef CDCOMPILE
-    // C De-compiler feature in future
-#endif
+}
+
+void gui::load_decompiled_code() {
+    
 }
 
 void gui::run_debug_application() {
-     // // Main loop
+    // Main loop
     while (!glfwWindowShouldClose(window))
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -221,6 +157,34 @@ void gui::run_debug_application() {
         render_io_panel();
         render_lcd_display();
         render_disassembled_code_section();
+        render_control_panel();
+        
+        render_frame();
+    }
+}
+
+void gui::run_main_application() {
+    // Main loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Poll and handle events (inputs, window resize, etc.)
+        glfwPollEvents();
+        // int num_instructions = 0;
+        if (is_run_enabled) {
+            int num_instructions = 0;
+            while ((num_instructions < INSTRUCTIONS_PER_FRAME)) {
+                t89->next_instruction();
+                num_instructions++;
+            }
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        render_io_panel();
+        render_lcd_display();
         render_control_panel();
         
         render_frame();
@@ -538,7 +502,7 @@ void gui::render_disassembled_code_section() {
         // Print Instruction
         if (entry.is_instruction) {
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x96,0x7b,0xb6,255));
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x00,0x77,0xb6,255));
             ImGui::Text("%s", entry.line.c_str());
             ImGui::PopStyleColor();
         }
@@ -555,33 +519,8 @@ void gui::render_disassembled_code_section() {
         if (is_step_enabled) {
             ImGui::SetScrollY(scroll_pos);
         }
-
-        // Print Instruction or Name
-        // ImGui::Text
-        // ImGui::Text("%s", entry.line.c_str());
     }
 
-    // for (size_t i = 0; i < disassembled_module.size(); i++) {
-    //     const char txt_green[] = "<--";
-    //     std::string disassembled_line = disassembled_module[4 * i];
-    //     // Determine if breakpoint should be printed
-    //     if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
-    //         int space_index = disassembled_module[4 * i].find(' ');
-    //         disassembled_line[space_index] = '*';
-    //     }
-    //     if ((uint32_t)(4 * i) == *pc_ptr) { // Code at current line, draw green arrow
-    //         if (is_step_enabled) {
-    //             ImGui::SetScrollY((((4*i) >> 2) - 7) * TEXT_BASE_HEIGHT);
-    //         }
-    //         ImGui::Text("%s", disassembled_line.c_str());
-    //         ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0,255,0,255));
-    //         ImGui::SameLine();
-    //         ImGui::Text("%s", txt_green);
-    //         ImGui::PopStyleColor();
-    //     } else {
-    //         ImGui::Text("%s", disassembled_line.c_str());
-    //     }        
-    // }
     ImGui::EndChild();
     ImGui::End();
 }

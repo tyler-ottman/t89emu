@@ -24,9 +24,9 @@
 #define D 549
 
 #define INSTRUCTIONS_PER_FRAME 1000000
-// #define DISASSEMBLER_IMPL_STRING_PARSE
-#define DISASSMELBER_IMPL_HEX
-// #define CDCOMPILE
+#define DISASSEMBLER_IMPL_HEX
+// #define CDECOMPILE
+
 class gui {
 private:
     float my_tex_w;
@@ -41,20 +41,21 @@ private:
     uint32_t* rom;
     uint32_t* ram;
     uint32_t* csr_mem;
-    RegisterFile* rf;
-    uint32_t* pc_ptr;
-    ImVec4 clear_color;
-    int init_application(char*);
-    void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
-    void load_disassembled_code(char* path_name);
-    std::unordered_map<uint32_t, std::string> disassembled_module;
+    RegisterFile* rf;std::unordered_map<uint32_t, std::string> disassembled_module;
     std::vector<struct Disassembled_Entry> disassembled_code;
     bool is_step_enabled;
     bool is_run_enabled;
     std::vector<uint32_t> breakpoints;
+    uint32_t* pc_ptr;
+    ImVec4 clear_color;
+    int init_application(char*);
+    void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
+    void load_disassembled_code();
+    void load_decompiled_code();
 public:
-    gui(char*, char*, int);
+    gui(char*, int);
     void run_debug_application();
+    void run_main_application();
     void render_register_bank();
     void render_lcd_display();
     void render_disassembled_code_section();
