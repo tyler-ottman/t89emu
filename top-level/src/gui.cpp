@@ -82,7 +82,7 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     is_run_enabled = false;
 
     // Initialize Emulator
-    this->t89 = new Pipeline(code_bin, debug);    
+    this->t89 = new Pipeline(code_bin, debug);
 
     // GUI needs pointers to emulator parts to probe values
     vram = t89->dram->video_memory;
@@ -93,9 +93,12 @@ gui::gui(char* code_bin, char* disassembled_file, int debug) {
     rf = t89->rf;
     
     const char filename[] = "../game-firmware/bin/game.elf";
-    ELF_Parse* elf_parser = new ELF_Parse(filename);
-    elf_parser->elf_flash_sections(t89->dram);
-    elf_parser->generate_disassembled_text();
+    elf_parser = new ELF_Parse(filename);
+
+    elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory
+    elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
+    
+    
     load_disassembled_code(disassembled_file);
 
     if (debug) {
@@ -166,9 +169,19 @@ void gui::load_disassembled_code(char* pathname) {
         // std::cout << disassembled_line << "\n";
         disassembled_module.insert(std::make_pair(address, disassembled_line));
     }
-#elif DISASSMELBER_IMPL_HEX
+#endif
+#ifdef DISASSMELBER_IMPL_HEX
+     disassembled_code = elf_parser->get_disassembled_code();
+     for (const auto &line : disassembled_code) {
+		if (line.is_instruction) {
+			printf("%08x: %s\n", line.address, line.line.c_str());
+		} else {
+			printf("%s\n", line.line.c_str());
+		}
+	}
     // Future Disassembler Implementation
-#else
+#endif
+#ifdef CDCOMPILE
     // C De-compiler feature in future
 #endif
 }
@@ -207,7 +220,7 @@ void gui::run_debug_application() {
         render_csr_bank();
         render_io_panel();
         render_lcd_display();
-        // render_disassembled_code_section();
+        render_disassembled_code_section();
         render_control_panel();
         
         render_frame();
@@ -492,34 +505,83 @@ void gui::render_disassembled_code_section() {
     ImVec2 child_size = ImVec2(0, 0);
     ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
 
-    for (size_t i = 0; i < disassembled_module.size(); i++) {
-        const char txt_green[] = "<--";
-        std::string disassembled_line = disassembled_module[4 * i];
-        // Determine if breakpoint should be printed
-        if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
-            int space_index = disassembled_module[4 * i].find(' ');
-            disassembled_line[space_index] = '*';
-        }
-        if ((uint32_t)(4 * i) == *pc_ptr) { // Code at current line, draw green arrow
-            if (is_step_enabled) {
-                ImGui::SetScrollY((((4*i) >> 2) - 7) * TEXT_BASE_HEIGHT);
+    // When stepping through code, disassembler should auto scroll to current executed instruction
+    float scroll_pos = 0.0;
+    if (is_step_enabled) {
+        for (size_t idx = 0; idx < disassembled_code.size(); idx++) {
+            struct Disassembled_Entry entry = disassembled_code.at(idx);
+            if (entry.is_instruction && (entry.address == *pc_ptr)) {
+                scroll_pos = (idx - 7.0) * TEXT_BASE_HEIGHT;
             }
-            ImGui::Text("%s", disassembled_line.c_str());
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0,255,0,255));
-            ImGui::SameLine();
-            ImGui::Text("%s", txt_green);
-            ImGui::PopStyleColor();
-        } else {
-            ImGui::Text("%s", disassembled_line.c_str());
         }
-
-        // Add/Remove Breakpoint symbol
-        if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
-            // Determine if breakpoint needs to be added or removed
-
-        }
-        
     }
+
+    for (const auto &entry : disassembled_code) {
+        char addr_str[64];
+        sprintf(addr_str, "%08x", entry.address);
+        std::string disassembled_line = addr_str;
+
+        if (entry.is_instruction) {
+            if (std::find(breakpoints.begin(), breakpoints.end(), entry.address) != breakpoints.end()) {
+                // Red address to indicate breakpoint
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0x00, 0x00, 0xff));
+            } else { // Green Address if no breakpoint
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x00,0xab,0x41,255));
+            }
+            ImGui::Text("%s:", disassembled_line.c_str());         
+        } else { // Golden Yellow Name
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0xdf, 0x00, 255));
+            ImGui::Text("%s", entry.line.c_str());
+        }
+        ImGui::PopStyleColor();
+
+        // Print Instruction
+        if (entry.is_instruction) {
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x96,0x7b,0xb6,255));
+            ImGui::Text("%s", entry.line.c_str());
+            ImGui::PopStyleColor();
+        }
+
+        // Emulator at current instruction, draw arrow
+        if (entry.is_instruction && (*pc_ptr == entry.address)) {
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff,0x00,0x00,0xff));
+            ImGui::Text("<--");
+            ImGui::PopStyleColor();
+        }
+
+        // If stepping through code, auto scroll to current instruction
+        if (is_step_enabled) {
+            ImGui::SetScrollY(scroll_pos);
+        }
+
+        // Print Instruction or Name
+        // ImGui::Text
+        // ImGui::Text("%s", entry.line.c_str());
+    }
+
+    // for (size_t i = 0; i < disassembled_module.size(); i++) {
+    //     const char txt_green[] = "<--";
+    //     std::string disassembled_line = disassembled_module[4 * i];
+    //     // Determine if breakpoint should be printed
+    //     if (std::find(breakpoints.begin(), breakpoints.end(), 4 * i) != breakpoints.end()) {
+    //         int space_index = disassembled_module[4 * i].find(' ');
+    //         disassembled_line[space_index] = '*';
+    //     }
+    //     if ((uint32_t)(4 * i) == *pc_ptr) { // Code at current line, draw green arrow
+    //         if (is_step_enabled) {
+    //             ImGui::SetScrollY((((4*i) >> 2) - 7) * TEXT_BASE_HEIGHT);
+    //         }
+    //         ImGui::Text("%s", disassembled_line.c_str());
+    //         ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0,255,0,255));
+    //         ImGui::SameLine();
+    //         ImGui::Text("%s", txt_green);
+    //         ImGui::PopStyleColor();
+    //     } else {
+    //         ImGui::Text("%s", disassembled_line.c_str());
+    //     }        
+    // }
     ImGui::EndChild();
     ImGui::End();
 }

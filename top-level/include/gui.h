@@ -24,9 +24,9 @@
 #define D 549
 
 #define INSTRUCTIONS_PER_FRAME 1000000
-#define DISASSEMBLER_IMPL_STRING_PARSE 1
-#define DISASSMELBER_IMPL_HEX 1
-
+// #define DISASSEMBLER_IMPL_STRING_PARSE
+#define DISASSMELBER_IMPL_HEX
+// #define CDCOMPILE
 class gui {
 private:
     float my_tex_w;
@@ -36,6 +36,7 @@ private:
     std::vector<int> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
     Pipeline* t89;
+    ELF_Parse* elf_parser;
     uint32_t* vram;
     uint32_t* rom;
     uint32_t* ram;
@@ -47,6 +48,7 @@ private:
     void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
     void load_disassembled_code(char* path_name);
     std::unordered_map<uint32_t, std::string> disassembled_module;
+    std::vector<struct Disassembled_Entry> disassembled_code;
     bool is_step_enabled;
     bool is_run_enabled;
     std::vector<uint32_t> breakpoints;

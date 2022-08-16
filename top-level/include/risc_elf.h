@@ -140,5 +140,6 @@ public:
     ~ELF_Parse();
     bool elf_flash_sections(Memory*);
     void generate_disassembled_text();
+    std::vector<struct Disassembled_Entry> get_disassembled_code();
 };
 
