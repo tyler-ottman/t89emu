@@ -22,7 +22,6 @@ $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
 	$(CXX) $(LDFLAGS) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME).elf $(CFLAGS)
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .text $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).code
 	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .data $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).data
-	$(OBJDUMP) -d ./bin/game.elf -M no-aliases > ./bin/game.disassembly
 	cat ./bin/game.code ./bin/game.data > ./bin/game.bin
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s

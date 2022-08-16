@@ -184,17 +184,11 @@ void ELF_Parse::generate_disassembled_text() {
 			disassemble_instruction(cur_addr, instruction);
 		}
 	}
-	
-	for (const auto &line : disassembled_code) {
-		if (line.is_instruction) {
-			printf("%08x: %s\n", line.address, line.line.c_str());
-		} else {
-			printf("%s\n", line.line.c_str());
-		}
-	}
 }
 
-
+std::vector<struct Disassembled_Entry> ELF_Parse::get_disassembled_code() {
+	return disassembled_code;
+}
 
 std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instruction) {
 	const std::vector<std::string> instruction_names = {
@@ -231,37 +225,37 @@ std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instr
 	switch (opcode) {
 	case LUI:
 		immediate = (immediate >> 12) & 0xfffff;
-		sprintf(instruction_str, "lui\t%s,0x%x", register_names.at(rd).c_str(), immediate);
+		sprintf(instruction_str, "%-8s%s,0x%x", "lui", register_names.at(rd).c_str(), immediate);
 		break;
 	case AUIPC:
 		immediate = (immediate >> 12) & 0xfffff;
-		sprintf(instruction_str, "auipc\t%s,0x%x", register_names.at(rd).c_str(), immediate);
+		sprintf(instruction_str, "%-8s%s,0x%x", "auipc", register_names.at(rd).c_str(), immediate);
 		break;
 	case JAL:
-		sprintf(instruction_str, "jal\t%s,%x", register_names.at(rd).c_str(), (immediate + addr));
+		sprintf(instruction_str, "%-8s%s,%x", "jal", register_names.at(rd).c_str(), (immediate + addr));
 		break;
 	case JALR:
-		sprintf(instruction_str, "jalr\t%s,%d(%s)", register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
+		sprintf(instruction_str, "%-8s%s,%d(%s)", "jalr", register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
 		break;
 	case BTYPE:
-		sprintf(instruction_str, "%s\t%s,%s,%x", branch_isntructions.at(funct3).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str(), (immediate + addr));
+		sprintf(instruction_str, "%-8s%s,%s,%x", branch_isntructions.at(funct3).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str(), (immediate + addr));
 		break;
 	case LOAD:
-		sprintf(instruction_str, "%s\t%s,%d(%s)", load_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
+		sprintf(instruction_str, "%-8s%s,%d(%s)", load_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), immediate, register_names.at(rs1).c_str());
 		break;
 	case STORE:
-		sprintf(instruction_str, "%s\t%s,%d(%s)", store_instructions.at(funct3).c_str(), register_names.at(rs2).c_str(), immediate, register_names.at(rs1).c_str());
+		sprintf(instruction_str, "%-8s%s,%d(%s)", store_instructions.at(funct3).c_str(), register_names.at(rs2).c_str(), immediate, register_names.at(rs1).c_str());
 		break;
 	case ITYPE:
 		switch(funct3) {
 		case 0b101: 
-			sprintf(instruction_str, "%s\t%s,%s,0x%x", srli_srai.at(funct7).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), ((immediate >> 20) & 0b11111));
+			sprintf(instruction_str, "%-8s%s,%s,0x%x", srli_srai.at(funct7).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), ((immediate >> 20) & 0b11111));
 			break;
 		case 0b001:
-			sprintf(instruction_str, "slli\t%s,%s,0x%x", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
+			sprintf(instruction_str, "%-8s%s,%s,0x%x", "slli", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
 			break;
 		default:
-			sprintf(instruction_str, "%s\t%s,%s,%d", i_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
+			sprintf(instruction_str, "%-8s%s,%s,%d", i_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);
 			break;
 		}
 		break;
@@ -269,18 +263,18 @@ std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instr
 		switch(funct3) {
 		case 0b000: // add / sub
 			switch(funct7) {
-			case 0b0000000: sprintf(instruction_str, "add\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
-			case 0b0100000: sprintf(instruction_str, "sub\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0000000: sprintf(instruction_str, "%-8s%s,%s,%s", "add", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0100000: sprintf(instruction_str, "%-8s%s,%s,%s", "sub", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
 			}
 			break;
 		case 0b101: // srl / sra
 			switch(funct7) {
-			case 0b0000000: sprintf(instruction_str, "srl\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
-			case 0b0100000: sprintf(instruction_str, "sra\t%s,%s,%s", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0000000: sprintf(instruction_str, "%-8s%s,%s,%s", "srl", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			case 0b0100000: sprintf(instruction_str, "%-8s%s,%s,%s", "sra", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
 			}
 			break;
 		default:
-			sprintf(instruction_str, "%s\t%s,%s,%s", r_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
+			sprintf(instruction_str, "%-8s%s,%s,%s", r_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), register_names.at(rs2).c_str()); break;
 		}
 		break;
 	case PRIV:
@@ -297,7 +291,7 @@ std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instr
 			break;
 		default:
 			// CSRRW / CSRRS / CSRRC
-			sprintf(instruction_str, "%s\t%s,%s,%s", csr_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), get_csr_name(csr_addr).c_str(), register_names.at(rs1).c_str());
+			sprintf(instruction_str, "%-8s%s,%s,%s", csr_instructions.at(funct3).c_str(), register_names.at(rd).c_str(), get_csr_name(csr_addr).c_str(), register_names.at(rs1).c_str());
 			break;
 		}
 		break;
