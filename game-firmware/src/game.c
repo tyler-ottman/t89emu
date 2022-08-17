@@ -23,6 +23,7 @@ int main(void)
 {
     unsigned int i;
     char* test = "hello world\n";
+    int* arr = (int*)malloc(10);
     while (1) {
         for (i = 0; i < 20; i++)  init_blue_screen();
         for (i = 0; i < 20; i++) {
@@ -31,6 +32,6 @@ int main(void)
         break;
     }
     // init_blue_screen();
-
+    arr[i] = 2;
     return 0;
 }

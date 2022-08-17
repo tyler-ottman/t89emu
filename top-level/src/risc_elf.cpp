@@ -174,6 +174,7 @@ void ELF_Parse::generate_disassembled_text() {
 				disassembled_line.address = cur_addr;
 				disassembled_line.line = "<" + addr_symb->second + ">:";
 				disassembled_code.push_back(disassembled_line);
+				printf("%s\n", disassembled_line.line.c_str());
 			}
 
 			Elf32_Word instruction = *((uint32_t*)(elf_file_info->elf_data + section->offset + idx));
@@ -181,6 +182,7 @@ void ELF_Parse::generate_disassembled_text() {
 			disassembled_line.address = cur_addr;
 			disassembled_line.line = disassemble_instruction(cur_addr, instruction);
 			disassembled_code.push_back(disassembled_line);
+			printf("%08x: %s\n", disassembled_line.address, disassembled_line.line.c_str());
 			disassemble_instruction(cur_addr, instruction);
 		}
 	}
@@ -248,8 +250,12 @@ std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instr
 		break;
 	case ITYPE:
 		switch(funct3) {
-		case 0b101: 
-			sprintf(instruction_str, "%-8s%s,%s,0x%x", srli_srai.at(funct7).c_str(), register_names.at(rd).c_str(), register_names.at(rs1).c_str(), ((immediate >> 20) & 0b11111));
+		case 0b101:	// srai / srli
+			switch(funct7) {
+			case 0b0100000: sprintf(instruction_str, "%-8s%s,%s,0x%x", "srai", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate); break;
+			case 0b0000000: sprintf(instruction_str, "%-8s%s,%s,0x%x", "srli", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate); break;
+			}
+			
 			break;
 		case 0b001:
 			sprintf(instruction_str, "%-8s%s,%s,0x%x", "slli", register_names.at(rd).c_str(), register_names.at(rs1).c_str(), immediate);

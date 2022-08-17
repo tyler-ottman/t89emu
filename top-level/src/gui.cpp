@@ -93,9 +93,9 @@ gui::gui(char* code_bin, int debug) {
     rf = t89->rf;
     
     const char filename[] = "../game-firmware/bin/game.elf";
+    
     elf_parser = new ELF_Parse(filename);
-
-    elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory
+    elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory    
     elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
 
 #ifdef DISASSEMBLER_IMPL_HEX
