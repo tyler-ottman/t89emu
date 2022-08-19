@@ -2,8 +2,21 @@
 #include <unordered_map>
 #include "Components.h"
 
+struct mem_access {
+    uint8_t* mem_section;
+    uint32_t mem_base;
+};
+
+struct mem_access memory_accesor;
+
+uint8_t* Memory::get_mem_section(uint32_t address) {
+    
+}
+
 void Memory::write(uint32_t address, uint32_t data, int size)
 {
+    
+
     int offset = address & 0b11;
     uint32_t* mem_section;
     uint32_t base_addr;

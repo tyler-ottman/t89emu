@@ -98,6 +98,9 @@ gui::gui(char* code_bin, int debug) {
     elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory    
     elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
 
+    *pc_ptr = elf_parser->get_entry_pc();
+    printf("Entry %08x\n", *pc_ptr);
+
 #ifdef DISASSEMBLER_IMPL_HEX
     load_disassembled_code();
 #endif

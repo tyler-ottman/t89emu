@@ -56,20 +56,20 @@ Pipeline::Pipeline(char* code_bin, int debug = 0)
 	this->debug_mode = debug; // Debug mode
 
     // Flash ELF file to ROM
-    std::ifstream text_input(code_bin, std::ios::binary);
-	if (text_input.fail()) {std::cerr << "Could not open" << code_bin << "\n"; exit(EXIT_FAILURE);}
-    std::vector<char> text_section((std::istreambuf_iterator<char>(text_input)),(std::istreambuf_iterator<char>()));
-    text_input.close();
+    // std::ifstream text_input(code_bin, std::ios::binary);
+	// if (text_input.fail()) {std::cerr << "Could not open" << code_bin << "\n"; exit(EXIT_FAILURE);}
+    // std::vector<char> text_section((std::istreambuf_iterator<char>(text_input)),(std::istreambuf_iterator<char>()));
+    // text_input.close();
 
-    size_t num_instructions = text_section.size() / 4;    
-    for (size_t i = 0; i < num_instructions; i++) {
-        // Preliminary 32-bit instruction
-        uint32_t instruction = ((text_section[4*i+3] << 24) & 0xff000000) |
-                               ((text_section[4*i+2] << 16) & 0x00ff0000) |
-                               ((text_section[4*i+1] << 8)  & 0x0000ff00) |
-                               ((text_section[4*i+0])       & 0x000000ff);
-		dram->write(INSTRUCTION_MEMORY_START + 4 * i, instruction, WORD);
-    }
+    // size_t num_instructions = text_section.size() / 4;    
+    // for (size_t i = 0; i < num_instructions; i++) {
+    //     // Preliminary 32-bit instruction
+    //     uint32_t instruction = ((text_section[4*i+3] << 24) & 0xff000000) |
+    //                            ((text_section[4*i+2] << 16) & 0x00ff0000) |
+    //                            ((text_section[4*i+1] << 8)  & 0x0000ff00) |
+    //                            ((text_section[4*i+0])       & 0x000000ff);
+	// 	dram->write(INSTRUCTION_MEMORY_START + 4 * i, instruction, WORD);
+    // }
 }
 
 Pipeline::~Pipeline() {

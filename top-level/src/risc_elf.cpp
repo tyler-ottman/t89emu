@@ -106,10 +106,10 @@ bool ELF_Parse::elf_flash_sections(Memory* dram) {
 	}
 
 	// printf("Full image:\n");
-	// for (Elf32_Addr addr = 0; addr < flash_image.size(); addr++) {
-	// 	// dram->write(addr, flash_image.at(addr), BYTE);
-	// 	printf("%02x ", flash_image.at(addr));
-	// }
+	for (Elf32_Addr addr = 0; addr < flash_image.size(); addr++) {
+		dram->write(addr, flash_image.at(addr), BYTE);
+		// printf("%02x ", flash_image.at(addr));
+	}
 	return true;
 }
 
@@ -174,7 +174,6 @@ void ELF_Parse::generate_disassembled_text() {
 				disassembled_line.address = cur_addr;
 				disassembled_line.line = "<" + addr_symb->second + ">:";
 				disassembled_code.push_back(disassembled_line);
-				printf("%s\n", disassembled_line.line.c_str());
 			}
 
 			Elf32_Word instruction = *((uint32_t*)(elf_file_info->elf_data + section->offset + idx));
@@ -182,14 +181,16 @@ void ELF_Parse::generate_disassembled_text() {
 			disassembled_line.address = cur_addr;
 			disassembled_line.line = disassemble_instruction(cur_addr, instruction);
 			disassembled_code.push_back(disassembled_line);
-			printf("%08x: %s\n", disassembled_line.address, disassembled_line.line.c_str());
-			disassemble_instruction(cur_addr, instruction);
 		}
 	}
 }
 
 std::vector<struct Disassembled_Entry> ELF_Parse::get_disassembled_code() {
 	return disassembled_code;
+}
+
+Elf32_Addr ELF_Parse::get_entry_pc() {
+	return elf_header_info->entry;
 }
 
 std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instruction) {

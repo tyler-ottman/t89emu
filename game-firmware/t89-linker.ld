@@ -40,6 +40,7 @@ SECTIONS
         *(.data*)
         . = ALIGN(4);
         _edata = .;
+
     } > RAM
 
     .bss :

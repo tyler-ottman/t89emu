@@ -140,6 +140,6 @@ public:
     ~ELF_Parse();
     bool elf_flash_sections(Memory*);
     void generate_disassembled_text();
+    Elf32_Addr get_entry_pc();
     std::vector<struct Disassembled_Entry> get_disassembled_code();
 };
-
