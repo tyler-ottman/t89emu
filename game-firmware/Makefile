@@ -20,9 +20,6 @@ all: directories $(BIN_DIR)/$(TARGET_NAME)
 
 $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
 	$(CXX) $(LDFLAGS) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME).elf $(CFLAGS)
-	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .text $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).code
-	$(OBJCOPY) $(OBJCOPY_FLAGS) -j .data $(BIN_DIR)/$(TARGET_NAME).elf $(BIN_DIR)/$(TARGET_NAME).data
-	cat ./bin/game.code ./bin/game.data > ./bin/game.bin
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@

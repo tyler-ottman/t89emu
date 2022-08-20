@@ -1,4 +1,5 @@
 #include "Components.h"
+#include <iostream>
 
 CSRMemoryDevice::CSRMemoryDevice(uint32_t base, uint32_t size) {
     baseAddress = base;

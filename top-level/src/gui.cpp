@@ -46,7 +46,7 @@ int gui::init_application(char* glsl_version) {
     return 0;
 }
 
-gui::gui(char* code_bin, int debug) {
+gui::gui(char* elf_file, int debug) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -82,14 +82,12 @@ gui::gui(char* code_bin, int debug) {
     is_run_enabled = false;
 
     // Parse ELF file to load ROM/RAM, disassembler
-    const char filename[] = "../game-firmware/bin/game.elf";
-    elf_parser = new ELF_Parse(filename);
+    elf_parser = new ELF_Parse(elf_file);
     elf_parser->elf_flash_sections(); // Generated ROM image    
     elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
 
-    printf("ROM start: %08x, size: %08x\nRAM start: %08x, size: %08x\n", elf_parser->rom_start, elf_parser->rom_size, elf_parser->ram_start, elf_parser->ram_size);
     // Initialize Emulator
-    t89 = new Pipeline(elf_parser->rom_start, elf_parser->rom_size, elf_parser->ram_start, elf_parser->ram_size, debug);
+    t89 = new Pipeline(elf_parser->rom_start, ROM_SIZE, elf_parser->ram_start, RAM_SIZE, debug);
 
     // GUI needs pointers to emulator parts to probe values
     vram = t89->bus->video_device->mem;
@@ -103,8 +101,6 @@ gui::gui(char* code_bin, int debug) {
     *pc_ptr = elf_parser->get_entry_pc();
     
     // Flash ROM
-    printf("Flash image size %ld\n", elf_parser->flash_image.size());
-    printf("RAM + ROM %d\n", elf_parser->ram_size + elf_parser->rom_size);
     uint8_t* elf_rom = elf_parser->get_rom_image();
     memcpy(rom, elf_rom, elf_parser->flash_image.size());
 
@@ -162,7 +158,6 @@ void gui::run_debug_application() {
         // ImGui::ShowDemoWindow(&show_demo_window);
 
         render_memory_viewer();
-        
         render_register_bank();
         render_csr_bank();
         render_io_panel();
@@ -537,7 +532,7 @@ void gui::render_csr_bank() {
     std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
     std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
 
-    std::vector<std::string> csr_mem_name = {"mcycle_h", "mcycle_l", "mtimecmp_h", "mtimecmp_l", "keyboard"};
+    std::vector<std::string> csr_mem_name = {"mcycle_l", "mcycle_h", "mtimecmp_l", "mtimecmp_h", "keyboard"};
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags))
@@ -580,7 +575,8 @@ void gui::render_csr_bank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X", csr_mem[row]);
+            uint32_t* csr_value = (uint32_t*)(csr_mem + 4 * row);
+            sprintf(buf, "0x%08X", *csr_value);
             ImGui::TextUnformatted(buf);
         }
         ImGui::EndTable();

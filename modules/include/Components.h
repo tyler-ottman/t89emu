@@ -199,6 +199,10 @@ public:
 #define SCREEN_WIDTH 512
 #define SCREEN_HEIGHT 288
 
+// ROM/RAM base address defined by linker, maximum possible size is fixed
+#define ROM_SIZE 2097152 // 2 MB
+#define RAM_SIZE 1048576 // 1 MB
+
 // Some memory devices are at fixed addresses
 
 // CSR Memory-Mapped IO Device
