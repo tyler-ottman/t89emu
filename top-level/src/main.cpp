@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     }
     
     // Debug Mode
-	int debug = (atoi(argv[2]) == 1) ? 1 : 0;
+    int debug = (atoi(argv[2]) == 1) ? 1 : 0;
     gui interface(argv[1], debug);
 
     return 0;

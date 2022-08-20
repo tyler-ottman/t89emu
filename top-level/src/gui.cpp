@@ -46,7 +46,7 @@ int gui::init_application(char* glsl_version) {
     return 0;
 }
 
-gui::gui(char* code_bin, int debug) {
+gui::gui(char* elf_file, int debug) {
     std::vector<std::string> register_names = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -81,22 +81,28 @@ gui::gui(char* code_bin, int debug) {
     is_step_enabled = false;
     is_run_enabled = false;
 
+    // Parse ELF file to load ROM/RAM, disassembler
+    elf_parser = new ELF_Parse(elf_file);
+    elf_parser->elf_flash_sections(); // Generated ROM image    
+    elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
+
     // Initialize Emulator
-    this->t89 = new Pipeline(code_bin, debug);
+    t89 = new Pipeline(elf_parser->rom_start, ROM_SIZE, elf_parser->ram_start, RAM_SIZE, debug);
 
     // GUI needs pointers to emulator parts to probe values
-    vram = t89->dram->video_memory;
-    rom = t89->dram->instruction_memory;
-    ram = t89->dram->data_memory;
-    csr_mem = t89->dram->csr_memory;
+    vram = t89->bus->video_device->mem;
+    rom = t89->bus->rom_device->mem;
+    ram = t89->bus->ram_device->mem;
+    csr_mem = t89->bus->csr_device->mem;
     pc_ptr = &t89->pc->PC;
     rf = t89->rf;
-    
-    const char filename[] = "../game-firmware/bin/game.elf";
-    elf_parser = new ELF_Parse(filename);
 
-    elf_parser->elf_flash_sections(t89->dram); // Flash executable program sections to memory
-    elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
+    // Set entry PC
+    *pc_ptr = elf_parser->get_entry_pc();
+    
+    // Flash ROM
+    uint8_t* elf_rom = elf_parser->get_rom_image();
+    memcpy(rom, elf_rom, elf_parser->flash_image.size());
 
 #ifdef DISASSEMBLER_IMPL_HEX
     load_disassembled_code();
@@ -115,7 +121,10 @@ gui::gui(char* code_bin, int debug) {
 }
 
 void gui::load_disassembled_code() {
-     disassembled_code = elf_parser->get_disassembled_code();
+    disassembled_code = elf_parser->get_disassembled_code();
+    // for (const auto &entry : disassembled_code) {
+    //     printf("%s\n", entry.line.c_str());
+    // }
 }
 
 void gui::load_decompiled_code() {
@@ -124,20 +133,18 @@ void gui::load_decompiled_code() {
 
 void gui::run_debug_application() {
     // Main loop
+    std::cout << "Starting debug application" << std::endl;
     while (!glfwWindowShouldClose(window))
     {
         // Poll and handle events (inputs, window resize, etc.)
         glfwPollEvents();
-        // int num_instructions = 0;
+
         if (is_run_enabled) {
             int num_instructions = 0;
             while ((num_instructions < INSTRUCTIONS_PER_FRAME) && (std::find(breakpoints.begin(), breakpoints.end(), *pc_ptr) == breakpoints.end())) {
                 t89->next_instruction();
                 num_instructions++;
             }
-            // for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
-            //     t89->next_instruction();
-            // }
         }
         if (is_step_enabled) {
             t89->next_instruction();
@@ -151,14 +158,12 @@ void gui::run_debug_application() {
         // ImGui::ShowDemoWindow(&show_demo_window);
 
         render_memory_viewer();
-        
         render_register_bank();
         render_csr_bank();
         render_io_panel();
         render_lcd_display();
         render_disassembled_code_section();
         render_control_panel();
-        
         render_frame();
     }
 }
@@ -256,12 +261,12 @@ void gui::render_io_panel() {
             // Set Bit Flag in Keyboard CSR
             for (size_t i = 0; i < buttons.size(); i++) {
                 if (key == buttons.at(i)) {
-                    t89->dram->csr_memory[4] |= (1 << i); // i specifies what bit "key" maps to
+                    csr_mem[4] |= (1 << i); // i specifies what bit "key" maps to
                 }
             }
             break;
         } else {
-            t89->dram->csr_memory[4] = 0;
+            csr_mem[4] = 0;
         }
     }
     ImGui::End();
@@ -340,11 +345,10 @@ void gui::render_memory_viewer() {
             jumpAddr = 0; // Jump to PC
         ImGui::SameLine();
         if (ImGui::Button("SP"))
-            jumpAddr = INSTRUCTION_MEMORY_SIZE; // Jump to SP
+            jumpAddr = (t89->bus->rom_end - t89->bus->rom_base); // Jump to SP
         ImGui::SameLine();
         if (ImGui::Button("VRAM"))
-            jumpAddr = INSTRUCTION_MEMORY_SIZE + DATA_MEMORY_SIZE; // Jump to VRAM
-        
+            jumpAddr = (t89->bus->rom_end - t89->bus->rom_base) + (t89->bus->ram_end - t89->bus->ram_base); // Jump to VRAM
         
         ImGui::EndTable();
     }
@@ -373,9 +377,9 @@ void gui::render_memory_viewer() {
         ImGui::TableSetupColumn("2", 0, 60);
         ImGui::TableSetupColumn("3", 0, 330);
         ImGui::TableSetupColumn("4", 0, 150);
-        add_memory_section(INSTRUCTION_MEMORY_SIZE, INSTRUCTION_MEMORY_START, rom, "CODE");
-        add_memory_section(DATA_MEMORY_SIZE, DATA_MEMORY_START, ram, "DATA");
-        add_memory_section(VIDEO_MEMORY_SIZE, VIDEO_MEMORY_START, vram, "VRAM");
+        add_memory_section(t89->bus->rom_device->deviceSize, t89->bus->rom_device->baseAddress, rom, "CODE");
+        add_memory_section(t89->bus->ram_device->deviceSize, t89->bus->ram_device->baseAddress, ram, "DATA");
+        add_memory_section(VIDEO_SIZE, VIDEO_BASE, vram, "VRAM");
 
         ImGui::EndTable();
     }
@@ -383,39 +387,28 @@ void gui::render_memory_viewer() {
     ImGui::End();
 }
 
-void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint32_t* mem_ptr, std::string mem_section_name) {
+void gui::add_memory_section(uint32_t mem_size, uint32_t mem_start, uint8_t* mem_ptr, std::string mem_section_name) {
     uint8_t hex_bytes[16];
     uint8_t ascii_bytes[16];
-    uint32_t address_offset = mem_start >> 4;
-    ImGuiListClipper clipper; //(endAddr - startAddr, ImGui::GetTextLineHeight());
-    clipper.Begin(mem_size >> 4);
-    while (clipper.Step())
-    {
-        for (uint32_t addr = clipper.DisplayStart + address_offset; addr < clipper.DisplayEnd + address_offset; ++addr)
-        {
+    uint32_t rows_in_mem_section = ceil(mem_size / 16.0); // 16 bytes per row
+    ImGuiListClipper clipper;
+    clipper.Begin(rows_in_mem_section);
+    while (clipper.Step()) {
+        for (int addr = clipper.DisplayStart; addr < clipper.DisplayEnd; addr++) {
             ImGui::TableNextRow();
 
             // Memory Section Name
             ImGui::TableNextColumn();
-            ImGui::Text("%s", mem_section_name.c_str()); // CHANGE LATER
+            ImGui::Text("%s", mem_section_name.c_str()); // change later?
 
             // 32-bit Memory Address
             ImGui::TableNextColumn();
-            ImGui::Text("%07X0", addr); // CHANGE LATER
-
-            for (int i = 0; i < 4; ++i)
-            {
-                uint32_t temp = (addr - address_offset) << 2;
-                hex_bytes[4*i+0] = (mem_ptr[temp + i] & 0xff000000) >> 24;
-                hex_bytes[4*i+1] = (mem_ptr[temp + i] & 0x00ff0000) >> 16;
-                hex_bytes[4*i+2] = (mem_ptr[temp + i] & 0x0000ff00) >> 8;
-                hex_bytes[4*i+3] = (mem_ptr[temp + i] & 0x000000ff);
-            }
-
-            for (int i = 0; i < 16; i++) {
+            ImGui::Text("%08x", 16 * addr + mem_start);
+            for (size_t i = 0; i < 16; i++) {
+                hex_bytes[i] = ((16 * addr + i) >= mem_size) ? 0xff : mem_ptr[16 * addr + i];
                 ascii_bytes[i] = (hex_bytes[i] >= 0x20 && hex_bytes[i] <= 0x7E) ? hex_bytes[i] : '.';
             }
-
+            
             // Memory Section to Hex Bytes
             ImGui::TableNextColumn();
             ImGui::Text("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
@@ -468,7 +461,7 @@ void gui::render_disassembled_code_section() {
     }
     ImVec2 child_size = ImVec2(0, 0);
     ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
-
+    
     // When stepping through code, disassembler should auto scroll to current executed instruction
     float scroll_pos = 0.0;
     if (is_step_enabled) {
@@ -479,10 +472,11 @@ void gui::render_disassembled_code_section() {
             }
         }
     }
-
+    
     for (const auto &entry : disassembled_code) {
         char addr_str[64];
         sprintf(addr_str, "%08x", entry.address);
+        
         std::string disassembled_line = addr_str;
 
         if (entry.is_instruction) {
@@ -507,7 +501,7 @@ void gui::render_disassembled_code_section() {
             ImGui::PopStyleColor();
         }
 
-        // Emulator at current instruction, draw arrow
+        // // Emulator at current instruction, draw arrow
         if (entry.is_instruction && (*pc_ptr == entry.address)) {
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff,0x00,0x00,0xff));
@@ -538,7 +532,7 @@ void gui::render_csr_bank() {
     std::vector<int> csr_address = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
     std::vector<std::string> csr_name = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
 
-    std::vector<std::string> csr_mem_name = {"mcycle_h", "mcycle_l", "mtimecmp_h", "mtimecmp_l", "keyboard"};
+    std::vector<std::string> csr_mem_name = {"mcycle_l", "mcycle_h", "mtimecmp_l", "mtimecmp_h", "keyboard"};
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags))
@@ -581,7 +575,8 @@ void gui::render_csr_bank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X", t89->dram->csr_memory[row]);
+            uint32_t* csr_value = (uint32_t*)(csr_mem + 4 * row);
+            sprintf(buf, "0x%08X", *csr_value);
             ImGui::TextUnformatted(buf);
         }
         ImGui::EndTable();

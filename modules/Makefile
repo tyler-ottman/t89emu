@@ -8,7 +8,7 @@ CXX = g++
 INCLUDE = -I $(INC_DIR)
 
 TARGET_NAME = $(LIB_DIR)/modules.a
-TARGET_OBJS = $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/CSR.o $(OBJ_DIR)/Memory.o $(OBJ_DIR)/MemControlUnit.o
+TARGET_OBJS = $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/CSR.o $(OBJ_DIR)/MemControlUnit.o $(OBJ_DIR)/MemoryDevice.o $(OBJ_DIR)/CSRMemoryDevice.o $(OBJ_DIR)/RAMMemoryDevice.o $(OBJ_DIR)/ROMMemoryDevice.o $(OBJ_DIR)/VideoMemoryDevice.o $(OBJ_DIR)/Bus.o
 
 all: directories $(TARGET_NAME)
 

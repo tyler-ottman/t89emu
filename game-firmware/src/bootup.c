@@ -15,8 +15,8 @@ extern uint32_t _sbss;
 extern uint32_t _ebss;
 
 #define CSR_MEMORY_START (uint32_t)0x30000000
-volatile uint32_t* mtimecmp_h = (uint32_t*)(CSR_MEMORY_START + 8);
-volatile uint32_t* mtimecmp_l = (uint32_t*)(CSR_MEMORY_START + 12);
+volatile uint32_t* mtimecmp_l = (uint32_t*)(CSR_MEMORY_START + 8);
+volatile uint32_t* mtimecmp_h = (uint32_t*)(CSR_MEMORY_START + 12);
 volatile uint32_t* keyboard_controller = (uint32_t*)(CSR_MEMORY_START + 16);
 
 void random_routine(void);

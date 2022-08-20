@@ -38,10 +38,9 @@ void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immedia
 	}
 }
 
-Pipeline::Pipeline(char* code_bin, int debug = 0)
+Pipeline::Pipeline(uint32_t rom_base, uint32_t rom_size, uint32_t ram_base, uint32_t ram_size, int debug = 0)
 {
 	rf = new RegisterFile;
-	dram = new Memory;
 	pc = new ProgramCounter;
 	csr = new CSR;
 	alu = new ALU;
@@ -49,33 +48,13 @@ Pipeline::Pipeline(char* code_bin, int debug = 0)
 	immgen = new ImmediateGenerator;
 	mcu = new MemControlUnit;
 	nextpc = new NextPC;
-
-	this->interrupt_assert = 0;
-	this->IO_BUS = 0;	 // 32 bit IO bus
-	this->IO_ADDR = 0;   // 32-bit IO address
-	this->debug_mode = debug; // Debug mode
-
-    // Flash ELF file to ROM
-    std::ifstream text_input(code_bin, std::ios::binary);
-	if (text_input.fail()) {std::cerr << "Could not open" << code_bin << "\n"; exit(EXIT_FAILURE);}
-    std::vector<char> text_section((std::istreambuf_iterator<char>(text_input)),(std::istreambuf_iterator<char>()));
-    text_input.close();
-
-    size_t num_instructions = text_section.size() / 4;    
-    for (size_t i = 0; i < num_instructions; i++) {
-        // Preliminary 32-bit instruction
-        uint32_t instruction = ((text_section[4*i+3] << 24) & 0xff000000) |
-                               ((text_section[4*i+2] << 16) & 0x00ff0000) |
-                               ((text_section[4*i+1] << 8)  & 0x0000ff00) |
-                               ((text_section[4*i+0])       & 0x000000ff);
-		dram->write(INSTRUCTION_MEMORY_START + 4 * i, instruction, WORD);
-    }
+	bus = new Bus(rom_base, rom_size, ram_base, ram_size);
 }
 
 Pipeline::~Pipeline() {
 	delete rf;
-	delete dram;
 	delete pc;
+	delete bus;
 	delete csr;
 	delete alu;
 	delete aluc;
@@ -87,21 +66,16 @@ Pipeline::~Pipeline() {
 bool Pipeline::next_instruction()
 {
 	uint32_t trap_taken = 0;
-	// Micro-Controller
-	if ((csr->read_csr(MIE) == 0x888) && (this->interrupt_assert == 1)) {
-		// External Interrupt and MIE enabled
-		dram->write(this->IO_ADDR, this->IO_BUS, WORD); // write IO data to IO port
-		this->interrupt_assert = 0;
-		trap_taken = 1;
-	}
 
-	// Increment 64-bit memory mapped mcycle
-	dram->csr_memory[0] = (dram->csr_memory[1] == 0xffffffff) ? (dram->csr_memory[0] + 1) : (dram->csr_memory[0]);
-	dram->csr_memory[1]++;
+	// Increment 64-bit mcycle
+	uint64_t* mcycle = (uint64_t*)(bus->csr_device->mem);
+	(*mcycle)++;
+
+	uint64_t* mtimecmp = (uint64_t*)(bus->csr_device->mem + 8);
 
 	// Fetch Stage
 	uint32_t pc_addr = pc->getPC();						 // Current PC
-	uint32_t cur_instruction = dram->read(pc_addr, WORD); // Current Instruction
+	uint32_t cur_instruction = bus->read(pc_addr, WORD); // Current Instruction
 	
 	// Decode Stage
 	uint32_t opcode = cur_instruction & 0b1111111;			   // opcode field
@@ -120,10 +94,8 @@ bool Pipeline::next_instruction()
 	uint32_t alu_opcode;
 	uint32_t alu_output;
 	uint32_t cause_offset = 0;
-	uint64_t mcycle64 = (((uint64_t)dram->csr_memory[0]) << 32) | (dram->csr_memory[1]);
-	uint64_t mtimecmp64 = (((uint64_t)dram->csr_memory[2]) << 32) | (dram->csr_memory[3]);
 	
-	if (mcycle64 >= mtimecmp64) // Pending Timer interrupt
+	if (*mcycle >= *mtimecmp) // Pending Timer interrupt
 		csr->set_mtip();
 	else
 		csr->reset_mtip();
@@ -166,11 +138,11 @@ bool Pipeline::next_instruction()
 			break;
 		case LOAD:
 			mem_size = mcu->get_mem_size(funct3);
-			rf->write(dram->read(rf->read(rs1) + immediate, mem_size), rd);
+			rf->write(bus->read(rf->read(rs1) + immediate, mem_size), rd);
 			break;
 		case STORE:
 			mem_size = mcu->get_mem_size(funct3);
-			dram->write(rf->read(rs1) + immediate, rf->read(rs2), mem_size);
+			bus->write(rf->read(rs1) + immediate, rf->read(rs2), mem_size);
 			break;
 		case ITYPE:
 			alu_opcode = aluc->getALUoperation(opcode, funct7, funct3);
