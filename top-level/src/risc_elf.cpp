@@ -11,6 +11,7 @@ ELF_Parse::ELF_Parse(const char* filepath) {
 
 ELF_Parse::~ELF_Parse() {
 	delete elf_file_info;
+	delete rom_image;
 }
 
 bool ELF_Parse::elf_init_headers() {
@@ -79,9 +80,7 @@ const ELF_Program_Header* ELF_Parse::get_program_header(int nentry) {
 }
 
 // Flash all loadable sections as one contiguous byte array to ROM
-bool ELF_Parse::elf_flash_sections(Memory* dram) {
-	std::vector<uint8_t> flash_image;
-
+bool ELF_Parse::elf_flash_sections() {
 	// Iterate through program table entries
 	int p_num = elf_header_info->phnum;
 	for (int idx = 0; idx < p_num; idx++) {
@@ -92,6 +91,15 @@ bool ELF_Parse::elf_flash_sections(Memory* dram) {
 
 		// Size of section
 		Elf32_Word section_size = (p_hdr->memsz < p_hdr->filesz) ? p_hdr->memsz : p_hdr->filesz;
+
+		// If seciton is readable/write, mark as RAM
+		if ((p_hdr->flags & PF_R) && (p_hdr->flags & PF_W)) {
+			ram_start = p_hdr->paddr;
+			ram_size = section_size;
+		} else if ((p_hdr->flags & PF_R) && (p_hdr->flags & PF_X)) {
+			rom_start = p_hdr->paddr;
+			rom_size = section_size;
+		}
 
 		// Flash section to ROM
 		for (size_t jdx = 0; jdx < section_size; jdx++) {
@@ -105,11 +113,9 @@ bool ELF_Parse::elf_flash_sections(Memory* dram) {
 		}
 	}
 
-	// printf("Full image:\n");
-	for (Elf32_Addr addr = 0; addr < flash_image.size(); addr++) {
-		dram->write(addr, flash_image.at(addr), BYTE);
-		// printf("%02x ", flash_image.at(addr));
-	}
+	// for (auto const &entry : flash_image) {
+	// 	printf("%02x ", entry);
+	// }
 	return true;
 }
 
@@ -122,7 +128,17 @@ std::pair<Elf32_Addr, std::string>* ELF_Parse::find_symbol_at_address(Elf32_Addr
 	return nullptr;
 }
 
-void ELF_Parse::generate_disassembled_text() {
+uint8_t* ELF_Parse::get_rom_image() {
+	uint32_t flash_size = flash_image.size();
+	// rom_image = new uint8_t(flash_size);
+	rom_image = (uint8_t*)malloc(flash_size * sizeof(uint8_t));
+	for (uint32_t idx = 0; idx < flash_size; idx++) {
+		rom_image[idx] = flash_image.at(idx);
+	}
+	return rom_image;
+}
+
+bool ELF_Parse::generate_disassembled_text() {
 	// Use String/Symble Headers for reference
 	const struct ELF_Section_Header* strtab_hdr = get_section_header(".strtab");
 	const struct ELF_Section_Header* symtab_hdr = get_section_header(".symtab");
@@ -183,6 +199,7 @@ void ELF_Parse::generate_disassembled_text() {
 			disassembled_code.push_back(disassembled_line);
 		}
 	}
+	return true;
 }
 
 std::vector<struct Disassembled_Entry> ELF_Parse::get_disassembled_code() {
@@ -307,6 +324,7 @@ std::string ELF_Parse::disassemble_instruction(Elf32_Addr addr, Elf32_Word instr
 	}
 
 	delete immgen;
+	// printf("%s\n", instruction_str);
 	return instruction_str;
 }
 

@@ -19,12 +19,12 @@ private:
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
 public:
-	Pipeline(char*, int);
+	Pipeline(uint32_t, uint32_t, uint32_t, uint32_t, int);
 	~Pipeline();
 	bool next_instruction();
 
 	RegisterFile* rf;
-	Memory* dram;
+	Bus* bus;
 	ProgramCounter* pc;
 	CSR* csr;
 	ALU* alu;

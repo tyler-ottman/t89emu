@@ -135,11 +135,20 @@ private:
     std::vector<const struct ELF_Program_Header*> executable_sections; // Section - Pointer to beginning of section, section size
 
     std::vector<struct Disassembled_Entry> disassembled_code;
+    
+    uint8_t* rom_image; // ROM/RAM initially flashedd to ROM
 public:
     ELF_Parse(const char*);
     ~ELF_Parse();
-    bool elf_flash_sections(Memory*);
-    void generate_disassembled_text();
+    bool elf_flash_sections();
+    bool generate_disassembled_text();
     Elf32_Addr get_entry_pc();
     std::vector<struct Disassembled_Entry> get_disassembled_code();
+    uint8_t* get_rom_image();
+
+    std::vector<uint8_t> flash_image;
+    uint32_t rom_start = 0;
+    uint32_t rom_size = 0;
+    uint32_t ram_start = 0;
+    uint32_t ram_size = 0;
 };

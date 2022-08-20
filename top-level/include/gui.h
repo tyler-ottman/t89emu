@@ -8,6 +8,7 @@
 #include <fstream>
 #include <map>
 #include <algorithm>
+#include <cmath>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -37,10 +38,10 @@ private:
     std::vector<std::pair<std::string, uint32_t>> registers;
     Pipeline* t89;
     ELF_Parse* elf_parser;
-    uint32_t* vram;
-    uint32_t* rom;
-    uint32_t* ram;
-    uint32_t* csr_mem;
+    uint8_t* vram;
+    uint8_t* rom;
+    uint8_t* ram;
+    uint8_t* csr_mem;
     RegisterFile* rf;std::unordered_map<uint32_t, std::string> disassembled_module;
     std::vector<struct Disassembled_Entry> disassembled_code;
     bool is_step_enabled;
@@ -49,7 +50,7 @@ private:
     uint32_t* pc_ptr;
     ImVec4 clear_color;
     int init_application(char*);
-    void add_memory_section(uint32_t, uint32_t, uint32_t*, std::string);
+    void add_memory_section(uint32_t, uint32_t, uint8_t*, std::string);
     void load_disassembled_code();
     void load_decompiled_code();
 public:

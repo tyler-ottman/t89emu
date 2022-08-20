@@ -112,8 +112,85 @@ public:
 
 #endif // NEXTPC_H
 
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef MEMCONTROLUNIT_H
+#define MEMCONTROLUNIT_H
+
+class MemControlUnit
+{
+public:
+    int get_mem_size(uint32_t);
+};
+
+#endif // MEMORY_H
+
+#ifndef MEMORYDEVICE_H
+#define MEMORYDEVICE_H
+
+class MemoryDevice {
+public:
+    //MemoryDevice(uint32_t, uint32_t);
+    MemoryDevice();
+    virtual ~MemoryDevice();
+    virtual uint8_t* get_address(uint32_t);
+    virtual uint32_t read(uint32_t, uint32_t) = 0;
+    virtual void write(uint32_t, uint32_t, uint32_t) = 0;
+    uint32_t baseAddress;
+    uint32_t deviceSize;
+    uint8_t* mem;
+};
+
+#endif
+
+#ifndef CSR_MEMORYDEVICE_H
+#define CSR_MEMORYDEVICE_H
+
+class CSRMemoryDevice : public MemoryDevice {
+public:
+    CSRMemoryDevice(uint32_t, uint32_t);
+    uint32_t read(uint32_t, uint32_t);
+    void write(uint32_t, uint32_t, uint32_t);
+};
+
+#endif // CSR_MEMORYDEVICE_H
+
+#ifndef ROM_MEMORYDEVICE_H
+#define ROM_MEMORYDEVICE_H
+
+class ROMMemoryDevice : public MemoryDevice {
+public:
+    ROMMemoryDevice(uint32_t, uint32_t);
+    uint32_t read(uint32_t, uint32_t);
+    void write(uint32_t, uint32_t, uint32_t);
+};
+
+#endif // ROM_MEMORYDEVICE_H
+
+#ifndef RAM_MEMORYDEVICE_H
+#define RAM_MEMORYDEVICE_H
+
+class RAMMemoryDevice : public MemoryDevice {
+public:
+    RAMMemoryDevice(uint32_t, uint32_t);
+    uint32_t read(uint32_t, uint32_t);
+    void write(uint32_t, uint32_t, uint32_t);
+};
+
+#endif // RAM_MEMORYDEVICE_H
+
+#ifndef VIDEO_MEMORYDEVICE_H
+#define VIDEO_MEMORYDEVICE_H
+
+class VideoMemoryDevice : public MemoryDevice {
+public:
+    VideoMemoryDevice(uint32_t, uint32_t);
+    uint32_t read(uint32_t, uint32_t);
+    void write(uint32_t, uint32_t, uint32_t);
+};
+
+#endif // VIDEO_MEMORYDEVICE_H
+
+#ifndef BUS_H
+#define BUS_H
 
 #define BYTE 1
 #define HALFWORD 2
@@ -122,30 +199,48 @@ public:
 #define SCREEN_WIDTH 512
 #define SCREEN_HEIGHT 288
 
-#define INSTRUCTION_MEMORY_START    0x00000000 // Beginning of Instruction Memory
-#define DATA_MEMORY_START           0x10000000 // Beginning of Data Memory
-#define VIDEO_MEMORY_START          0x20000000 // Beginning of Video Memory
-#define CSR_MEMORY_START            0x30000000 // Beginning of CSR Memory Mapped Registers
+// Some memory devices are at fixed addresses
 
-#define INSTRUCTION_MEMORY_SIZE (WORD * 32768) // 128 KB
-#define DATA_MEMORY_SIZE (WORD * 262144) // 1 MB
-#define VIDEO_MEMORY_SIZE (WORD * SCREEN_WIDTH * SCREEN_HEIGHT) // About 590 KB
-#define N_CSR_MEMORY_REGISTERS 5
+// CSR Memory-Mapped IO Device
+#define CSR_BASE 0x30000000
+#define CSR_SIZE 0x14
+#define CSR_END (CSR_BASE + CSR_SIZE)
 
-class Memory
-{
-private:
-    uint8_t* get_mem_section(uint32_t);
+// Video Memory Device
+#define VIDEO_BASE 0x20000000
+#define VIDEO_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT * WORD)
+#define VIDEO_END (VIDEO_BASE + VIDEO_SIZE)
+
+// Future: UART
+// Future: PLIC
+class Bus {
+    
 public:
-    uint32_t instruction_memory[INSTRUCTION_MEMORY_SIZE] = { 0 };      // 128 KB Instruction Memory
-    uint32_t data_memory[DATA_MEMORY_SIZE] = { 0 };
-    uint32_t video_memory[VIDEO_MEMORY_SIZE] = { 0 }; // 512x288 Video Memory
-    uint32_t csr_memory[N_CSR_MEMORY_REGISTERS] = { 0 };
-    void write(uint32_t, uint32_t, int);
-    uint32_t read(uint32_t, int);
+    Bus(uint32_t, uint32_t, uint32_t, uint32_t);
+    ~Bus();
+    void write(uint32_t, uint32_t, uint32_t);
+    uint32_t read(uint32_t, uint32_t);
+    ROMMemoryDevice* rom_device;
+    RAMMemoryDevice* ram_device;
+    VideoMemoryDevice* video_device;
+    CSRMemoryDevice* csr_device;
+    uint32_t rom_base;
+    uint32_t rom_end;
+    uint32_t ram_base;
+    uint32_t ram_end;
 };
 
-#endif // MEMORY_H
+#endif // BUS_H
+
+#ifndef TRAP_H
+#define TRAP_H
+
+class Trap {
+public:
+
+};
+
+#endif // TRAP_H
 
 #ifndef CSR_H
 #define CSR_H
@@ -172,11 +267,11 @@ public:
 #define MHARTID     0xF14
 
 // Memory Mapped CSR Addressed
-#define MCYCLE_H    CSR_MEMORY_START
-#define MCYCLE_L    (CSR_MEMORY_START + 4)
-#define MTIMECMP_H  (CSR_MEMORY_START + 8)
-#define MTIMECMP_L  (CSR_MEMORY_START + 12)
-#define KEYBOARD    (CSR_MEMORY_START + 16)
+#define MCYCLE_H    CSR_BASE
+#define MCYCLE_L    (CSR_BASE + 4)
+#define MTIMECMP_H  (CSR_BASE + 8)
+#define MTIMECMP_L  (CSR_BASE + 12)
+#define KEYBOARD    (CSR_BASE + 16)
 
 #define MSTATUS_MIE_MASK 3
 #define MSTATUS_MPIE_MASK 7
@@ -248,119 +343,3 @@ public:
 };
 
 #endif // CSR_H
-
-#ifndef MEMCONTROLUNIT_H
-#define MEMCONTROLUNIT_H
-
-class MemControlUnit
-{
-public:
-    int get_mem_size(uint32_t);
-};
-
-#endif // MEMORY_H
-
-#ifndef MEMORYDEVICE_H
-#define MEMORYDEVICE_H
-
-class MemoryDevice {
-private:
-    uint32_t baseAddress;
-    uint32_t deviceSize;
-    uint8_t* mem;
-public:
-    MemoryDevice(uint32_t, uint32_t);
-    ~MemoryDevice();
-    virtual uint8_t* get_address(uint32_t);
-    virtual uint32_t read(uint32_t, uint32_t);
-    virtual void write(uint32_t, uint32_t, uint32_t);
-};
-
-#endif
-
-#ifndef CSR_MEMORYDEVICE_H
-#define CSR_MEMORYDEVICE_H
-
-class CSRMemoryDevice : public MemoryDevice {
-private:
-
-};
-
-#endif // CSR_MEMORYDEVICE_H
-
-#ifndef ROM_MEMORYDEVICE_H
-#define ROM_MEMORYDEVICE_H
-
-class ROMMemoryDevice : public MemoryDevice {
-public:
-    ROMMemoryDevice(uint32_t, uint32_t);
-};
-
-#endif // ROM_MEMORYDEVICE_H
-
-#ifndef RAM_MEMORYDEVICE_H
-#define RAM_MEMORYDEVICE_H
-
-class RAMMemoryDevice : public MemoryDevice {
-
-};
-
-#endif // RAM_MEMORYDEVICE_H
-
-#ifndef VIDEO_MEMORYDEVICE_H
-#define VIDEO_MEMORYDEVICE_H
-
-class VideoMemoryDevice : public MemoryDevice {
-
-};
-
-#endif // VIDEO_MEMORYDEVICE_H
-
-#ifndef BUS_H
-#define BUS_H
-
-#define BYTE 1
-#define HALFWORD 2
-#define WORD 4
-
-#define SCREEN_WIDTH 512
-#define SCREEN_HEIGHT 288
-
-// Some memory devices are at fixed addresses
-
-// CSR Memory-Mapped IO Device
-#define CSR_BASE 0x30000000
-#define CSR_SIZE 0xf
-#define CSR_END (CSR_BASE + CSR_SIZE)
-
-// Video Memory Device
-#define VIDEO_BASE 0x20000000
-#define VIDEO_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT * WORD)
-#define VIDEO_END (VIDEO_BASE + VIDEO_SIZE)
-
-// Future: UART
-// Future: PLIC
-class Bus {
-private:
-    ROMMemoryDevice* rom_device;
-    RAMMemoryDevice* ram_device;
-    VideoMemoryDevice* video_device;
-    CSRMemoryDevice* csr_device;
-    // uart
-    // plic
-public:
-    Bus();
-    ~Bus();
-};
-
-#endif // BUS_H
-
-#ifndef TRAP_H
-#define TRAP_H
-
-class Trap {
-public:
-
-};
-
-#endif // TRAP_H
