@@ -11,7 +11,7 @@ ELF_Parse::ELF_Parse(const char* filepath) {
 
 ELF_Parse::~ELF_Parse() {
 	delete elf_file_info;
-	delete rom_image;
+	// delete rom_image;
 }
 
 bool ELF_Parse::elf_init_headers() {
@@ -94,17 +94,21 @@ bool ELF_Parse::elf_flash_sections() {
 
 		// If seciton is readable/write, mark as RAM
 		if ((p_hdr->flags & PF_R) && (p_hdr->flags & PF_W)) {
+			// Add section to RAM image
 			ram_start = p_hdr->paddr;
 			ram_size = section_size;
+			for (size_t jdx = 0; jdx < section_size; jdx++) {
+				uint8_t* data = (uint8_t*)(elf_file_info->elf_data + p_hdr->offset + jdx);
+				ram_image.push_back(*data);
+			}
 		} else if ((p_hdr->flags & PF_R) && (p_hdr->flags & PF_X)) {
+			// Add section to ROM image
 			rom_start = p_hdr->paddr;
 			rom_size = section_size;
-		}
-
-		// Flash section to ROM
-		for (size_t jdx = 0; jdx < section_size; jdx++) {
-			uint8_t* data = (uint8_t*)(elf_file_info->elf_data + p_hdr->offset + jdx);
-			flash_image.push_back(*data);
+			for (size_t jdx = 0; jdx < section_size; jdx++) {
+				uint8_t* data = (uint8_t*)(elf_file_info->elf_data + p_hdr->offset + jdx);
+				rom_image.push_back(*data);
+			}
 		}
 
 		// If section is executable, add to disassembled text 
@@ -129,13 +133,16 @@ std::pair<Elf32_Addr, std::string>* ELF_Parse::find_symbol_at_address(Elf32_Addr
 }
 
 uint8_t* ELF_Parse::get_rom_image() {
+	// Add ROM, then RAM to flash image
+	flash_image.insert(flash_image.end(), rom_image.begin(), rom_image.end());
+	flash_image.insert(flash_image.end(), ram_image.begin(), ram_image.end());
+
 	uint32_t flash_size = flash_image.size();
-	// rom_image = new uint8_t(flash_size);
-	rom_image = (uint8_t*)malloc(flash_size * sizeof(uint8_t));
+	raw_image = (uint8_t*)malloc(flash_size * sizeof(uint8_t));
 	for (uint32_t idx = 0; idx < flash_size; idx++) {
-		rom_image[idx] = flash_image.at(idx);
+		raw_image[idx] = flash_image.at(idx);
 	}
-	return rom_image;
+	return raw_image;
 }
 
 bool ELF_Parse::generate_disassembled_text() {

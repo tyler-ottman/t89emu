@@ -136,7 +136,7 @@ private:
 
     std::vector<struct Disassembled_Entry> disassembled_code;
     
-    uint8_t* rom_image; // ROM/RAM initially flashedd to ROM
+    // uint8_t* rom_image; // ROM/RAM initially flashedd to ROM
 public:
     ELF_Parse(const char*);
     ~ELF_Parse();
@@ -147,6 +147,9 @@ public:
     uint8_t* get_rom_image();
 
     std::vector<uint8_t> flash_image;
+    std::vector<uint8_t> rom_image; // ROM section
+    std::vector<uint8_t> ram_image; // RAM section
+    uint8_t* raw_image; // This is "flashed" to ROM in the emulator
     uint32_t rom_start = 0;
     uint32_t rom_size = 0;
     uint32_t ram_start = 0;
