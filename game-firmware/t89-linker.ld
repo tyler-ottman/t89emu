@@ -3,7 +3,7 @@ OUTPUT_ARCH("riscv")
 ENTRY(_start)
 MEMORY
 {
-    ROM (rx) : ORIGIN = 0x50000000, LENGTH = 128K
+    ROM (rx) : ORIGIN = 0x80000000, LENGTH = 128K
     RAM (rwx) : ORIGIN = 0x40000000, LENGTH = 1M
 }
 

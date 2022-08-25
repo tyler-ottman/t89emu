@@ -180,6 +180,12 @@ public:
 #ifndef VIDEO_MEMORYDEVICE_H
 #define VIDEO_MEMORYDEVICE_H
 
+#define VGA_TEXT_MODE 1
+#define GRAPHICS_MODE 2
+
+#define TEXT_MODE_VERTICAL_LINES    64
+#define TEXT_MODE_HORIZONTAL_LINES  21
+
 class VideoMemoryDevice : public MemoryDevice {
 public:
     VideoMemoryDevice(uint32_t, uint32_t);
@@ -212,7 +218,10 @@ public:
 
 // Video Memory Device
 #define VIDEO_BASE 0x20000000
-#define VIDEO_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT * WORD)
+#define VIDEO_TEXT_OFFSET (VIDEO_BASE + 16) // Starting address of Video Text buffer
+#define VIDEO_TEXT_BUFFER_SIZE (TEXT_MODE_HORIZONTAL_LINES * TEXT_MODE_VERTICAL_LINES)
+#define VIDEO_GRAPHICS_OFFSET (VIDEO_BASE + 16 + VIDEO_TEXT_BUFFER_SIZE)
+#define VIDEO_SIZE (16 + VIDEO_TEXT_BUFFER_SIZE + SCREEN_WIDTH * SCREEN_HEIGHT * WORD)
 #define VIDEO_END (VIDEO_BASE + VIDEO_SIZE)
 
 // Future: UART
