@@ -42,6 +42,7 @@ private:
     uint8_t* rom;
     uint8_t* ram;
     uint8_t* csr_mem;
+    char* vga_text_buffer;
     RegisterFile* rf;std::unordered_map<uint32_t, std::string> disassembled_module;
     std::vector<struct Disassembled_Entry> disassembled_code;
     bool is_step_enabled;
@@ -49,6 +50,7 @@ private:
     std::vector<uint32_t> breakpoints;
     uint32_t* pc_ptr;
     ImVec4 clear_color;
+    ImFont* egaFont;
     int init_application(char*);
     void add_memory_section(uint32_t, uint32_t, uint8_t*, std::string);
     void load_disassembled_code();
@@ -65,4 +67,5 @@ public:
     void render_memory_viewer();
     void render_csr_bank();
     void render_frame();
+    void render_fonts();
 };

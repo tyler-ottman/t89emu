@@ -5,7 +5,6 @@ ROMMemoryDevice::ROMMemoryDevice(uint32_t base, uint32_t size) {
     baseAddress = base;
     deviceSize = size;
 
-    printf("ROMMemoryDevice size: %d\n", size);
     mem = new uint8_t[deviceSize]();
 }
 

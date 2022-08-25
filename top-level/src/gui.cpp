@@ -60,6 +60,7 @@ gui::gui(char* elf_file, int debug) {
     
     // Get GLSL version
     char glsl_version[13];
+    
     if (init_application(glsl_version))
         exit(EXIT_FAILURE);
     
@@ -73,13 +74,19 @@ gui::gui(char* elf_file, int debug) {
     ImGui_ImplOpenGL3_Init(glsl_version);
     clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
     glGenTextures(1, &textureID); // Initialize Texture ID for VRAM
-
+    
     buttons = {TAB, W, A, S, D};
     my_tex_w = SCREEN_WIDTH;
     my_tex_h = SCREEN_HEIGHT;
 
     is_step_enabled = false;
     is_run_enabled = false;
+
+    
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->AddFontDefault();
+    egaFont = io.Fonts->AddFontFromFileTTF("myFont.ttf", 10.8);
+    // io.Fonts->AddFontFromFileTTF("myFont.ttf", 1.0);
 
     // Parse ELF file to load ROM/RAM, disassembler
     elf_parser = new ELF_Parse(elf_file);
@@ -90,7 +97,8 @@ gui::gui(char* elf_file, int debug) {
     t89 = new Pipeline(elf_parser->rom_start, ROM_SIZE, elf_parser->ram_start, RAM_SIZE, debug);
 
     // GUI needs pointers to emulator parts to probe values
-    vram = t89->bus->video_device->mem;
+    vram = (uint8_t*)(t89->bus->video_device->mem + 16 + VIDEO_TEXT_BUFFER_SIZE);
+    vga_text_buffer = (char*)(t89->bus->video_device->mem + 16);
     rom = t89->bus->rom_device->mem;
     ram = t89->bus->ram_device->mem;
     csr_mem = t89->bus->csr_device->mem;
@@ -99,6 +107,9 @@ gui::gui(char* elf_file, int debug) {
 
     // Set entry PC
     *pc_ptr = elf_parser->get_entry_pc();
+    t89->nextpc->nextPC = *pc_ptr;
+    printf("entry pc: %08x\n", t89->pc->PC);
+
     
     // Flash ROM
     uint8_t* elf_rom = elf_parser->get_rom_image();
@@ -164,6 +175,7 @@ void gui::run_debug_application() {
         render_lcd_display();
         render_disassembled_code_section();
         render_control_panel();
+        // render_fonts();
         render_frame();
     }
 }
@@ -273,18 +285,38 @@ void gui::render_io_panel() {
 }
 
 void gui::render_lcd_display() {
+    uint32_t video_mode = *((uint8_t*)t89->bus->video_device->mem);
+    char line_str[TEXT_MODE_VERTICAL_LINES+1]; // Print line by line on window
+
     // VRAM Module
     ImGui::Begin("VRAM Module");
-    ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-    ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-    ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+    if (video_mode == VGA_TEXT_MODE) {
+        ImGui::PushFont(egaFont);
+        for (int i = 0; i < TEXT_MODE_HORIZONTAL_LINES; i++) {
+            memcpy(line_str, vga_text_buffer + TEXT_MODE_VERTICAL_LINES * i, TEXT_MODE_VERTICAL_LINES);
+            for (int j = 0; j < TEXT_MODE_VERTICAL_LINES; j++) {
+                if (line_str[j] == '\0') {
+                    // Allow GUI to print entire line by replacing null byte with space
+                    line_str[j] = ' ';
+                }
+            }
+            line_str[TEXT_MODE_VERTICAL_LINES] = '\0';
+            ImGui::Text("%s", line_str);
+        }
+        ImGui::PopFont();
+    } else if (video_mode == GRAPHICS_MODE) {
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, my_tex_w, my_tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, vram);
-    ImGui::Image((void *)(intptr_t)textureID, ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, my_tex_w, my_tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, vram);
+        ImGui::Image((void *)(intptr_t)textureID, ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
+    }
+  
     ImGui::End();
 }
 
@@ -379,7 +411,7 @@ void gui::render_memory_viewer() {
         ImGui::TableSetupColumn("4", 0, 150);
         add_memory_section(t89->bus->rom_device->deviceSize, t89->bus->rom_device->baseAddress, rom, "CODE");
         add_memory_section(t89->bus->ram_device->deviceSize, t89->bus->ram_device->baseAddress, ram, "DATA");
-        add_memory_section(VIDEO_SIZE, VIDEO_BASE, vram, "VRAM");
+        add_memory_section(VIDEO_SIZE, VIDEO_BASE, t89->bus->video_device->mem, "VRAM");
 
         ImGui::EndTable();
     }
@@ -469,6 +501,7 @@ void gui::render_disassembled_code_section() {
             struct Disassembled_Entry entry = disassembled_code.at(idx);
             if (entry.is_instruction && (entry.address == *pc_ptr)) {
                 scroll_pos = (idx - 7.0) * TEXT_BASE_HEIGHT;
+                break;
             }
         }
     }
