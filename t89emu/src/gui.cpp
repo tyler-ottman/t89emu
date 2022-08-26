@@ -85,8 +85,7 @@ gui::gui(char* elf_file, int debug) {
     
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontDefault();
-    egaFont = io.Fonts->AddFontFromFileTTF("myFont.ttf", 10.8);
-    // io.Fonts->AddFontFromFileTTF("myFont.ttf", 1.0);
+    egaFont = io.Fonts->AddFontFromFileTTF("egaFont.ttf", 10.8);
 
     // Parse ELF file to load ROM/RAM, disassembler
     elf_parser = new ELF_Parse(elf_file);
