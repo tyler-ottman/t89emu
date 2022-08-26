@@ -1,6 +1,4 @@
 #!/bin/bash
 echo "Building CPU emulator..."
-cd ../modules
-make
-cd ../top-level
+cd ../t89emu
 make

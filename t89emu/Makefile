@@ -14,24 +14,21 @@ IMGUI_SRC = ./src/vendor
 IMGUI_INC = ./include/vendor
 TOP_LEVEL_SRC = ./src
 TOP_LEVEL_INC = ./include
-COMPONENTS_LIB = ../modules/lib
-COMPONENTS_INC = ../modules/include
 
 OBJ_DIR = ./obj
 
 CXX = g++
 CXXFLAGS = -std=c++11 -I$(IMGUI_INC) -I$(IMGUI_INC)/backends # Vendor Include
 CXXFLAGS += -I$(TOP_LEVEL_INC) # Non-Vendor Include
-CXXFLAGS += -I$(COMPONENTS_INC) # CPU Components library
 CXXFLAGS += -g -Wall -Wformat -O3
-LDFLAGS = $(COMPONENTS_LIB)/modules.a
 
 TARGET_OBJS = $(OBJ_DIR)/main.o
+TARGET_OBJS += $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/CSR.o $(OBJ_DIR)/MemControlUnit.o $(OBJ_DIR)/MemoryDevice.o $(OBJ_DIR)/CSRMemoryDevice.o $(OBJ_DIR)/RAMMemoryDevice.o $(OBJ_DIR)/ROMMemoryDevice.o $(OBJ_DIR)/VideoMemoryDevice.o $(OBJ_DIR)/Bus.o
 TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
 TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
 TARGET_OBJS += $(OBJ_DIR)/pipeline.o $(OBJ_DIR)/gui.o $(OBJ_DIR)/risc_elf.o
 
-TARGET_NAME = top-level
+TARGET_NAME = t89emu
 
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
@@ -82,7 +79,7 @@ all: directories $(TARGET_NAME)
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(TARGET_NAME): $(TARGET_OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 $(OBJ_DIR)/%.o: $(IMGUI_SRC)/%.cpp # ImGui frontend object files
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
