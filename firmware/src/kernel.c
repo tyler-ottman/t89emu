@@ -25,7 +25,7 @@ int main(void)
     }
 
     // Enable Graphics Mode
-    // *VIDEO_MEMORY = 2;
+    //*VIDEO_MEMORY = 2;
     init_blue_screen();
 
     return 0;

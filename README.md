@@ -20,8 +20,6 @@ $ make
 ```
 **Note**: The toolchain may take up to an hour to build
 
-After building the toolchain
-
 ## Getting Started
 
 The firmware directory provides a skeleton template for Embedded or Operating Systems development. The code provided demonstrates how to properly interface T89-EMU's hardware (see details below detailing the hardware specifications). The emulator provides a modern graphical user interface using Dear ImGui with an OpenGL/GLFW backend. To build the emulator, execute the following commands
@@ -39,9 +37,12 @@ $ make
 The Makefile provided compiles and links the source code, outputting an ELF file targeting the RISC-V T89-EMU architecture. After obtaining the binary, the emulator is ready to run
 
 ```console
-$ cd ../top-level/
+$ cd ..
 $ ./run.sh
 ```
+
+A window with the application should appear allowing you to run the firmware on the emulator. Running the sample 'Hello world' application, the window should look like:
+![Alt text](./img/helloWorld.png "Hello World Example")
 
 ## Hardware Documentation
 

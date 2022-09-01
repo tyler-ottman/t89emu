@@ -1,3 +1,3 @@
 #!/bin/bash
 echo "Running t89-OS Emualtor"
-./t89emu/t89emu ./firmware/bin/game.elf 1
+./t89emu/t89emu ./firmware/bin/kernel.elf 1
