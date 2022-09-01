@@ -67,5 +67,3 @@ uint32_t ImmediateGenerator::getImmediate(uint32_t instruction)
     }
     return immediate;
 }
-
-class ImmediateGenerator;

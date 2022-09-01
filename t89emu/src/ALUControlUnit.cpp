@@ -36,5 +36,3 @@ int ALUControlUnit::getALUoperation(int opcode, int funct7, int funct3)
         return 0b0000;
     }
 }
-
-class ALUControlUnit;

@@ -63,5 +63,3 @@ void CSR::write_csr(uint32_t address, uint32_t data) {
             exit(EXIT_FAILURE);
     }
 }
-
-class CSR;

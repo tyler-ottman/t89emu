@@ -50,5 +50,3 @@ uint32_t ALU::execute(uint32_t A, uint32_t B, int ALU_op)
         exit(EXIT_FAILURE);
     }
 }
-
-class ALU;

@@ -43,5 +43,3 @@ uint32_t NextPC::calculateNextPC(uint32_t offset, uint32_t opcode, uint32_t func
     }
     return this->nextPC;
 }
-
-class NextPC;

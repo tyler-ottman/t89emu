@@ -112,6 +112,9 @@ struct Disassembled_Entry {
     std::string line;
 };
 
+#ifndef ELF_PARSE_H
+#define ELF_PARSE_H
+
 class ELF_Parse {
 private:
     bool elf_init_headers();
@@ -155,3 +158,5 @@ public:
     uint32_t ram_start = 0;
     uint32_t ram_size = 0;
 };
+
+#endif // ELF_PARSE_H

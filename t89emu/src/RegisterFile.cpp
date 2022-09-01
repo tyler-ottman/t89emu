@@ -29,5 +29,3 @@ void RegisterFile::write(uint32_t data, int reg)
 {   
     this->registers[reg] = (reg != 0) ? data : 0;
 }
-
-class RegisterFile;

@@ -28,6 +28,9 @@
 #define DISASSEMBLER_IMPL_HEX
 // #define CDECOMPILE
 
+#ifndef GUI_H
+#define GUI_H
+
 class gui {
 private:
     float my_tex_w;
@@ -69,3 +72,5 @@ public:
     void render_frame();
     void render_fonts();
 };
+
+#endif // GUI_H

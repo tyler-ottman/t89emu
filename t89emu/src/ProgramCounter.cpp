@@ -15,5 +15,3 @@ uint32_t ProgramCounter::getPC()
 {
     return this->PC;
 }
-
-class ProgramCounter;
