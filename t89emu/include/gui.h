@@ -9,12 +9,12 @@
 #include <map>
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "Components.h"
-#include "pipeline.h"
+#include "CPU.h"
 #include "risc_elf.h"
 
 // Defined Buttons
@@ -46,7 +46,8 @@ private:
     uint8_t* ram;
     uint8_t* csr_mem;
     char* vga_text_buffer;
-    RegisterFile* rf;std::unordered_map<uint32_t, std::string> disassembled_module;
+    RegisterFile* rf;
+    std::unordered_map<uint32_t, std::string> disassembled_module;
     std::vector<struct Disassembled_Entry> disassembled_code;
     bool is_step_enabled;
     bool is_run_enabled;

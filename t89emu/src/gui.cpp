@@ -107,8 +107,6 @@ gui::gui(char* elf_file, int debug) {
     // Set entry PC
     *pc_ptr = elf_parser->get_entry_pc();
     t89->nextpc->nextPC = *pc_ptr;
-    printf("entry pc: %08x\n", t89->pc->PC);
-
     
     // Flash ROM
     uint8_t* elf_rom = elf_parser->get_rom_image();

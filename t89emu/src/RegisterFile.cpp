@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <iostream>
-#include "Components.h"
+#include "RegisterFile.h"
 
 /*
 x0	        zero
@@ -18,14 +18,19 @@ x28-31	    t3-6
 */
 RegisterFile::RegisterFile()
 {
-    this->registers = (uint32_t*)calloc(32, sizeof(uint32_t));
+    registers = new uint32_t[32]();
+}
+
+RegisterFile::~RegisterFile() {
+    delete registers;
 }
 
 uint32_t RegisterFile::read(int reg) {
-    return this->registers[reg];
+    return registers[reg];
 }
 
 void RegisterFile::write(uint32_t data, int reg)
 {   
-    this->registers[reg] = (reg != 0) ? data : 0;
+    // Writing to register x0 should do nothing
+    registers[reg] = (reg != 0) ? data : 0;
 }

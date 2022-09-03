@@ -26,7 +26,7 @@ TARGET_OBJS = $(OBJ_DIR)/main.o
 TARGET_OBJS += $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/CSR.o $(OBJ_DIR)/MemControlUnit.o $(OBJ_DIR)/MemoryDevice.o $(OBJ_DIR)/CSRMemoryDevice.o $(OBJ_DIR)/RAMMemoryDevice.o $(OBJ_DIR)/ROMMemoryDevice.o $(OBJ_DIR)/VideoMemoryDevice.o $(OBJ_DIR)/Bus.o
 TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
 TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
-TARGET_OBJS += $(OBJ_DIR)/pipeline.o $(OBJ_DIR)/gui.o $(OBJ_DIR)/risc_elf.o
+TARGET_OBJS += $(OBJ_DIR)/CPU.o $(OBJ_DIR)/gui.o $(OBJ_DIR)/risc_elf.o
 
 TARGET_NAME = t89emu
 

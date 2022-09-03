@@ -1,4 +1,4 @@
-#include "Components.h"
+#include "MemControlUnit.h"
 
 // # of bytes written to memory
 int MemControlUnit::get_mem_size(uint32_t funct3) {

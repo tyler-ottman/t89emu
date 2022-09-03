@@ -1,7 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
-#include "Components.h"
+#include "ImmediateGenerator.h"
 
 uint32_t ImmediateGenerator::getImmediate(uint32_t instruction)
 {
@@ -9,8 +9,7 @@ uint32_t ImmediateGenerator::getImmediate(uint32_t instruction)
     uint32_t immediate = 0;
     uint32_t funct3;
 
-    switch (opcode)
-    {
+    switch (opcode) {
     case LUI: // lui
         return instruction & 0xfffff000;
     case AUIPC: // auipc

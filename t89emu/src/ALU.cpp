@@ -1,9 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <exception>
-#include <math.h>
-#include "Components.h"
+#include "ALU.h"
 
 // 32-bit ALU Operations
 uint32_t ALU::execute(uint32_t A, uint32_t B, int ALU_op) 
@@ -46,7 +41,6 @@ uint32_t ALU::execute(uint32_t A, uint32_t B, int ALU_op)
     case SLTU: // sltu
         return (A < B); // Unsigned integer comparison
     default: // Invalid opcode
-        std::cerr << "Invalid ALU Opcode Exception" << std::endl;
-        exit(EXIT_FAILURE);
+        return 0;
     }
 }

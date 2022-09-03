@@ -6,7 +6,15 @@
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
-#include "Components.h"
+#include "ALU.h"
+#include "ALUControlUnit.h"
+#include "Bus.h"
+#include "CSR.h"
+#include "ImmediateGenerator.h"
+#include "MemControlUnit.h"
+#include "NextPC.h"
+#include "ProgramCounter.h"
+#include "RegisterFile.h"
 
 class Pipeline {
 private:
@@ -14,6 +22,8 @@ private:
 	int debug_mode;
 	uint32_t IO_BUS;
 	uint32_t IO_ADDR;
+
+	void execute_instruction();
 	
 	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);

@@ -1,4 +1,4 @@
-#include "Components.h"
+#include "Bus.h"
 
 // RAM / ROM defined by user in linker script
 Bus::Bus(uint32_t rom_start, uint32_t rom_size, uint32_t ram_start, uint32_t ram_size) {

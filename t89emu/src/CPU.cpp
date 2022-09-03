@@ -1,4 +1,4 @@
-#include "pipeline.h"
+#include "CPU.h"
 
 void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
@@ -209,4 +209,8 @@ bool Pipeline::next_instruction()
 	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, trap_taken, csr->mepc));
 
 	return true;
+}
+
+void Pipeline::execute_instruction() {
+	
 }

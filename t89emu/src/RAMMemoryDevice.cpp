@@ -1,4 +1,4 @@
-#include "Components.h"
+#include "RAMMemoryDevice.h"
 
 RAMMemoryDevice::RAMMemoryDevice(uint32_t base, uint32_t size) {
     baseAddress = base;

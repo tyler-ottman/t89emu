@@ -1,5 +1,4 @@
-#include "Components.h"
-#include <iostream>
+#include "ROMMemoryDevice.h"
 
 ROMMemoryDevice::ROMMemoryDevice(uint32_t base, uint32_t size) {
     baseAddress = base;

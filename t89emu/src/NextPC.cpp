@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Components.h"
+#include "NextPC.h"
 
 NextPC::NextPC() {
     this->nextPC = 0;

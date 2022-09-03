@@ -6,7 +6,8 @@
 #include <vector>
 #include <utility>
 
-#include "Components.h"
+#include "Architecture.h"
+#include "ImmediateGenerator.h"
 
 typedef uint32_t Elf32_Addr; // Unsigned program address
 typedef uint16_t Elf32_Half; // Unsigned medium integer

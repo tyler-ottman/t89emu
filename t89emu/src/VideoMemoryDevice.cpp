@@ -1,5 +1,5 @@
-#include "Components.h"
-#include <iostream>
+#include "VideoMemoryDevice.h"
+
 VideoMemoryDevice::VideoMemoryDevice(uint32_t base, uint32_t size) {
     baseAddress = base;
     deviceSize = size;

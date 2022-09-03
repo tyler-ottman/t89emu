@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Components.h"
+#include "CSR.h"
 
 CSR::CSR(){
     // Supported ISA
