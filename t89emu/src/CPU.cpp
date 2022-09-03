@@ -49,6 +49,7 @@ Pipeline::Pipeline(uint32_t rom_base, uint32_t rom_size, uint32_t ram_base, uint
 	mcu = new MemControlUnit;
 	nextpc = new NextPC;
 	bus = new Bus(rom_base, rom_size, ram_base, ram_size);
+	trap = new Trap;
 }
 
 Pipeline::~Pipeline() {
@@ -60,18 +61,21 @@ Pipeline::~Pipeline() {
 	delete aluc;
 	delete immgen;
 	delete mcu;
-	delete nextpc; 
+	delete nextpc;
+	delete trap;
 }
-
+int a = 1;
+uint64_t* mcycle;
 bool Pipeline::next_instruction()
 {
 	uint32_t trap_taken = 0;
 
 	// Increment 64-bit mcycle
-	uint64_t* mcycle = (uint64_t*)(bus->csr_device->mem);
+	//uint64_t* 
+	mcycle = (uint64_t*)(&bus->csr_device->mem[0]);
 	(*mcycle)++;
 
-	uint64_t* mtimecmp = (uint64_t*)(bus->csr_device->mem + 8);
+	uint64_t* mtimecmp = (uint64_t*)&bus->csr_device->mem[8];
 
 	// Fetch Stage
 	uint32_t pc_addr = pc->getPC();						 // Current PC

@@ -15,6 +15,7 @@
 #include "NextPC.h"
 #include "ProgramCounter.h"
 #include "RegisterFile.h"
+#include "Trap.h"
 
 class Pipeline {
 private:
@@ -35,6 +36,7 @@ public:
 
 	RegisterFile* rf;
 	Bus* bus;
+	Trap* trap;
 	ProgramCounter* pc;
 	CSR* csr;
 	ALU* alu;

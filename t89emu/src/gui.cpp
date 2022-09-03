@@ -85,7 +85,7 @@ gui::gui(char* elf_file, int debug) {
     
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontDefault();
-    egaFont = io.Fonts->AddFontFromFileTTF("egaFont.ttf", 10.8);
+    egaFont = io.Fonts->AddFontFromFileTTF("./egaFont.ttf", 10.8);
 
     // Parse ELF file to load ROM/RAM, disassembler
     elf_parser = new ELF_Parse(elf_file);
@@ -100,7 +100,7 @@ gui::gui(char* elf_file, int debug) {
     vga_text_buffer = (char*)(t89->bus->video_device->mem + 16);
     rom = t89->bus->rom_device->mem;
     ram = t89->bus->ram_device->mem;
-    csr_mem = t89->bus->csr_device->mem;
+    csr_mem = &t89->bus->csr_device->mem[0];
     pc_ptr = &t89->pc->PC;
     rf = t89->rf;
 
@@ -257,6 +257,8 @@ void gui::render_register_bank() {
 
 void gui::render_io_panel() {
     // Keyboard State
+    uint32_t* keyboard_csr = (uint32_t*)&csr_mem[16];
+    
     ImGui::Begin("External I/O");
     ImGui::Text("Button Pressed:");
     // Check for buttons pressed
@@ -270,12 +272,13 @@ void gui::render_io_panel() {
             // Set Bit Flag in Keyboard CSR
             for (size_t i = 0; i < buttons.size(); i++) {
                 if (key == buttons.at(i)) {
-                    csr_mem[4] |= (1 << i); // i specifies what bit "key" maps to
+                    
+                    *keyboard_csr = (1 << i); // i specifies what bit "key" maps to
                 }
             }
             break;
         } else {
-            csr_mem[4] = 0;
+            *keyboard_csr = 0;
         }
     }
     ImGui::End();
@@ -605,7 +608,7 @@ void gui::render_csr_bank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            uint32_t* csr_value = (uint32_t*)(csr_mem + 4 * row);
+            uint32_t* csr_value = (uint32_t*)&csr_mem[4 * row];
             sprintf(buf, "0x%08X", *csr_value);
             ImGui::TextUnformatted(buf);
         }
