@@ -68,7 +68,7 @@ void load_ram(void) {
     // Enable External/Timer/Software Interrupts
     csr_set_field_mie((1 << MIE_MEIE_MASK) | (1 << MIE_MTIE_MASK) | (1 << MIE_MSIE_MASK));
 
-    asm("ecall");
+    // asm("ecall");
 }
 
 // code from https://sourceware.org/newlib/libc.html#Syscalls

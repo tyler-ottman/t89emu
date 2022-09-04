@@ -3,8 +3,8 @@
 #include <iostream>
 #include <fstream>
 
-#ifndef PIPELINE_H
-#define PIPELINE_H
+#ifndef CPU_H
+#define CPU_H
 
 #include "ALU.h"
 #include "ALUControlUnit.h"
@@ -17,22 +17,21 @@
 #include "RegisterFile.h"
 #include "Trap.h"
 
-class Pipeline {
+class CPU {
 private:
-	int interrupt_assert;
-	int debug_mode;
-	uint32_t IO_BUS;
-	uint32_t IO_ADDR;
-
-	void execute_instruction();
+	// Execute a normal RV32I instruction
+	// If the instruction is executed successfully, function returns true
+	// Otherwise, function returns false and stores the type of exception
+	// which will then invoke the CPU to take_trap()
+	bool execute_instruction();
 	
 	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
 public:
-	Pipeline(uint32_t, uint32_t, uint32_t, uint32_t, int);
-	~Pipeline();
-	bool next_instruction();
+	CPU(uint32_t, uint32_t, uint32_t, uint32_t, int);
+	~CPU();
+	void next_instruction();
 
 	RegisterFile* rf;
 	Bus* bus;
@@ -46,4 +45,4 @@ public:
 	NextPC* nextpc;
 };
 
-#endif // PIPELINE_H
+#endif // CPU_H

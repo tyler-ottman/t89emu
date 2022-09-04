@@ -1,6 +1,6 @@
 #include "CPU.h"
 
-void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
+void CPU::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csr_addr, uint32_t cur_instruction)
 {
 	if(cur_instruction == 0) {exit(1);}
 	std::cout << std::hex << "Current Instruction: " << cur_instruction << std::endl;
@@ -22,7 +22,7 @@ void Pipeline::debug_pre_execute(uint32_t opcode, uint32_t funct3, uint32_t func
 	}
 }
 
-void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rd_data, uint32_t rs2_data, uint32_t rs1_data, uint32_t pc_addr)
+void CPU::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rd_data, uint32_t rs2_data, uint32_t rs1_data, uint32_t pc_addr)
 {
 	switch (opcode) {
 		case LUI: std::cout << "Wrote " << rd_data << " to register " << rd << std::endl << std::endl; break;
@@ -38,8 +38,7 @@ void Pipeline::debug_post_execute(uint32_t opcode, uint32_t rd, uint32_t immedia
 	}
 }
 
-Pipeline::Pipeline(uint32_t rom_base, uint32_t rom_size, uint32_t ram_base, uint32_t ram_size, int debug = 0)
-{
+CPU::CPU(uint32_t rom_base, uint32_t rom_size, uint32_t ram_base, uint32_t ram_size, int debug = 0) {
 	rf = new RegisterFile;
 	pc = new ProgramCounter;
 	csr = new CSR;
@@ -52,7 +51,7 @@ Pipeline::Pipeline(uint32_t rom_base, uint32_t rom_size, uint32_t ram_base, uint
 	trap = new Trap;
 }
 
-Pipeline::~Pipeline() {
+CPU::~CPU() {
 	delete rf;
 	delete pc;
 	delete bus;
@@ -64,18 +63,23 @@ Pipeline::~Pipeline() {
 	delete nextpc;
 	delete trap;
 }
-int a = 1;
-uint64_t* mcycle;
-bool Pipeline::next_instruction()
+
+
+void CPU::next_instruction()
 {
+	// Update Clint Device every cycle
+	bus->clint_device->next_cycle(csr);
+
+	// Check for interrupts
+	if (bus->clint_device->check_interrupts(csr)) {
+		trap->take_trap(csr, pc, nextpc, bus->clint_device->interrupt_type);
+	}
+
+	execute_instruction();
+}
+
+bool CPU::execute_instruction() {
 	uint32_t trap_taken = 0;
-
-	// Increment 64-bit mcycle
-	//uint64_t* 
-	mcycle = (uint64_t*)(&bus->csr_device->mem[0]);
-	(*mcycle)++;
-
-	uint64_t* mtimecmp = (uint64_t*)&bus->csr_device->mem[8];
 
 	// Fetch Stage
 	uint32_t pc_addr = pc->getPC();						 // Current PC
@@ -98,23 +102,6 @@ bool Pipeline::next_instruction()
 	uint32_t alu_opcode;
 	uint32_t alu_output;
 	uint32_t cause_offset = 0;
-	
-	if (*mcycle >= *mtimecmp) // Pending Timer interrupt
-		csr->set_mtip();
-	else
-		csr->reset_mtip();
-
-	// Check timer interrupt
-	if (csr->get_mie() && csr->get_mtie() && csr->get_mtip()) {
-		// Global/Timer Interrupt enabled, pending timer interrupt
-		cause_offset = 7;
-		csr->mepc = pc->PC; // Save PC to mepc
-		if (csr->get_mie()) csr->set_mpie(); // MIE Enabled, save to MPIE
-		csr->reset_mie(); // Set MIE to 0
-		csr->set_mpp(MACHINE_MODE); // Set MPP to previous privilege level
-		pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4 * cause_offset, 1, csr->mepc));
-		return true;
-	}
 	
 	switch(opcode) {
 	case LUI:
@@ -202,19 +189,18 @@ bool Pipeline::next_instruction()
 			rf->write(csr->read_csr(csr_addr), rd); // Write current value of CSR to rd
 			if (rs1 != 0)
 				csr->write_csr(csr_addr, (!rf->read(rs1)) & csr->read_csr(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
-		default:																	  // CSR instruction
+			break;
+		default:
 			// Immediate CSR Instructions not yet supported
 			break;
 		}
+		break;
+	default:
+		// Illegal Instruction
 		break;
 	}
 
 	// Update PC
 	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, trap_taken, csr->mepc));
-
 	return true;
-}
-
-void Pipeline::execute_instruction() {
-	
 }

@@ -4,6 +4,9 @@
 #ifndef RAM_MEMORYDEVICE_H
 #define RAM_MEMORYDEVICE_H
 
+// RAM base address defined by linker, maximum possible size is fixed
+#define RAM_SIZE 1048576 // 1 MB
+
 class RAMMemoryDevice : public MemoryDevice {
 public:
     RAMMemoryDevice(uint32_t, uint32_t);

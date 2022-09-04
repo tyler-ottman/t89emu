@@ -4,8 +4,7 @@
 #ifndef NEXTPC_H
 #define NEXTPC_H
 
-class NextPC
-{
+class NextPC {
 private:
     int branch_alu(uint32_t, uint32_t, uint32_t);
 public:

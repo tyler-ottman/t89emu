@@ -39,7 +39,7 @@ private:
     GLFWwindow *window;
     std::vector<int> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
-    Pipeline* t89;
+    CPU* t89;
     ELF_Parse* elf_parser;
     uint8_t* vram;
     uint8_t* rom;

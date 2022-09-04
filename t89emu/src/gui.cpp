@@ -93,14 +93,14 @@ gui::gui(char* elf_file, int debug) {
     elf_parser->generate_disassembled_text(); // Generated disassembled code for GUIs
 
     // Initialize Emulator
-    t89 = new Pipeline(elf_parser->rom_start, ROM_SIZE, elf_parser->ram_start, RAM_SIZE, debug);
+    t89 = new CPU(elf_parser->rom_start, ROM_SIZE, elf_parser->ram_start, RAM_SIZE, debug);
 
     // GUI needs pointers to emulator parts to probe values
     vram = (uint8_t*)(t89->bus->video_device->mem + 16 + VIDEO_TEXT_BUFFER_SIZE);
     vga_text_buffer = (char*)(t89->bus->video_device->mem + 16);
     rom = t89->bus->rom_device->mem;
     ram = t89->bus->ram_device->mem;
-    csr_mem = &t89->bus->csr_device->mem[0];
+    csr_mem = &t89->bus->clint_device->mem[0];
     pc_ptr = &t89->pc->PC;
     rf = t89->rf;
 
