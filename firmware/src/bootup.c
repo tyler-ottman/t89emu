@@ -56,7 +56,7 @@ void load_ram(void) {
     }
 
     // Set time until next interrupt
-    *mtimecmp_l = 0x40000000;
+    *mtimecmp_l = 0x20000000;
     random_routine();
 
     // Specify Instruction set architecture

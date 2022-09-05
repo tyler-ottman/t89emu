@@ -18,14 +18,16 @@ void init_blue_screen() {
 int main(void)
 {
     // Enable VGA Text Mode
-    // *VIDEO_MEMORY = 1;
+    *VIDEO_MEMORY = 1;
+
+    // Write 'Hello World!' to screen
     char screen_buf[13] = "Hello World!";
     for (int idx = 0; idx < 13; idx++) {
         TEXT_BUFFER[idx] = screen_buf[idx];
     }
 
     // Enable Graphics Mode
-    *VIDEO_MEMORY = 2;
+    // *VIDEO_MEMORY = 2;
     init_blue_screen();
 
     return 0;

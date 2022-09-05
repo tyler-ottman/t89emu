@@ -20,7 +20,7 @@ OBJ_DIR = ./obj
 CXX = g++
 CXXFLAGS = -std=c++11 -I$(IMGUI_INC) -I$(IMGUI_INC)/backends # Vendor Include
 CXXFLAGS += -I$(TOP_LEVEL_INC) # Non-Vendor Include
-CXXFLAGS += -g -Wall -Wformat -O2
+CXXFLAGS += -g -Wall -Wformat -O3
 
 TARGET_OBJS = $(OBJ_DIR)/main.o
 TARGET_OBJS += $(OBJ_DIR)/ALUControlUnit.o $(OBJ_DIR)/NextPC.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/ALU.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/CSR.o $(OBJ_DIR)/MemControlUnit.o $(OBJ_DIR)/MemoryDevice.o $(OBJ_DIR)/ClintMemoryDevice.o $(OBJ_DIR)/RAMMemoryDevice.o $(OBJ_DIR)/ROMMemoryDevice.o $(OBJ_DIR)/VideoMemoryDevice.o $(OBJ_DIR)/Bus.o $(OBJ_DIR)/Trap.o

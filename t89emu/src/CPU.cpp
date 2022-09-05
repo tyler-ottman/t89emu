@@ -64,7 +64,6 @@ CPU::~CPU() {
 	delete trap;
 }
 
-
 void CPU::next_instruction()
 {
 	// Update Clint Device every cycle
@@ -75,16 +74,31 @@ void CPU::next_instruction()
 		trap->take_trap(csr, pc, nextpc, bus->clint_device->interrupt_type);
 	}
 
-	execute_instruction();
+	uint32_t exception_code = execute_instruction();
+	if (exception_code != STATUS_OK) {
+		// Hard to emulate accurately, but previous call to execute_instruction() fails
+		// because exception is thrown. In a real system, the CSRs and PC will change in
+		// the same cycle, so the trap bit causes the PC to switch (mux) from the faulting instruction
+		// to the jump instruction in the vector table
+		trap->take_trap(csr, pc, nextpc, exception_code);
+		
+		// Trap phase of cycle emulated (usually means control lines switch)
+		// Now execute the jump instruction in the vector table
+		execute_instruction();
+	}
 }
 
-bool CPU::execute_instruction() {
-	uint32_t trap_taken = 0;
-
+uint32_t CPU::execute_instruction() {
 	// Fetch Stage
 	uint32_t pc_addr = pc->getPC();						 // Current PC
-	uint32_t cur_instruction = bus->read(pc_addr, WORD); // Current Instruction
-	
+	uint32_t cur_instruction;
+	uint32_t exception_code = bus->read(pc_addr, WORD, &cur_instruction); // Current Instruction
+	if (exception_code != STATUS_OK) {
+		// Instruction Access fault or instruction address misaligned
+		return exception_code;
+	}
+
+
 	// Decode Stage
 	uint32_t opcode = cur_instruction & 0b1111111;			   // opcode field
 	uint32_t funct3 = (cur_instruction >> 12) & 0b111;		   // funct3 field
@@ -96,12 +110,12 @@ bool CPU::execute_instruction() {
 	uint32_t csr_addr = (cur_instruction >> 20) & 0xfff;	   // CSR Address
 
 	// Execution flow dependent on instrution type
-	uint32_t mem_size;
+	uint32_t access_size;
 	uint32_t A = 0;
 	uint32_t B = 0;
 	uint32_t alu_opcode;
 	uint32_t alu_output;
-	uint32_t cause_offset = 0;
+	uint32_t read_value;
 	
 	switch(opcode) {
 	case LUI:
@@ -128,12 +142,21 @@ bool CPU::execute_instruction() {
 		B = rf->read(rs2);
 		break;
 	case LOAD:
-		mem_size = mcu->get_mem_size(funct3);
-		rf->write(bus->read(rf->read(rs1) + immediate, mem_size), rd);
+		access_size = mcu->get_mem_size(funct3);
+		exception_code = bus->read(rf->read(rs1) + immediate, access_size, &read_value);
+		if (exception_code != STATUS_OK) {
+			// "Throw" exception
+			return exception_code;
+		}
+		rf->write(read_value, rd);
 		break;
 	case STORE:
-		mem_size = mcu->get_mem_size(funct3);
-		bus->write(rf->read(rs1) + immediate, rf->read(rs2), mem_size);
+		access_size = mcu->get_mem_size(funct3);
+		exception_code = bus->write(rf->read(rs1) + immediate, rf->read(rs2), access_size);
+		if (exception_code != STATUS_OK) {
+			// "Throw" exception
+			return exception_code;
+		}
 		break;
 	case ITYPE:
 		alu_opcode = aluc->getALUoperation(opcode, funct7, funct3);
@@ -161,19 +184,8 @@ bool CPU::execute_instruction() {
 				csr->set_mpp(MACHINE_MODE);
 				break;
 			case ECALL_IMM:
-				csr->set_msip();
-				if (csr->get_mie() && csr->get_msie() && csr->get_msip()) {
-					cause_offset = 3;
-					// Save mepc
-					csr->mepc = pc->PC + WORD;
-					// Save MIE to MPIE before trap
-					if (csr->get_mie()) // MIE Enabled, save to MPIE
-						csr->set_mpie();
-					csr->reset_mie();
-					csr->set_mpp(MACHINE_MODE);
-					trap_taken = 1;
-				}
-				break;
+				// Throw ecall from machine mode
+				return ECALL_FROM_M_MODE;
 			}
 			break;
 		case 0b001:									 // CSRRW
@@ -197,10 +209,11 @@ bool CPU::execute_instruction() {
 		break;
 	default:
 		// Illegal Instruction
-		break;
+		return ILLEGAL_INSTRUCTION;
 	}
 
 	// Update PC
-	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mtvec + 4*cause_offset, trap_taken, csr->mepc));
-	return true;
+	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc));
+	
+	return STATUS_OK;
 }

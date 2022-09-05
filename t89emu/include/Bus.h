@@ -14,8 +14,12 @@ class Bus {
 public:
     Bus(uint32_t, uint32_t, uint32_t, uint32_t);
     ~Bus();
-    void write(uint32_t, uint32_t, uint32_t);
-    uint32_t read(uint32_t, uint32_t);
+
+    // For read/write, bus and memory devices return exception
+    // status codes if something goes wrong
+    uint32_t write(uint32_t addr, uint32_t write_value, uint32_t access_size);
+    uint32_t read(uint32_t addr, uint32_t access_size, uint32_t* read_value);
+
     ROMMemoryDevice* rom_device;
     RAMMemoryDevice* ram_device;
     VideoMemoryDevice* video_device;

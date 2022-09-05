@@ -9,7 +9,7 @@ private:
     int branch_alu(uint32_t, uint32_t, uint32_t);
 public:
     NextPC();
-    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+    uint32_t calculateNextPC(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
     uint32_t nextPC;
 };
 

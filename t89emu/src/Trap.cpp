@@ -1,4 +1,5 @@
 #include "Trap.h"
+#include <iostream>
 
 Trap::Trap() {
     
@@ -11,7 +12,15 @@ Trap::~Trap() {
 void Trap::take_trap(CSR* csr, ProgramCounter* pc, NextPC* nextpc, uint32_t mcause) {
     // Save current PC to machine exception program counter
     csr->mepc = pc->PC;
+
+    // If ECALL save PC + 4
+    if (mcause == ECALL_FROM_M_MODE) {
+        csr->mepc += 4;
+    }
     
+    // Write cause of exception/interrupt to mcause
+    csr->mcause = mcause;
+
     // If MIE was enabled, store in MPIE
     if (csr->get_mie()) {
         csr->set_mpie();
@@ -26,7 +35,17 @@ void Trap::take_trap(CSR* csr, ProgramCounter* pc, NextPC* nextpc, uint32_t mcau
     csr->reset_mie();   // Globally disable interrupts
 
     // Set PC to jump to proper interrupt/exception handler in vector table
-    uint32_t vector_table_offset = (mcause >= 0x80000000) ? (mcause - 0x80000000) : mcause;
+    uint32_t vector_table_offset;
+
+    if (mcause >= 0x80000000) {
+        // Interrupt
+        vector_table_offset = mcause - 0x80000000;
+    } else {
+        // Exception
+        vector_table_offset = 16 + mcause;
+    }
+
     nextpc->nextPC = csr->mtvec + 4 * vector_table_offset;
     pc->PC = csr->mtvec + 4 * vector_table_offset;
+    // printf("trapping to PC: %08x\n", pc->PC);
 }

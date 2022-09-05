@@ -23,7 +23,7 @@ private:
 	// If the instruction is executed successfully, function returns true
 	// Otherwise, function returns false and stores the type of exception
 	// which will then invoke the CPU to take_trap()
-	bool execute_instruction();
+	uint32_t execute_instruction();
 	
 	void debug_post_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 	void debug_pre_execute(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);

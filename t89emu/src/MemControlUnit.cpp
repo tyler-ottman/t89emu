@@ -3,8 +3,15 @@
 // # of bytes written to memory
 int MemControlUnit::get_mem_size(uint32_t funct3) {
     switch(funct3) {
-        case 0b000: return 1; // LB, SB
-        case 0b001: return 2; // LH, SH
-        default:    return 4; // LW, LBU, LHU, SW
+        case 0b000: // LB, SB 
+        case 0b100: // LBU
+            return BYTE;
+        case 0b001: // LH, SH
+        case 0b101: // LHU
+            return HALFWORD;
+        case 0b010: // LW, SW
+            return WORD;
+        default:
+            return 0; // todo: throw exception
     }
 }

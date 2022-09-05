@@ -20,23 +20,25 @@ Bus::~Bus() {
     delete clint_device;
 }
 
-void Bus::write(uint32_t addr, uint32_t data, uint32_t access_size) {
-    if ((addr >= rom_base) && (addr < rom_end)) rom_device->write(addr, data, access_size);
-    else if ((addr >= ram_base) && (addr < ram_end)) ram_device->write(addr, data, access_size);
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) video_device->write(addr, data, access_size);
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) clint_device->write(addr, data, access_size);
+uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t access_size) {
+    // Check if addresse falls within a valid range in memory
+    if ((addr >= rom_base) && (addr < rom_end)) return(rom_device->write(addr, data, access_size));
+    else if ((addr >= ram_base) && (addr < ram_end)) return(ram_device->write(addr, data, access_size));
+    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(video_device->write(addr, data, access_size));
+    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->write(addr, data, access_size));
     else {
-        // Invalid address
+        // Invalid address access
+        return LOAD_ACCESS_FAULT;
     }
 }
 
-uint32_t Bus::read(uint32_t addr, uint32_t access_size) {
-    if ((addr >= rom_base) && (addr < rom_end)) return(rom_device->read(addr, access_size));
-    else if ((addr >= ram_base) && (addr < ram_end)) return(ram_device->read(addr, access_size));
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(video_device->read(addr, access_size));
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->read(addr, access_size));
+uint32_t Bus::read(uint32_t addr, uint32_t access_size, uint32_t* read_value) {
+    if ((addr >= rom_base) && (addr < rom_end)) return(rom_device->read(addr, access_size, read_value));
+    else if ((addr >= ram_base) && (addr < ram_end)) return(ram_device->read(addr, access_size, read_value));
+    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(video_device->read(addr, access_size, read_value));
+    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->read(addr, access_size, read_value));
     else {
-        return 0;
-        // Invalid address exception (trap handler later)
+        // Invalid address access
+        return STORE_ACCESS_FAULT;
     }
 }
