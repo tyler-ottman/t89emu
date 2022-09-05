@@ -36,6 +36,9 @@ _vector_table:
     j _reserved                             # Reserved
     j _environment_call_m_mode              # Environment Call from M-Mode
 
+# Many of the interrupts/exceptions simply spin, doing nothing
+# That is where the user should provide software to properly handle
+# the appropriate interrupt/exception
 
 # This exception should never be reached
 _reserved:
@@ -44,7 +47,7 @@ _reserved:
  # Handle ECALL / Exceptions
 # Probably don't need, only 1 Hart
 _machine_software_interrupt:
-    mret # not tested
+    jal _machine_software_interrupt # Write software to handle interrupt
 
 # Handle Timer Interrupts
 _machine_timer_interrupt:                   
