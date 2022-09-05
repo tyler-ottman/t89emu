@@ -2,6 +2,7 @@
 .global _vector_table
 .global random_routine
 
+# Do not change unless you know what you are doing
 _vector_table:
     # Interrupts
     j _reserved                             # Reserved
@@ -35,57 +36,63 @@ _vector_table:
     j _reserved                             # Reserved
     j _environment_call_m_mode              # Environment Call from M-Mode
 
+
+# This exception should never be reached
 _reserved:
-    mret
+    jal _reserved
 
-_machine_software_interrupt:                # Handle ECALL / Exceptions
-                                            # Probably don't need, only 1 Hart
+ # Handle ECALL / Exceptions
+# Probably don't need, only 1 Hart
+_machine_software_interrupt:
     mret # not tested
 
-_machine_timer_interrupt:                   # Handle Timer Interrupts
-    mret # tested
+# Handle Timer Interrupts
+_machine_timer_interrupt:                   
+    mret # Write software to handle interrupt
 
-_machine_external_interrupt:                # Handle External Interrupts
+# Handle External Interrupts
+_machine_external_interrupt:
     mret # TODO
 
-_instruction_address_misaligned:            # Trap taken when branch/jump provides
-                                            # a misaligned address
-    mret # TODO
+# Trap taken when branch/jump provides
+# a misaligned address
+_instruction_address_misaligned:
+    jal _instruction_address_misaligned # Write software to handle interrupt
 
+# What causes this exception?
 _instruction_access_fault:
-    mret # TODO                             # What causes this exception?
+    jal _instruction_access_fault # TODO
 
-_illegal_instruction:                       # Trap taken when CPU tries to write to
-                                            # ROM or an unknown opcode is found (there might
-                                            # be other types of illegal instruction exceptions
-                                            # in the near future)
-    mret # not tested
+# Trap taken when CPU tries to write to
+# ROM or an unknown opcode is found (there might
+# be other types of illegal instruction exceptions
+# in the near future)
+_illegal_instruction:
+    jal _illegal_instruction # Write software to handle exception
 
-_load_address_misaligned:                   # Trap taken when address being accessed from a memory 
-                                            # device is misaligned (depending on the size of the access)
-    mret # not tested
+# Trap taken when address being accessed from a memory 
+# device is misaligned (depending on the size of the access)
+_load_address_misaligned:
+    jal _load_address_misaligned # Write software to handle exception
+ 
+# Trap taken when bus module determines no memory device
+# exists at the address the cpu is trying to access (possibly
+# other types of load access fault exceptions in the future)
+_load_access_fault:
+    jal _load_access_fault # Write software to handle exception
 
-_load_access_fault:                         # Trap taken when bus module determines no memory device
-                                            # exists at the address the cpu is trying to access (possibly
-                                            # other types of load access fault exceptions in the future)
-    mret # not tested
+# Trap taken when address being accessed from a memory
+# device is misaligned (depending on the size of the access)
+_store_address_misaligned:
+    jal _store_address_misaligned # Write software to handle exception
 
-_store_address_misaligned:                  # Trap taken when address being accessed from a memory
-                                            # device is misaligned (depending on the size of the access)
-    mret # not tested
+# Trap taken when bus module determines no memory device
+# exists at the address the cpu is trying to access (possibly
+# other types of store access fault exceptions in future)
+_store_access_fault:
+    jal _store_access_fault # Write software to handle exception
 
-_store_access_fault:                        # Trap taken when bus module determines no memory device
-                                            # exists at the address the cpu is trying to access (possibly
-                                            # other types of store access fault exceptions in future)
-    mret # not tested
-
-_environment_call_m_mode:                   # Trap taken when CPU invokes ecall instruction
-    mret # tested
-
-random_routine:
-    nop
-    nop
-    ret
-
-_spin_trap:
-    jal _spin_trap
+# Trap taken when CPU invokes ecall instruction
+_environment_call_m_mode:
+    jal _environment_call_m_mode # Write software to handle exception
+    mret

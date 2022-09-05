@@ -28,7 +28,7 @@ uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t access_size) {
     else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->write(addr, data, access_size));
     else {
         // Invalid address access
-        return LOAD_ACCESS_FAULT;
+        return STORE_ACCESS_FAULT;
     }
 }
 
@@ -39,6 +39,6 @@ uint32_t Bus::read(uint32_t addr, uint32_t access_size, uint32_t* read_value) {
     else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->read(addr, access_size, read_value));
     else {
         // Invalid address access
-        return STORE_ACCESS_FAULT;
+        return LOAD_ACCESS_FAULT;
     }
 }

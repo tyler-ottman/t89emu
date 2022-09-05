@@ -8,7 +8,7 @@
 
 // Clint Device (Memory-mapped CSRs)
 #define CLINT_BASE 0x30000000
-#define CLINT_SIZE 0x14
+#define CLINT_SIZE 0x18
 #define CLINT_END (CLINT_BASE + CLINT_SIZE)
 
 #define MCYCLE_OFFSET       0

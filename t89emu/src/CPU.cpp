@@ -212,8 +212,15 @@ uint32_t CPU::execute_instruction() {
 		return ILLEGAL_INSTRUCTION;
 	}
 
-	// Update PC
-	pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc));
+	// Update Program Counter
+	exception_code = nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc);
+	if (exception_code != STATUS_OK) {
+		return exception_code;
+	}
+
+	pc->PC = nextpc->nextPC;
+
+	// pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc));
 	
 	return STATUS_OK;
 }

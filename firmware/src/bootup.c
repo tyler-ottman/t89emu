@@ -18,6 +18,7 @@ extern uint32_t _ebss;
 volatile uint32_t* mtimecmp_l = (uint32_t*)(CSR_MEMORY_START + 8);
 volatile uint32_t* mtimecmp_h = (uint32_t*)(CSR_MEMORY_START + 12);
 volatile uint32_t* keyboard_controller = (uint32_t*)(CSR_MEMORY_START + 16);
+volatile uint32_t* msip = (uint32_t*)(CSR_MEMORY_START + 20);
 
 void random_routine(void);
 
@@ -57,7 +58,6 @@ void load_ram(void) {
 
     // Set time until next interrupt
     *mtimecmp_l = 0x20000000;
-    random_routine();
 
     // Specify Instruction set architecture
     csr_set_field_misa(1 << MISA_I_EXTENSION_MASK);
@@ -68,6 +68,7 @@ void load_ram(void) {
     // Enable External/Timer/Software Interrupts
     csr_set_field_mie((1 << MIE_MEIE_MASK) | (1 << MIE_MTIE_MASK) | (1 << MIE_MSIE_MASK));
 
+    // *msip = 1; // Trigger software interrupt
     // asm("ecall");
 }
 
