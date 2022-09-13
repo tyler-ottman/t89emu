@@ -14,7 +14,7 @@ LDFLAGS = -T $(LDFILE) -nostartfiles
 OBJCOPY_FLAGS = -O binary
 
 TARGET_NAME = kernel
-TARGET_OBJS = $(OBJ_DIR)/crt0.o $(OBJ_DIR)/bootup.o $(OBJ_DIR)/interrupt.o $(OBJ_DIR)/kernel.o
+TARGET_OBJS = $(OBJ_DIR)/crt0.o $(OBJ_DIR)/bootup.o $(OBJ_DIR)/interrupt.o $(OBJ_DIR)/kernel.o $(OBJ_DIR)/terminal.o
 
 all: directories $(BIN_DIR)/$(TARGET_NAME)
 

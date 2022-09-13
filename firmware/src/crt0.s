@@ -12,7 +12,7 @@ _start:
     csrw mtvec, a0
 
     call load_ram                       # Load data to RAM
-    call main                           # OS main routine
+    call kernel_main                           # OS main routine
 
 _spin:
     jal _spin
