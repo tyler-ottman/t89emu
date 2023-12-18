@@ -41,7 +41,8 @@ public:
 
 private:
     int initApplication(char *glslVersion);
-    void addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr, std::string memSecitonName);
+    void addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
+                          std::string memSecitonName);
     void loadDisassembledCode(void);
     void loadDecompiledCode(void);
 

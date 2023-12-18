@@ -10,7 +10,8 @@ Trap::~Trap() {
 
 }
 
-void Trap::takeTrap(Csr *csr, ProgramCounter *pc, NextPc *nextPc, uint32_t mcause) {
+void Trap::takeTrap(Csr *csr, ProgramCounter *pc, NextPc *nextPc,
+                    uint32_t mcause) {
     // Save current PC to machine exception program counter
     csr->setMepc(pc->getPc());
 

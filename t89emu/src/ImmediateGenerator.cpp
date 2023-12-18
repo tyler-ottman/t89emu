@@ -52,7 +52,8 @@ uint32_t ImmediateGenerator::getImmediate(uint32_t instruction) {
         }
         return immediate;
     case STORE: // Stores
-        immediate = ((instruction >> 20) & (0b1111111 << 5)) + ((instruction >> 7) & 0b11111);
+        immediate = ((instruction >> 20) & (0b1111111 << 5)) +
+                    ((instruction >> 7) & 0b11111);
         if (instruction >> 31) {
             // MSB of immediate is 1 (store backwards)
             immediate |= 0xfffff000;

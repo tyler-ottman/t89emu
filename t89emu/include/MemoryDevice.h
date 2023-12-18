@@ -14,12 +14,14 @@ public:
     virtual uint8_t *getAddress(uint32_t addr);
 
     // If read was successful, return with STATUS_OK
-    // Otherwise read returns with exception code 
-    virtual uint32_t read(uint32_t addr, uint32_t size, uint32_t *read_value) = 0;
+    // Otherwise read returns with exception code
+    virtual uint32_t read(uint32_t addr, uint32_t size,
+                          uint32_t *read_value) = 0;
 
     // If write was successful, return with STATUS_OK
     // Otherwise write returns with exception code
-    virtual uint32_t write(uint32_t addr, uint32_t write_value, uint32_t size) = 0;
+    virtual uint32_t write(uint32_t addr, uint32_t write_value,
+                           uint32_t size) = 0;
 
     uint32_t getBaseAddress(void);
     uint32_t getDeviceSize(void);

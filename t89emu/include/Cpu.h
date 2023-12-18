@@ -19,7 +19,8 @@
 
 class Cpu {
 public:
-	Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize, int debug);
+	Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
+	    int debug);
 	~Cpu();
 	
 	void nextInstruction(void);
@@ -41,11 +42,16 @@ private:
 	// Otherwise, function returns false and stores the type of exception
 	// which will then invoke the CPU to take_trap()
 	uint32_t executeInstruction(void);
-	
-	void debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csrAddr, uint32_t curInstruction);
-	void debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rdData, uint32_t rs2Data, uint32_t rs1Data, uint32_t pcAddr);
 
-	Alu *alu;
+    void debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7,
+                         uint32_t rs1, uint32_t rs2, uint32_t rd,
+                         uint32_t immediate, uint32_t csrAddr,
+                         uint32_t curInstruction);
+    void debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate,
+                          uint32_t rdData, uint32_t rs2Data,
+                          uint32_t rs1Data, uint32_t pcAddr);
+
+    Alu *alu;
 	AluControlUnit *aluc;
 	Bus *bus;
 	Csr *csr;

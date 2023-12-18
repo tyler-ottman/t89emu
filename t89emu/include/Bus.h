@@ -11,7 +11,8 @@
 
 class Bus {
 public:
-    Bus(uint32_t romStart, uint32_t romSize, uint32_t ramStart, uint32_t ramSize);
+    Bus(uint32_t romStart, uint32_t romSize, uint32_t ramStart,
+        uint32_t ramSize);
     ~Bus();
 
     // For read/write, bus and memory devices return exception

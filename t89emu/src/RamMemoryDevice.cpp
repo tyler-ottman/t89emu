@@ -9,7 +9,8 @@ RamMemoryDevice::RamMemoryDevice(uint32_t base, uint32_t size) {
     mem = new uint8_t[deviceSize]();
 }
 
-uint32_t RamMemoryDevice::read(uint32_t addr, uint32_t size, uint32_t* readValue) {
+uint32_t RamMemoryDevice::read(uint32_t addr, uint32_t size,
+                               uint32_t *readValue) {
     // Check memory access is aligned
     if (!checkAlignment(addr, size)) {
         return LOAD_ADDRESS_MISALIGNED;
@@ -24,7 +25,8 @@ uint32_t RamMemoryDevice::read(uint32_t addr, uint32_t size, uint32_t* readValue
     return STATUS_OK;
 }
 
-uint32_t RamMemoryDevice::write(uint32_t addr, uint32_t writeValue, uint32_t size) {
+uint32_t RamMemoryDevice::write(uint32_t addr, uint32_t writeValue,
+                                uint32_t size) {
     // Check memory access is aligned
     if (!checkAlignment(addr, size)) {
         return STORE_ADDRESS_MISALIGNED;

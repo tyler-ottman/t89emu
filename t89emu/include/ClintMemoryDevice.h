@@ -15,9 +15,9 @@
 #define MCYCLE_OFFSET           0
 #define MTIMECMP_OFFSET         8
 
-// Machine software interrupt pending bit must be 
+// Machine software interrupt pending bit must be
 // in memory for harts to generate software interrupts
-#define MSIP_OFFSET             20 // Todo: move keyboard register to plic              
+#define MSIP_OFFSET             20 // Todo: move keyboard register to plic
 
 class ClintMemoryDevice : public MemoryDevice {
 public:

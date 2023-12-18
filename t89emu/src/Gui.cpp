@@ -1,8 +1,10 @@
 #include "Gui.h"
 
 struct funcs {
-    static bool IsLegacyNativeDupe(ImGuiKey key) { return key < 512 && ImGui::GetIO().KeyMap[key] != -1; }
-}; // Hide Native<>ImGuiKey duplicates when both exists in the array
+    static bool IsLegacyNativeDupe(ImGuiKey key) {
+        return key < 512 && ImGui::GetIO().KeyMap[key] != -1;
+    }
+};  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
 static void glfw_error_callback(int error, const char *description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -52,11 +54,14 @@ Gui::Gui(char *elfFile, int debug) {
     elfParser = new ElfParser(elfFile);
 
     // Initialize Emulator
-    t89 = new Cpu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(), RAM_SIZE, debug);
+    t89 = new Cpu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
+                  RAM_SIZE, debug);
 
     // GUI probes CPU components to display them
-    vramProbe = (uint8_t *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16 + VIDEO_TEXT_BUFFER_SIZE);
-    vgaTextProbe = (char *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16);
+    vramProbe = (uint8_t *)(t89->getBusModule()->getVideoDevice()->getBuffer() +
+                            16 + VIDEO_TEXT_BUFFER_SIZE);
+    vgaTextProbe =
+        (char *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16);
     romProbe = t89->getBusModule()->getRomMemoryDevice()->getBuffer();
     ramProbe = t89->getBusModule()->getRamMemoryDevice()->getBuffer();
     csrMemProbe = t89->getBusModule()->getClintDevice()->getBuffer();
@@ -99,7 +104,9 @@ void Gui::runDebugApplication() {
 
         if (isRunEnabled) {
             int numInstructions = 0;
-            while ((numInstructions < INSTRUCTIONS_PER_FRAME) && (std::find(breakpoints.begin(), breakpoints.end(), *pcProbe) == breakpoints.end())) {
+            while ((numInstructions < INSTRUCTIONS_PER_FRAME) &&
+                   (std::find(breakpoints.begin(), breakpoints.end(),
+                              *pcProbe) == breakpoints.end())) {
                 t89->nextInstruction();
                 numInstructions++;
             }
@@ -170,62 +177,69 @@ int Gui::initApplication(char *glslVersion) {
     strcpy(glslVersion, "#version 150");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           // Required on Mac
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Required on Mac
 #else
     // GL 3.0 + GLSL 130
     strcpy(glslVersion, "#version 130");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
+    // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
 #endif
 
     // Create window with graphics context
     window = glfwCreateWindow(1280, 720, "t89-OS", NULL, NULL);
-    if (window == NULL)
-        exit(EXIT_FAILURE);
+    if (window == NULL) exit(EXIT_FAILURE);
     glfwMakeContextCurrent(window);
     return 0;
 }
 
-void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t* memPtr, std::string memSectionName) {
+void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
+                           std::string memSectionName) {
     uint8_t hexBytes[16];
     uint8_t asciiBytes[16];
-    uint32_t rowsInMemSection = ceil(memSize / 16.0); // 16 bytes per row
+    uint32_t rowsInMemSection = ceil(memSize / 16.0);  // 16 bytes per row
     ImGuiListClipper clipper;
     clipper.Begin(rowsInMemSection);
     while (clipper.Step()) {
-        for (int addr = clipper.DisplayStart; addr < clipper.DisplayEnd; addr++) {
+        for (int addr = clipper.DisplayStart; addr < clipper.DisplayEnd;
+             addr++) {
             ImGui::TableNextRow();
 
             // Memory Section Name
             ImGui::TableNextColumn();
-            ImGui::Text("%s", memSectionName.c_str()); // change later?
+            ImGui::Text("%s", memSectionName.c_str());  // change later?
 
             // 32-bit Memory Address
             ImGui::TableNextColumn();
             ImGui::Text("%08x", 16 * addr + memStart);
             for (size_t i = 0; i < 16; i++) {
-                hexBytes[i] = ((16 * addr + i) >= memSize) ? 0xff : memPtr[16 * addr + i];
-                asciiBytes[i] = (hexBytes[i] >= 0x20 && hexBytes[i] <= 0x7E) ? hexBytes[i] : '.';
+                hexBytes[i] =
+                    ((16 * addr + i) >= memSize) ? 0xff : memPtr[16 * addr + i];
+                asciiBytes[i] = (hexBytes[i] >= 0x20 && hexBytes[i] <= 0x7E)
+                                    ? hexBytes[i]
+                                    : '.';
             }
-            
+
             // Memory Section to Hex Bytes
             ImGui::TableNextColumn();
-            ImGui::Text("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
-                        hexBytes[0], hexBytes[1], hexBytes[2], hexBytes[3],
-                        hexBytes[4], hexBytes[5], hexBytes[6], hexBytes[7],
-                        hexBytes[8], hexBytes[9], hexBytes[10], hexBytes[11],
-                        hexBytes[12], hexBytes[13], hexBytes[14], hexBytes[15]);
+            ImGui::Text(
+                "%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
+                "%02X %02X %02X %02X",
+                hexBytes[0], hexBytes[1], hexBytes[2], hexBytes[3], hexBytes[4],
+                hexBytes[5], hexBytes[6], hexBytes[7], hexBytes[8], hexBytes[9],
+                hexBytes[10], hexBytes[11], hexBytes[12], hexBytes[13],
+                hexBytes[14], hexBytes[15]);
 
             // Memory Section to Readable ASCII characters
             ImGui::TableNextColumn();
-            ImGui::Text("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-                        asciiBytes[0], asciiBytes[1], asciiBytes[2], asciiBytes[3],
-                        asciiBytes[4], asciiBytes[5], asciiBytes[6], asciiBytes[7],
-                        asciiBytes[8], asciiBytes[9], asciiBytes[10], asciiBytes[11],
-                        asciiBytes[12], asciiBytes[13], asciiBytes[14], asciiBytes[15]);
+            ImGui::Text("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", asciiBytes[0],
+                        asciiBytes[1], asciiBytes[2], asciiBytes[3],
+                        asciiBytes[4], asciiBytes[5], asciiBytes[6],
+                        asciiBytes[7], asciiBytes[8], asciiBytes[9],
+                        asciiBytes[10], asciiBytes[11], asciiBytes[12],
+                        asciiBytes[13], asciiBytes[14], asciiBytes[15]);
         }
     }
 }
@@ -256,24 +270,30 @@ void Gui::renderControlPanel() {
     ImGui::End();
 }
 
+// Register Module
 void Gui::renderCsrBank() {
-    // Register Module
-    enum ContentsType {
-        CT_Text,
-        CT_FillButton
+    enum ContentsType { 
+        CT_Text, CT_FillButton
     };
-    static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+
+    static ImGuiTableFlags flags =
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
     static bool displayHeaders = true;
 
-    std::vector<int> csrAddress = {MSTATUS, MISA, MIE, MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, MIP};
-    std::vector<std::string> csrName = {"mstatus", "misa", "mie", "mtvec", "mscratch", "mepc", "mcause", "mtval", "mip"};
+    std::vector<int> csrAddress = {MSTATUS, MISA,   MIE,   MTVEC, MSCRATCH,
+                                   MEPC,    MCAUSE, MTVAL, MIP};
+    std::vector<std::string> csrName = {"mstatus", "misa",     "mie",
+                                        "mtvec",   "mscratch", "mepc",
+                                        "mcause",  "mtval",    "mip"};
 
-    std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l", "mtimecmp_h", "keyboard"};
+    std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l",
+                                           "mtimecmp_h", "keyboard"};
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags)) {
         // Display headers so we can inspect their interaction with borders.
-        // (Headers are not the main purpose of this section of the demo, so we are not elaborating on them too much. See other sections for details)
+        // (Headers are not the main purpose of this section of the demo, so we
+        // are not elaborating on them too much. See other sections for details)
         if (displayHeaders) {
             ImGui::TableSetupColumn("Register Name");
             ImGui::TableSetupColumn("Value");
@@ -292,7 +312,8 @@ void Gui::renderCsrBank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X", t89->getCsrModule()->readCsr(csrAddress.at(row)));
+            sprintf(buf, "0x%08X",
+                    t89->getCsrModule()->readCsr(csrAddress.at(row)));
             ImGui::TextUnformatted(buf);
         }
 
@@ -327,11 +348,14 @@ void Gui::renderDisassembledCodeSection() {
         ImGui::Text("Breakpoint ");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(100);
-        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9,
+                                 ImGuiInputTextFlags_CharsHexadecimal |
+                                     ImGuiInputTextFlags_CharsUppercase);
         uint32_t breakpointAddress = (uint32_t)strtol(hexBuf, NULL, 16);
         ImGui::SameLine();
         if (ImGui::Button("set")) {
-            if (std::find(breakpoints.begin(), breakpoints.end(), breakpointAddress) == breakpoints.end()) {
+            if (std::find(breakpoints.begin(), breakpoints.end(),
+                          breakpointAddress) == breakpoints.end()) {
                 // Breakpoint at address not found, add it
                 breakpoints.push_back(breakpointAddress);
             }
@@ -348,9 +372,10 @@ void Gui::renderDisassembledCodeSection() {
         ImGui::EndTable();
     }
     ImVec2 child_size = ImVec2(0, 0);
-    ImGui::BeginChild("##ScrollingRegion", child_size); //, false);
-    
-    // When stepping through code, disassembler should auto scroll to current executed instruction
+    ImGui::BeginChild("##ScrollingRegion", child_size);  //, false);
+
+    // When stepping through code, disassembler should auto scroll to current
+    // executed instruction
     float scroll_pos = 0.0;
     if (isStepEnabled) {
         for (size_t idx = 0; idx < disassembledCode.size(); idx++) {
@@ -361,23 +386,27 @@ void Gui::renderDisassembledCodeSection() {
             }
         }
     }
-    
+
     for (const auto &entry : disassembledCode) {
         char addr_str[64];
         sprintf(addr_str, "%08x", entry.address);
-        
+
         std::string disassembledLine = addr_str;
 
         if (entry.isInstruction) {
-            if (std::find(breakpoints.begin(), breakpoints.end(), entry.address) != breakpoints.end()) {
+            if (std::find(breakpoints.begin(), breakpoints.end(),
+                          entry.address) != breakpoints.end()) {
                 // Red address to indicate breakpoint
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0x00, 0x00, 0xff));
-            } else { // Green Address if no breakpoint
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x00,0xab,0x41,255));
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                                      IM_COL32(0xff, 0x00, 0x00, 0xff));
+            } else {  // Green Address if no breakpoint
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                                      IM_COL32(0x00, 0xab, 0x41, 255));
             }
-            ImGui::Text("%s:", disassembledLine.c_str());         
-        } else { // Golden Yellow Name
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0xdf, 0x00, 255));
+            ImGui::Text("%s:", disassembledLine.c_str());
+        } else {  // Golden Yellow Name
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  IM_COL32(0xff, 0xdf, 0x00, 255));
             ImGui::Text("%s", entry.line.c_str());
         }
         ImGui::PopStyleColor();
@@ -385,7 +414,8 @@ void Gui::renderDisassembledCodeSection() {
         // Print Instruction
         if (entry.isInstruction) {
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0x00,0x77,0xb6,255));
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  IM_COL32(0x00, 0x77, 0xb6, 255));
             ImGui::Text("%s", entry.line.c_str());
             ImGui::PopStyleColor();
         }
@@ -393,7 +423,8 @@ void Gui::renderDisassembledCodeSection() {
         // // Emulator at current instruction, draw arrow
         if (entry.isInstruction && (*pcProbe == entry.address)) {
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff,0x00,0x00,0xff));
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  IM_COL32(0xff, 0x00, 0x00, 0xff));
             ImGui::Text("<--");
             ImGui::PopStyleColor();
         }
@@ -413,7 +444,8 @@ void Gui::renderFrame() {
     int displayW, displayH;
     glfwGetFramebufferSize(window, &displayW, &displayH);
     glViewport(0, 0, displayW, displayH);
-    glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w);
+    glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w,
+                 clearColor.z * clearColor.w, clearColor.w);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window);
@@ -422,19 +454,19 @@ void Gui::renderFrame() {
 void Gui::renderIoPanel() {
     // Keyboard State
     uint32_t *keyboardCsr = (uint32_t *)&csrMemProbe[16];
-    
+
     ImGui::Begin("External I/O");
     ImGui::Text("Button Pressed:");
     // Check for buttons pressed
     for (ImGuiKey const &key : buttons) {
-        if (funcs::IsLegacyNativeDupe(key))
-            continue;
+        if (funcs::IsLegacyNativeDupe(key)) continue;
         if (ImGui::IsKeyDown(key)) {
             ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key);
             // Set Bit Flag in Keyboard CSR
             for (size_t i = 0; i < buttons.size(); i++) {
                 if (key == buttons.at(i)) {
-                    *keyboardCsr = (1 << i); // i specifies what bit "key" maps to
+                    // i specifies what bit "key" maps to
+                    *keyboardCsr = (1 << i);
                 }
             }
             break;
@@ -446,18 +478,21 @@ void Gui::renderIoPanel() {
 }
 
 void Gui::renderLcdDisplay() {
-    uint32_t videoMode = *((uint8_t *)t89->getBusModule()->getVideoDevice()->getBuffer());
-    char lineStr[TEXT_MODE_VERTICAL_LINES+1]; // Print line by line on window
+    uint32_t videoMode =
+        *((uint8_t *)t89->getBusModule()->getVideoDevice()->getBuffer());
+    char lineStr[TEXT_MODE_VERTICAL_LINES + 1];  // Print line by line
 
     // VRAM Module
     ImGui::Begin("VRAM Module");
     if (videoMode == VGA_TEXT_MODE) {
         ImGui::PushFont(egaFont);
         for (int i = 0; i < TEXT_MODE_HORIZONTAL_LINES; i++) {
-            memcpy(lineStr, vgaTextProbe + TEXT_MODE_VERTICAL_LINES * i, TEXT_MODE_VERTICAL_LINES);
+            memcpy(lineStr, vgaTextProbe + TEXT_MODE_VERTICAL_LINES * i,
+                   TEXT_MODE_VERTICAL_LINES);
             for (int j = 0; j < TEXT_MODE_VERTICAL_LINES; j++) {
                 if (lineStr[j] == '\0') {
-                    // Allow GUI to print entire line by replacing null byte with space
+                    // Allow GUI to print entire line by replacing null byte
+                    // with space
                     lineStr[j] = ' ';
                 }
             }
@@ -466,18 +501,20 @@ void Gui::renderLcdDisplay() {
         }
         ImGui::PopFont();
     } else if (videoMode == GRAPHICS_MODE) {
-        ImVec2 uvMin = ImVec2(0.0f, 0.0f);                 // Top-left
-        ImVec2 uvMax = ImVec2(1.0f, 1.0f);                 // Lower-right
-        ImVec4 tintCol = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-        ImVec4 borderCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+        ImVec2 uvMin = ImVec2(0.0f, 0.0f);                  // Top-left
+        ImVec2 uvMax = ImVec2(1.0f, 1.0f);                  // Lower-right
+        ImVec4 tintCol = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);    // No tint
+        ImVec4 borderCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);  // 50% opaque white
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, myTexW, myTexH, 0, GL_RGBA, GL_UNSIGNED_BYTE, vramProbe);
-        ImGui::Image((void *)(intptr_t)textureID, ImVec2(myTexW, myTexH), uvMin, uvMax, tintCol, borderCol);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, myTexW, myTexH, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, vramProbe);
+        ImGui::Image((void *)(intptr_t)textureID, ImVec2(myTexW, myTexH), uvMin,
+                     uvMax, tintCol, borderCol);
     }
-  
+
     ImGui::End();
 }
 
@@ -494,7 +531,9 @@ void Gui::renderMemoryViewer() {
         // Manually Typed Address
         ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(100);
-        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        ImGui::InputTextWithHint("###jump to", "address", hexBuf, 9,
+                                 ImGuiInputTextFlags_CharsHexadecimal |
+                                     ImGuiInputTextFlags_CharsUppercase);
         ImGui::SameLine();
         if (ImGui::Button("go to addr"))
             jumpAddr = (int)strtol(hexBuf, NULL, 16);
@@ -502,21 +541,25 @@ void Gui::renderMemoryViewer() {
         // Memory Section Button
         ImGui::TableNextColumn();
         ImGui::Text("Jump to: ");
-        
+
         ImGui::SameLine();
-        if (ImGui::Button("PC"))
-            jumpAddr = 0; // Jump to PC
+        if (ImGui::Button("PC")) jumpAddr = 0;  // Jump to PC
         ImGui::SameLine();
         if (ImGui::Button("SP"))
-            jumpAddr = (t89->getBusModule()->getRomEnd() - t89->getBusModule()->getRomBase()); // Jump to SP
+            jumpAddr = (t89->getBusModule()->getRomEnd() -
+                        t89->getBusModule()->getRomBase());  // Jump to SP
         ImGui::SameLine();
         if (ImGui::Button("VRAM"))
-            jumpAddr = (t89->getBusModule()->getRomEnd() - t89->getBusModule()->getRomBase()) + (t89->getBusModule()->getRamEnd() - t89->getBusModule()->getRamBase()); // Jump to VRAM
-        
+            jumpAddr = (t89->getBusModule()->getRomEnd() -
+                        t89->getBusModule()->getRomBase()) +
+                       (t89->getBusModule()->getRamEnd() -
+                        t89->getBusModule()->getRamBase());  // Jump to VRAM
+
         ImGui::EndTable();
     }
 
-    ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit;
+    ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg |
+                            ImGuiTableFlags_SizingFixedFit;
     if (ImGui::BeginTable("headers", 4, flags)) {
         ImGui::TableSetupColumn("Region", 0, 60);
         ImGui::TableSetupColumn("Addr", 0, 60);
@@ -527,20 +570,27 @@ void Gui::renderMemoryViewer() {
     }
 
     ImVec2 childSize = ImVec2(0, 0);
-    ImGui::BeginChild("##ScrollingRegion", childSize); //, false);
+    ImGui::BeginChild("##ScrollingRegion", childSize);  //, false);
 
     // Jump to memory section if clicked
-    if (jumpAddr != -1)
-        ImGui::SetScrollY((jumpAddr >> 4) * TEXT_BASE_HEIGHT);
+    if (jumpAddr != -1) ImGui::SetScrollY((jumpAddr >> 4) * TEXT_BASE_HEIGHT);
 
     if (ImGui::BeginTable("mem", 4, flags)) {
         ImGui::TableSetupColumn("1", 0, 60);
         ImGui::TableSetupColumn("2", 0, 60);
         ImGui::TableSetupColumn("3", 0, 330);
         ImGui::TableSetupColumn("4", 0, 150);
-        addMemorySection(t89->getBusModule()->getRomMemoryDevice()->getDeviceSize(), t89->getBusModule()->getRomMemoryDevice()->getBaseAddress(), romProbe, "CODE");
-        addMemorySection(t89->getBusModule()->getRamMemoryDevice()->getDeviceSize(), t89->getBusModule()->getRamMemoryDevice()->getBaseAddress(), ramProbe, "DATA");
-        addMemorySection(VIDEO_SIZE, VIDEO_BASE, t89->getBusModule()->getVideoDevice()->getBuffer(), "VRAM");
+        addMemorySection(
+            t89->getBusModule()->getRomMemoryDevice()->getDeviceSize(),
+            t89->getBusModule()->getRomMemoryDevice()->getBaseAddress(),
+            romProbe, "CODE");
+        addMemorySection(
+            t89->getBusModule()->getRamMemoryDevice()->getDeviceSize(),
+            t89->getBusModule()->getRamMemoryDevice()->getBaseAddress(),
+            ramProbe, "DATA");
+        addMemorySection(VIDEO_SIZE, VIDEO_BASE,
+                         t89->getBusModule()->getVideoDevice()->getBuffer(),
+                         "VRAM");
 
         ImGui::EndTable();
     }
@@ -561,7 +611,8 @@ void Gui::renderRegisterBank() {
     ImGui::Begin("Registers");
     if (ImGui::BeginTable("Registers", 2, flags)) {
         // Display headers so we can inspect their interaction with borders.
-        // (Headers are not the main purpose of this section of the demo, so we are not elaborating on them too much. See other sections for details)
+        // (Headers are not the main purpose of this section of the demo, so we
+        // are not elaborating on them too much. See other sections for details)
         if (display_headers) {
             ImGui::TableSetupColumn("Register Name");
             ImGui::TableSetupColumn("Value");
