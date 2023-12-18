@@ -42,7 +42,8 @@ uint32_t Alu::execute(uint32_t A, uint32_t B, int aluOp) {
         // 32-bit Left Shift Register
         return A << B;
     case SLT: // slt
-        // In hardware, use MSB output of 32-bit subtractor (which uses 32-bit adder)
+        // In hardware, use MSB output of 32-bit subtractor (which uses 32-bit
+        // adder)
         msb = (A - B) >> 31;
         return (msb == 1);
     case SLTU: // sltu

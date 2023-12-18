@@ -1,16 +1,17 @@
 #include "Cpu.h"
 
-Cpu::Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize, int debug = 0) {
-	rf = new RegisterFile;
-	pc = new ProgramCounter;
-	csr = new Csr;
-	alu = new Alu;
-	aluc = new AluControlUnit;
-	immgen = new ImmediateGenerator;
-	mcu = new MemControlUnit;
-	nextPc = new NextPc;
-	bus = new Bus(romBase, romSize, ramBase, ramSize);
-	trap = new Trap;
+Cpu::Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
+         int debug = 0) {
+    rf = new RegisterFile;
+    pc = new ProgramCounter;
+    csr = new Csr;
+    alu = new Alu;
+    aluc = new AluControlUnit;
+    immgen = new ImmediateGenerator;
+    mcu = new MemControlUnit;
+    nextPc = new NextPc;
+    bus = new Bus(romBase, romSize, ramBase, ramSize);
+    trap = new Trap;
 }
 
 Cpu::~Cpu() {
@@ -30,23 +31,25 @@ void Cpu::nextInstruction() {
 	// Update Clint Device every cycle
 	bus->getClintDevice()->nextCycle(csr);
 
-	// Check for interrupts
-	if (bus->getClintDevice()->checkInterrupts(csr)) {
-		trap->takeTrap(csr, pc, nextPc, bus->getClintDevice()->getInterruptType());
-	}
+        // Check for interrupts
+        if (bus->getClintDevice()->checkInterrupts(csr)) {
+            trap->takeTrap(csr, pc, nextPc,
+                           bus->getClintDevice()->getInterruptType());
+        }
 
-	uint32_t exceptionCode = executeInstruction();
-	if (exceptionCode != STATUS_OK) {
-		// Hard to emulate accurately, but previous call to execute_instruction() fails
-		// because exception is thrown. In a real system, the CSRs and PC will change in
-		// the same cycle, so the trap bit causes the PC to switch (mux) from the faulting instruction
-		// to the jump instruction in the vector table
-		trap->takeTrap(csr, pc, nextPc, exceptionCode);
-		
-		// Trap phase of cycle emulated (usually means control lines switch)
-		// Now execute the jump instruction in the vector table
-		executeInstruction();
-	}
+        uint32_t exceptionCode = executeInstruction();
+        if (exceptionCode != STATUS_OK) {
+            // Hard to emulate accurately, but previous call to
+            // execute_instruction() fails because exception is thrown. In a
+            // real system, the CSRs and PC will change in the same cycle, so
+            // the trap bit causes the PC to switch (mux) from the faulting
+            // instruction to the jump instruction in the vector table
+            trap->takeTrap(csr, pc, nextPc, exceptionCode);
+
+            // Trap phase of cycle emulated (usually means control lines switch)
+            // Now execute the jump instruction in the vector table
+            executeInstruction();
+        }
 }
 
 Alu *Cpu::getAluModule() {
@@ -90,34 +93,36 @@ Trap *Cpu::getTrapModule() {
 }
 
 uint32_t Cpu::executeInstruction() {
-	// Fetch Stage
-	uint32_t pcAddr = pc->getPc();						 // Current PC
-	uint32_t curInstruction;
-	uint32_t exceptionCode = bus->read(pcAddr, WORD, &curInstruction); // Current Instruction
-	if (exceptionCode != STATUS_OK) {
-		// Instruction Access fault or instruction address misaligned
-		return exceptionCode;
-	}
+    // Fetch Stage
+    uint32_t pcAddr = pc->getPc();  // Current PC
+    uint32_t curInstruction;
+    uint32_t exceptionCode =
+        bus->read(pcAddr, WORD, &curInstruction);  // Current Instruction
+    if (exceptionCode != STATUS_OK) {
+        // Instruction Access fault or instruction address misaligned
+        return exceptionCode;
+    }
 
-	// Decode Stage
-	uint32_t opcode = curInstruction & 0b1111111;			   // opcode field
-	uint32_t funct3 = (curInstruction >> 12) & 0b111;		   // funct3 field
-	uint32_t funct7 = (curInstruction >> 25) & 0b1111111;	   // funct7 field
-	uint32_t rs1 = (curInstruction >> 15) & 0b11111;		   // Register Source 1
-	uint32_t rs2 = (curInstruction >> 20) & 0b11111;		   // Register Source 2
-	uint32_t rd = (curInstruction >> 7) & 0b11111;			   // Register Desination
-	uint32_t immediate = immgen->getImmediate(curInstruction); // Instruction Immediate
-	uint32_t csrAddr = (curInstruction >> 20) & 0xfff;	   	   // CSR Address
+    // Decode Stage
+    uint32_t opcode = curInstruction & 0b1111111;          // opcode field
+    uint32_t funct3 = (curInstruction >> 12) & 0b111;      // funct3 field
+    uint32_t funct7 = (curInstruction >> 25) & 0b1111111;  // funct7 field
+    uint32_t rs1 = (curInstruction >> 15) & 0b11111;       // Register Source 1
+    uint32_t rs2 = (curInstruction >> 20) & 0b11111;       // Register Source 2
+    uint32_t rd = (curInstruction >> 7) & 0b11111;  // Register Desination
+    uint32_t immediate =
+        immgen->getImmediate(curInstruction);           // Instruction Immediate
+    uint32_t csrAddr = (curInstruction >> 20) & 0xfff;  // CSR Address
 
-	// Execution flow dependent on instrution type
-	uint32_t accessSize;
-	uint32_t A = 0;
-	uint32_t B = 0;
-	uint32_t aluOpcode;
-	uint32_t aluOutput;
-	uint32_t readValue;
-	
-	switch(opcode) {
+    // Execution flow dependent on instrution type
+    uint32_t accessSize;
+    uint32_t A = 0;
+    uint32_t B = 0;
+    uint32_t aluOpcode;
+    uint32_t aluOutput;
+    uint32_t readValue;
+
+    switch (opcode) {
 	case LUI:
 		rf->write(immediate, rd);
 		break;
@@ -143,8 +148,9 @@ uint32_t Cpu::executeInstruction() {
 		break;
 	case LOAD:
 		accessSize = mcu->getMemSize(funct3);
-		exceptionCode = bus->read(rf->read(rs1) + immediate, accessSize, &readValue);
-		if (exceptionCode != STATUS_OK) {
+                exceptionCode = bus->read(rf->read(rs1) + immediate, accessSize,
+                                          &readValue);
+                if (exceptionCode != STATUS_OK) {
 			// "Throw" exception
 			return exceptionCode;
 		}
@@ -152,8 +158,9 @@ uint32_t Cpu::executeInstruction() {
 		break;
 	case STORE:
 		accessSize = mcu->getMemSize(funct3);
-		exceptionCode = bus->write(rf->read(rs1) + immediate, rf->read(rs2), accessSize);
-		if (exceptionCode != STATUS_OK) {
+                exceptionCode = bus->write(rf->read(rs1) + immediate,
+                                           rf->read(rs2), accessSize);
+                if (exceptionCode != STATUS_OK) {
 			// "Throw" exception
 			return exceptionCode;
 		}
@@ -188,19 +195,25 @@ uint32_t Cpu::executeInstruction() {
 				return ECALL_FROM_M_MODE;
 			}
 			break;
-		case 0b001:									// CSRRW
-			rf->write(csr->readCsr(csrAddr), rd);	// Write current value of CSR to rd
-			csr->writeCsr(csrAddr, rf->read(rs1)); // Store value of rs1 into CSR
+		case 0b001:	// CSRRW
+			// Write current value of CSR to rd
+			rf->write(csr->readCsr(csrAddr), rd);
+			// Store value of rs1 into CSR
+			csr->writeCsr(csrAddr, rf->read(rs1));
 			break;
-		case 0b010:								    // CSRRS
-			rf->write(csr->readCsr(csrAddr), rd);  // Write current value of CSR to rd
+		case 0b010:	// CSRRS
+			// Write current value of CSR to rd
+			rf->write(csr->readCsr(csrAddr), rd);
+			// Use rs1 as a bit mask to set CSR bits
 			if (rs1 != 0)
-				csr->writeCsr(csrAddr, rf->read(rs1) | csr->readCsr(csrAddr)); // Use rs1 as a bit mask to set CSR bits
+				csr->writeCsr(csrAddr, rf->read(rs1) | csr->readCsr(csrAddr));
 			break;
-		case 0b011:								   // CSRRC
-			rf->write(csr->readCsr(csrAddr), rd); // Write current value of CSR to rd
+		case 0b011:	// CSRRC
+			// Write current value of CSR to rd
+			rf->write(csr->readCsr(csrAddr), rd);
+			// Usr rs1 as a bit mask to reset CSR bits
 			if (rs1 != 0)
-				csr->writeCsr(csrAddr, (!rf->read(rs1)) & csr->readCsr(csrAddr)); // Usr rs1 as a bit mask to reset CSR bits
+				csr->writeCsr(csrAddr, (!rf->read(rs1))&csr->readCsr(csrAddr));
 			break;
 		default:
 			// Immediate CSR Instructions not yet supported
@@ -213,14 +226,13 @@ uint32_t Cpu::executeInstruction() {
 	}
 
 	// Update Program Counter
-	exceptionCode = nextPc->calculateNextPc(immediate, opcode, funct3, A, B, csr->getMepc());
+	exceptionCode = nextPc->calculateNextPc(immediate, opcode, funct3, A, B,
+											csr->getMepc());
 	if (exceptionCode != STATUS_OK) {
 		return exceptionCode;
 	}
 
 	pc->setPc(nextPc->getNextPc());
-
-	// pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc));
 	
 	return STATUS_OK;
 }

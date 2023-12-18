@@ -9,7 +9,8 @@ ClintMemoryDevice::ClintMemoryDevice(uint32_t base, uint32_t size) {
     mem = new uint8_t[deviceSize]();
 }
 
-uint32_t ClintMemoryDevice::read(uint32_t addr, uint32_t size, uint32_t *read_value) {
+uint32_t ClintMemoryDevice::read(uint32_t addr, uint32_t size,
+                                 uint32_t *read_value) {
     // Check memory access is aligned
     if (!checkAlignment(addr, size)) {
         return LOAD_ADDRESS_MISALIGNED;
@@ -25,7 +26,8 @@ uint32_t ClintMemoryDevice::read(uint32_t addr, uint32_t size, uint32_t *read_va
     return STATUS_OK;
 }
 
-uint32_t ClintMemoryDevice::write(uint32_t addr, uint32_t value, uint32_t size) {
+uint32_t ClintMemoryDevice::write(uint32_t addr, uint32_t value,
+                                  uint32_t size) {
     // Check memory access is aligned
     if (!checkAlignment(addr, size)) {
         return STORE_ADDRESS_MISALIGNED;
