@@ -26,8 +26,6 @@
 #define D 549
 
 #define INSTRUCTIONS_PER_FRAME 1000000
-#define DISASSEMBLER_IMPL_HEX
-// #define CDECOMPILE
 
 #ifndef GUI_H
 #define GUI_H
@@ -43,8 +41,6 @@ private:
     int initApplication(char *glslVersion);
     void addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
                           std::string memSecitonName);
-    void loadDisassembledCode(void);
-    void loadDecompiledCode(void);
 
     // Render Modules
     void renderControlPanel(void);
@@ -65,18 +61,7 @@ private:
     
     ElfParser *elfParser;
     Cpu *t89;
-    
-    // Device Probes
-    uint8_t *vramProbe;
-    uint8_t *romProbe;
-    uint8_t *ramProbe;
-    uint8_t *csrMemProbe;
-    char *vgaTextProbe;
-    RegisterFile *rfProbe;
-    uint32_t *pcProbe;
 
-    std::unordered_map<uint32_t, std::string> disassembledModule;
-    std::vector<struct DisassembledEntry> disassembledCode;
     bool isStepEnabled;
     bool isRunEnabled;
     std::vector<uint32_t> breakpoints;

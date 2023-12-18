@@ -8,6 +8,7 @@
 
 #include "Architecture.h"
 #include "ImmediateGenerator.h"
+#include "RomMemoryDevice.h"
 
 typedef uint32_t Elf32_Addr; // Unsigned program address
 typedef uint16_t Elf32_Half; // Unsigned medium integer
@@ -118,10 +119,10 @@ struct DisassembledEntry {
 
 class ElfParser {
 public:
-    ElfParser(const char *);
+    ElfParser(const char *path);
     ~ElfParser();
     
-    void flashRom(uint8_t *romDevice);
+    void flashRom(RomMemoryDevice *romDevice);
     std::vector<struct DisassembledEntry> &getDisassembledCode(void);
 
     Elf32_Addr getEntryPc(void);
@@ -130,32 +131,27 @@ public:
 
 private:
     // Initialize ELF Parsing
-    bool elfInitHeaders(void);
-    bool elfFlashSections(void);
-    bool generateDisassembledText(void);
+    bool initHeaders(const char *path);
+    bool generateImage(void);
+    bool generateDisassembledCode(void);
 
     const ElfSectionHeader *getSectionHeader(const char *name);
-    const ElfProgramHeader *getProgramHeader(int);
-    std::pair<Elf32_Addr, std::string> *findSymbolAtAddress(Elf32_Addr addr);
-    std::string disassembleInstruction(Elf32_Addr addr, Elf32_Word instruction);
-    std::string getCsrName(int);
+    const ElfProgramHeader *getProgramHeader(int nentry);
+    std::pair<Elf32_Addr, std::string> *getSymbolAtAddress(Elf32_Addr addr);
+    std::string getInstructionStr(Elf32_Addr addr, Elf32_Word instruction);
+    std::string getCsrName(int csrAddr);
 
     // ELF Header Information
     const struct ElfHeader *elfHeaderInfo;
-    const struct ElfProgramHeader *elfProgramHeader;
-    const struct ElfSectionHeader *elfSectionHeader;
     
     // ELF File Information
     struct ElfFileInformation *elfFileInfo;
-    const char *fileName;
 
     // ROM/RAM Information
     std::vector<uint8_t> romImage; // ROM section
     std::vector<uint8_t> ramImage; // RAM section
     uint32_t romStart;
-    uint32_t romSize;
     uint32_t ramStart;
-    uint32_t ramSize;
 
     // List of all executable sections within ELF file
     std::vector<const struct ElfProgramHeader *> executableSections;

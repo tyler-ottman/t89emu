@@ -57,32 +57,12 @@ Gui::Gui(char *elfFile, int debug) {
     t89 = new Cpu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
                   RAM_SIZE, debug);
 
-    // GUI probes CPU components to display them
-    vramProbe = (uint8_t *)(t89->getBusModule()->getVideoDevice()->getBuffer() +
-                            16 + VIDEO_TEXT_BUFFER_SIZE);
-    vgaTextProbe =
-        (char *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16);
-    romProbe = t89->getBusModule()->getRomMemoryDevice()->getBuffer();
-    ramProbe = t89->getBusModule()->getRamMemoryDevice()->getBuffer();
-    csrMemProbe = t89->getBusModule()->getClintDevice()->getBuffer();
-    rfProbe = t89->getRegisterFileModule();
-    pcProbe = t89->getProgramCounterModule()->getPcPtr();
-
     // Set entry PC
     t89->getProgramCounterModule()->setPc(elfParser->getEntryPc());
     t89->getNextPcModule()->setNextPc(elfParser->getEntryPc());
     
     // Flash ELF Loadable sections to ROM Device
-    elfParser->flashRom(romProbe);
-
-#ifdef DISASSEMBLER_IMPL_HEX
-    loadDisassembledCode();
-#endif
-
-    // C De-Compiler feature in future
-#ifdef CDECOMPILE
-    load_decompiled_code();
-#endif
+    elfParser->flashRom(t89->getBusModule()->getRomMemoryDevice());
 
     if (debug) {
         runDebugApplication();
@@ -106,7 +86,8 @@ void Gui::runDebugApplication() {
             int numInstructions = 0;
             while ((numInstructions < INSTRUCTIONS_PER_FRAME) &&
                    (std::find(breakpoints.begin(), breakpoints.end(),
-                              *pcProbe) == breakpoints.end())) {
+                    *(t89->getProgramCounterModule()->getPcPtr())) ==
+                    breakpoints.end())) {
                 t89->nextInstruction();
                 numInstructions++;
             }
@@ -244,17 +225,6 @@ void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
     }
 }
 
-void Gui::loadDisassembledCode() {
-    disassembledCode = elfParser->getDisassembledCode();
-    // for (const auto &entry : disassembledCode) {
-    //     printf("%s\n", entry.line.c_str());
-    // }
-}
-
-void Gui::loadDecompiledCode() {
-    
-}
-
 void Gui::renderControlPanel() {
     isStepEnabled = false;
     ImGui::Begin("Control Panel");
@@ -288,6 +258,8 @@ void Gui::renderCsrBank() {
 
     std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l",
                                            "mtimecmp_h", "keyboard"};
+
+    uint8_t *csrMemBuffer = t89->getBusModule()->getClintDevice()->getBuffer();
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags)) {
@@ -329,7 +301,7 @@ void Gui::renderCsrBank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            uint32_t *csrValue = (uint32_t *)&csrMemProbe[4 * row];
+            uint32_t *csrValue = (uint32_t *)&csrMemBuffer[4 * row];
             sprintf(buf, "0x%08X", *csrValue);
             ImGui::TextUnformatted(buf);
         }
@@ -376,11 +348,15 @@ void Gui::renderDisassembledCodeSection() {
 
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
+    uint32_t *pcPtr = t89->getProgramCounterModule()->getPcPtr();
+    std::vector<struct DisassembledEntry> &disassembledCode =
+        elfParser->getDisassembledCode();
+
     float scroll_pos = 0.0;
     if (isStepEnabled) {
         for (size_t idx = 0; idx < disassembledCode.size(); idx++) {
             struct DisassembledEntry entry = disassembledCode.at(idx);
-            if (entry.isInstruction && (entry.address == *pcProbe)) {
+            if (entry.isInstruction && (entry.address == *pcPtr)) {
                 scroll_pos = (idx - 7.0) * TEXT_BASE_HEIGHT;
                 break;
             }
@@ -421,7 +397,7 @@ void Gui::renderDisassembledCodeSection() {
         }
 
         // // Emulator at current instruction, draw arrow
-        if (entry.isInstruction && (*pcProbe == entry.address)) {
+        if (entry.isInstruction && (*pcPtr == entry.address)) {
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text,
                                   IM_COL32(0xff, 0x00, 0x00, 0xff));
@@ -453,7 +429,8 @@ void Gui::renderFrame() {
 
 void Gui::renderIoPanel() {
     // Keyboard State
-    uint32_t *keyboardCsr = (uint32_t *)&csrMemProbe[16];
+    uint8_t *csrMemBuffer = t89->getBusModule()->getClintDevice()->getBuffer();
+    uint32_t *keyboardCsr = (uint32_t *)&csrMemBuffer[16];
 
     ImGui::Begin("External I/O");
     ImGui::Text("Button Pressed:");
@@ -486,8 +463,10 @@ void Gui::renderLcdDisplay() {
     ImGui::Begin("VRAM Module");
     if (videoMode == VGA_TEXT_MODE) {
         ImGui::PushFont(egaFont);
+        char *vgaTextBuffer =
+            (char *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16);
         for (int i = 0; i < TEXT_MODE_HORIZONTAL_LINES; i++) {
-            memcpy(lineStr, vgaTextProbe + TEXT_MODE_VERTICAL_LINES * i,
+            memcpy(lineStr, vgaTextBuffer + TEXT_MODE_VERTICAL_LINES * i,
                    TEXT_MODE_VERTICAL_LINES);
             for (int j = 0; j < TEXT_MODE_VERTICAL_LINES; j++) {
                 if (lineStr[j] == '\0') {
@@ -506,11 +485,15 @@ void Gui::renderLcdDisplay() {
         ImVec4 tintCol = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);    // No tint
         ImVec4 borderCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);  // 50% opaque white
 
+        uint8_t *vramBuffer =
+            (uint8_t *)(t89->getBusModule()->getVideoDevice()->getBuffer() +
+                        16 + VIDEO_TEXT_BUFFER_SIZE);
+
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, myTexW, myTexH, 0, GL_RGBA,
-                     GL_UNSIGNED_BYTE, vramProbe);
+                     GL_UNSIGNED_BYTE, vramBuffer);
         ImGui::Image((void *)(intptr_t)textureID, ImVec2(myTexW, myTexH), uvMin,
                      uvMax, tintCol, borderCol);
     }
@@ -583,11 +566,11 @@ void Gui::renderMemoryViewer() {
         addMemorySection(
             t89->getBusModule()->getRomMemoryDevice()->getDeviceSize(),
             t89->getBusModule()->getRomMemoryDevice()->getBaseAddress(),
-            romProbe, "CODE");
+            t89->getBusModule()->getRomMemoryDevice()->getBuffer(), "CODE");
         addMemorySection(
             t89->getBusModule()->getRamMemoryDevice()->getDeviceSize(),
             t89->getBusModule()->getRamMemoryDevice()->getBaseAddress(),
-            ramProbe, "DATA");
+            t89->getBusModule()->getRamMemoryDevice()->getBuffer(), "DATA");
         addMemorySection(VIDEO_SIZE, VIDEO_BASE,
                          t89->getBusModule()->getVideoDevice()->getBuffer(),
                          "VRAM");
@@ -635,7 +618,7 @@ void Gui::renderRegisterBank() {
             // Register Value
             ImGui::TableSetColumnIndex(1);
             // registers.at(row).second = rand() % 4294967295;
-            sprintf(buf, "0x%08X", rfProbe->read(row));
+            sprintf(buf, "0x%08X", t89->getRegisterFileModule()->read(row));
             if (contents_type == CT_Text)
                 ImGui::TextUnformatted(buf);
             else if (contents_type == CT_FillButton)

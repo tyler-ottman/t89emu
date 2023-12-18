@@ -2,16 +2,15 @@
 
 #include "ElfParser.h"
 
-ElfParser::ElfParser(const char* filepath) {
-	fileName = filepath;
-
+ElfParser::ElfParser(const char* path) {
 	elfFileInfo = new ElfFileInformation;
-	if(!elfFileInfo || !elfInitHeaders()) {
+	if(!elfFileInfo || !initHeaders(path)) {
 		std::cerr << "Error: ELF initialization failed\n";
 		exit(EXIT_FAILURE);
 	}
-	elfFlashSections(); // Generate ROM image    
-    generateDisassembledText(); // Generate Disassembled Text
+
+	generateImage(); // Generate Image that will be flashed to ROM    
+    generateDisassembledCode(); // Generate Disassembled Text
 }
 
 ElfParser::~ElfParser() {
@@ -19,10 +18,11 @@ ElfParser::~ElfParser() {
 	// delete romImage;
 }
 
-void ElfParser::flashRom(uint8_t *romDevice) {
+void ElfParser::flashRom(RomMemoryDevice *romDevice) {
 	// Load ROM + RAM into ROM Device
-	std::copy(romImage.begin(), romImage.end(), &romDevice[0]);
-	std::copy(ramImage.begin(), ramImage.end(), &romDevice[romImage.size()]);
+	uint8_t *buffer = romDevice->getBuffer();
+	std::copy(romImage.begin(), romImage.end(), &buffer[0]);
+	std::copy(ramImage.begin(), ramImage.end(), &buffer[romImage.size()]);
 }
 
 std::vector<struct DisassembledEntry> &ElfParser::getDisassembledCode() {
@@ -41,10 +41,10 @@ uint32_t ElfParser::getRomStart() {
 	return romStart;
 }
 
-bool ElfParser::elfInitHeaders() {
-	FILE *fp = fopen(fileName, "rb");
+bool ElfParser::initHeaders(const char *path) {
+	FILE *fp = fopen(path, "rb");
 	if (fp == NULL) {
-		std::cerr << "Error: could not open " << fileName << "\n";
+		std::cerr << "Error: could not open " << path << "\n";
 		return false;	
 	}
 	
@@ -86,7 +86,7 @@ bool ElfParser::elfInitHeaders() {
 }
 
 // Flash all loadable sections as one contiguous byte array to ROM
-bool ElfParser::elfFlashSections() {
+bool ElfParser::generateImage() {
 	// Iterate through program table entries
 	int p_num = elfHeaderInfo->phnum;
 	for (int idx = 0; idx < p_num; idx++) {
@@ -99,11 +99,10 @@ bool ElfParser::elfFlashSections() {
 		Elf32_Word sectionSize = (pHdr->memsz < pHdr->filesz) 
 								 ? pHdr->memsz : pHdr->filesz;
 
-		// If seciton is readable/write, mark as RAM
+		// If section is readable/write, mark as RAM
 		if ((pHdr->flags & PF_R) && (pHdr->flags & PF_W)) {
 			// Add section to RAM image
 			ramStart = pHdr->paddr;
-			ramSize = sectionSize;
 			for (size_t jdx = 0; jdx < sectionSize; jdx++) {
 				uint8_t *data = (uint8_t *)(elfFileInfo->elfData
 				                            + pHdr->offset + jdx);
@@ -112,7 +111,6 @@ bool ElfParser::elfFlashSections() {
 		} else if ((pHdr->flags & PF_R) && (pHdr->flags & PF_X)) {
 			// Add section to ROM image
 			romStart = pHdr->paddr;
-			romSize = sectionSize;
 			for (size_t jdx = 0; jdx < sectionSize; jdx++) {
 				uint8_t *data = (uint8_t *)(elfFileInfo->elfData
 				                            + pHdr->offset + jdx);
@@ -129,7 +127,7 @@ bool ElfParser::elfFlashSections() {
 	return true;
 }
 
-bool ElfParser::generateDisassembledText() {
+bool ElfParser::generateDisassembledCode() {
 	// Use String/Symble Headers for reference
 	const struct ElfSectionHeader *strtabHdr = getSectionHeader(".strtab");
 	const struct ElfSectionHeader *symtabHdr = getSectionHeader(".symtab");
@@ -184,7 +182,7 @@ bool ElfParser::generateDisassembledText() {
 			struct DisassembledEntry disassembledLine;
 			
 			std::pair<Elf32_Addr, std::string> *addrSymb = 
-				findSymbolAtAddress(curAddr);
+				getSymbolAtAddress(curAddr);
 			// Instruction at current address also has a symbol (function
 			// or assembly routine name)
 			if (addrSymb != nullptr) {
@@ -198,10 +196,9 @@ bool ElfParser::generateDisassembledText() {
 												    + section->offset + idx));
 			disassembledLine.isInstruction = true;
 			disassembledLine.address = curAddr;
-			disassembledLine.line = disassembleInstruction(curAddr, 
-														   instruction);
-			disassembledCode.push_back(disassembledLine);
-		}
+            disassembledLine.line = getInstructionStr(curAddr, instruction);
+            disassembledCode.push_back(disassembledLine);
+        }
 	}
 	return true;
 }
@@ -239,7 +236,7 @@ const ElfProgramHeader *ElfParser::getProgramHeader(int nentry) {
 	return pHdr;
 }
 
-std::pair<Elf32_Addr, std::string> *ElfParser::findSymbolAtAddress(
+std::pair<Elf32_Addr, std::string> *ElfParser::getSymbolAtAddress(
     Elf32_Addr addr) {
     for (auto &symbol : symbols) {
         if (symbol.first == addr) {
@@ -249,8 +246,8 @@ std::pair<Elf32_Addr, std::string> *ElfParser::findSymbolAtAddress(
     return nullptr;
 }
 
-std::string ElfParser::disassembleInstruction(Elf32_Addr addr,
-                                              Elf32_Word instruction) {
+std::string ElfParser::getInstructionStr(Elf32_Addr addr,
+                                         Elf32_Word instruction) {
     const std::vector<std::string> registerNames = {
         "zero", "ra", "sp", "gp", "tp",  "t0",  "t1", "t2", "s0", "s1", "a0",
         "a1",   "a2", "a3", "a4", "a5",  "a6",  "a7", "s2", "s3", "s4", "s5",
