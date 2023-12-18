@@ -1,11 +1,11 @@
-#include "ALU.h"
+#include "Alu.h"
 
 // 32-bit ALU Operations
-uint32_t ALU::execute(uint32_t A, uint32_t B, int ALU_op) 
+uint32_t Alu::execute(uint32_t A, uint32_t B, int AluOp) 
 {
-    uint32_t MSB;
+    uint32_t msb;
     
-    switch (ALU_op) {
+    switch (AluOp) {
     case ADD: // add
         // C++ implicitly interprets uint32_t operations as 2s compliment
         // The hardware implementation of 32-bit adder is up to the user
@@ -29,15 +29,15 @@ uint32_t ALU::execute(uint32_t A, uint32_t B, int ALU_op)
         return A >> B;
     case SRA: // sra
         // 32-bit Right Shifter Register with Sign Extension
-        MSB = -(A >> 31);
-	    return (MSB ^ A) >> B ^ MSB;
+        msb = -(A >> 31);
+	    return (msb ^ A) >> B ^ msb;
     case SLL: // sll
         // 32-bit Left Shift Register
         return A << B;
     case SLT: // slt
         // In hardware, use MSB output of 32-bit subtractor (which uses 32-bit adder)
-        MSB = (A - B) >> 31;
-        return (MSB == 1);
+        msb = (A - B) >> 31;
+        return (msb == 1);
     case SLTU: // sltu
         return (A < B); // Unsigned integer comparison
     default: // Invalid opcode

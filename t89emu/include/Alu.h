@@ -14,7 +14,7 @@
 #define SLT  8
 #define SLTU 9
 
-class ALU {
+class Alu {
 public:
     uint32_t execute(uint32_t, uint32_t, int);
 };

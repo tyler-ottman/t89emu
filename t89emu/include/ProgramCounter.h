@@ -3,14 +3,14 @@
 #ifndef PROGRAMCOUNTER_H
 #define PROGRAMCOUNTER_H
 
-class ProgramCounter
-{
+class ProgramCounter {
 public:
-    uint32_t PC;
-    
-    ProgramCounter();
-    void setPC(uint32_t);
-    uint32_t getPC();
+    ProgramCounter(void);
+    void setPc(uint32_t);
+    uint32_t getPc(void);
+    uint32_t *getPcPtr(void);
+private:
+    uint32_t pc;
 };
 
 #endif // PROGRAMCOUNTER_H

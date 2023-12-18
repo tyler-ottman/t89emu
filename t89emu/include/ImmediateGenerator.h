@@ -1,4 +1,5 @@
 #include <stdint.h>
+
 #include "Architecture.h"
 
 #ifndef IMMEDIATEGENERATOR_H

@@ -1,7 +1,8 @@
 #include <stdint.h>
+
 #include "Architecture.h"
+#include "Csr.h"
 #include "MemoryDevice.h"
-#include "CSR.h"
 
 #ifndef CLINTMEMORYDEVICE_H
 #define CLINTMEMORYDEVICE_H
@@ -21,13 +22,13 @@
 class ClintMemoryDevice : public MemoryDevice {
 public:
     ClintMemoryDevice(uint32_t, uint32_t);
-    uint32_t read(uint32_t addr, uint32_t size, uint32_t* read_value);
+    uint32_t read(uint32_t addr, uint32_t size, uint32_t *read_value);
     uint32_t write(uint32_t addr, uint32_t write_value, uint32_t size);
 
-    void next_cycle(CSR*);
-    bool check_interrupts(CSR*);
+    void nextCycle(Csr *);
+    bool checkInterrupts(Csr *);
 
-    uint32_t interrupt_type; // Used when taking trap
+    uint32_t interruptType; // Used when taking trap
 };
 
 #endif // CLINTMEMORYDEVICE_H

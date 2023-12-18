@@ -1,17 +1,19 @@
 #include <iostream>
+
 #include "ProgramCounter.h"
 
-ProgramCounter::ProgramCounter()
-{
-    PC = 0;
+ProgramCounter::ProgramCounter() {
+    pc = 0;
 }
 
-void ProgramCounter::setPC(uint32_t nextPC)
-{
-    this->PC = nextPC;
+void ProgramCounter::setPc(uint32_t nextPc) {
+    pc = nextPc;
 }
 
-uint32_t ProgramCounter::getPC()
-{
-    return this->PC;
+uint32_t ProgramCounter::getPc() {
+    return pc;
+}
+
+uint32_t *ProgramCounter::getPcPtr() {
+    return &pc;
 }

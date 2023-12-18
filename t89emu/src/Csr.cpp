@@ -1,7 +1,7 @@
 #include <iostream>
-#include "CSR.h"
+#include "Csr.h"
 
-CSR::CSR(){
+Csr::Csr(){
     // Supported ISA
     // I extension
     misa = 0;
@@ -30,7 +30,7 @@ CSR::CSR(){
     mtval = 0;
 }
 
-uint32_t CSR::read_csr(uint32_t address) {
+uint32_t Csr::readCSR(uint32_t address) {
     switch(address) {
         case MSTATUS:   return mstatus;
         case MISA:      return misa;
@@ -47,7 +47,7 @@ uint32_t CSR::read_csr(uint32_t address) {
     }
 }
 
-void CSR::write_csr(uint32_t address, uint32_t data) {
+void Csr::writeCSR(uint32_t address, uint32_t data) {
     switch(address) {
         case MSTATUS:   mstatus = data; break;
         case MISA:      misa = data; break;

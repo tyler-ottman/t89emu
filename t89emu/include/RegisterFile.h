@@ -3,10 +3,9 @@
 #ifndef REGISTERFILE_H
 #define REGISTERFILE_H
 
-class RegisterFile
-{
+class RegisterFile {
 private:
-    uint32_t* registers;
+    uint32_t *registers;
 
 public:
     RegisterFile();

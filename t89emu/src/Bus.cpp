@@ -1,42 +1,42 @@
 #include "Bus.h"
 
 // RAM / ROM defined by user in linker script
-Bus::Bus(uint32_t rom_start, uint32_t rom_size, uint32_t ram_start, uint32_t ram_size) {
-    rom_base = rom_start;
-    rom_end = rom_start + rom_size;
-    ram_base = ram_start;
-    ram_end = ram_start + ram_size;
+Bus::Bus(uint32_t romStart, uint32_t romSize, uint32_t ramStart, uint32_t ramSize) {
+    romBase = romStart;
+    romEnd = romStart + romSize;
+    ramBase = ramStart;
+    ramEnd = ramStart + ramSize;
 
-    rom_device = new ROMMemoryDevice(rom_start, rom_size);
-    ram_device = new RAMMemoryDevice(ram_start, ram_size);
-    video_device = new VideoMemoryDevice(VIDEO_BASE, VIDEO_SIZE);
-    clint_device = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
+    romDevice = new RomMemoryDevice(romStart, romSize);
+    ramDevice = new RamMemoryDevice(ramStart, ramSize);
+    videoDevice = new VideoMemoryDevice(VIDEO_BASE, VIDEO_SIZE);
+    clintDevice = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
 }
 
 Bus::~Bus() {
-    delete rom_device;
-    delete ram_device;
-    delete video_device;
-    delete clint_device;
+    delete romDevice;
+    delete ramDevice;
+    delete videoDevice;
+    delete clintDevice;
 }
 
-uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t access_size) {
+uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t accessSize) {
     // Check if addresse falls within a valid range in memory
-    if ((addr >= rom_base) && (addr < rom_end)) return(rom_device->write(addr, data, access_size));
-    else if ((addr >= ram_base) && (addr < ram_end)) return(ram_device->write(addr, data, access_size));
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(video_device->write(addr, data, access_size));
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->write(addr, data, access_size));
+    if ((addr >= romBase) && (addr < romEnd)) return(romDevice->write(addr, data, accessSize));
+    else if ((addr >= ramBase) && (addr < ramEnd)) return(ramDevice->write(addr, data, accessSize));
+    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(videoDevice->write(addr, data, accessSize));
+    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clintDevice->write(addr, data, accessSize));
     else {
         // Invalid address access
         return STORE_ACCESS_FAULT;
     }
 }
 
-uint32_t Bus::read(uint32_t addr, uint32_t access_size, uint32_t* read_value) {
-    if ((addr >= rom_base) && (addr < rom_end)) return(rom_device->read(addr, access_size, read_value));
-    else if ((addr >= ram_base) && (addr < ram_end)) return(ram_device->read(addr, access_size, read_value));
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(video_device->read(addr, access_size, read_value));
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clint_device->read(addr, access_size, read_value));
+uint32_t Bus::read(uint32_t addr, uint32_t accessSize, uint32_t *readValue) {
+    if ((addr >= romBase) && (addr < romEnd)) return(romDevice->read(addr, accessSize, readValue));
+    else if ((addr >= ramBase) && (addr < ramEnd)) return(ramDevice->read(addr, accessSize, readValue));
+    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END)) return(videoDevice->read(addr, accessSize, readValue));
+    else if ((addr >= CLINT_BASE) && (addr < CLINT_END)) return(clintDevice->read(addr, accessSize, readValue));
     else {
         // Invalid address access
         return LOAD_ACCESS_FAULT;

@@ -1,10 +1,10 @@
+#include <iostream>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "Architecture.h"
 #include "ImmediateGenerator.h"
@@ -52,7 +52,7 @@ typedef uint32_t Elf32_Word; // Unsigned large integer
 #define PF_W        0x2 // Write
 #define PF_R        0x4 // Read
 
-struct ELF_Header {
+struct ElfHeader {
     unsigned char   ident[EI_NIDENT]; // Magic Number
     Elf32_Half      type; // Executable - 2
     Elf32_Half      machine; //
@@ -69,7 +69,7 @@ struct ELF_Header {
     Elf32_Half      shstrndx;  
 };
 
-struct ELF_Section_Header {
+struct ElfSectionHeader {
     Elf32_Word      name;
     Elf32_Word      type;
     Elf32_Word      flags;
@@ -82,7 +82,7 @@ struct ELF_Section_Header {
     Elf32_Word      entsize;
 };
 
-struct ELF_Program_Header {
+struct ElfProgramHeader {
     Elf32_Word      type;
     Elf32_Off       offset;
     Elf32_Addr      vaddr;
@@ -93,7 +93,7 @@ struct ELF_Program_Header {
     Elf32_Word      align;
 };
 
-struct ELF_Symbol {
+struct ElfSymbol {
     Elf32_Word name;
     Elf32_Addr value;
     Elf32_Word size;
@@ -102,13 +102,13 @@ struct ELF_Symbol {
     Elf32_Half shndx;
 };
 
-struct ELF_File_Information {
-    uint8_t* elf_data;
-    unsigned int elf_size;
+struct ElfFileInformation {
+    uint8_t *elfData;
+    unsigned int elfSize;
 };
 
-struct Disassembled_Entry {
-    bool is_instruction; // Line if either Function/Assembly name or Instruction
+struct DisassembledEntry {
+    bool isInstruction; // Line if either Function/Assembly name or Instruction
     Elf32_Word address;
     std::string line;
 };
@@ -116,48 +116,48 @@ struct Disassembled_Entry {
 #ifndef ELF_PARSE_H
 #define ELF_PARSE_H
 
-class ELF_Parse {
+class ElfParser {
 private:
-    bool elf_init_headers();
+    bool elfInitHeaders();
 
-    const ELF_Section_Header* get_section_header(const char*);
-    const ELF_Program_Header* get_program_header(int);
-    std::pair<Elf32_Addr, std::string>* find_symbol_at_address(Elf32_Addr);
-    std::string disassemble_instruction(Elf32_Addr, Elf32_Word);
-    std::string get_csr_name(int);
+    const ElfSectionHeader *getSectionHeader(const char *);
+    const ElfProgramHeader *getProgramHeader(int);
+    std::pair<Elf32_Addr, std::string> *findSymbolAtAddress(Elf32_Addr);
+    std::string disassembleInstruction(Elf32_Addr, Elf32_Word);
+    std::string getCsrName(int);
 
-    // Elf Header Information
-    const struct ELF_Header* elf_header_info;
-    const struct ELF_Program_Header* elf_program_header;
-    const struct ELF_Section_Header* elf_section_header;
+    // ELF Header Information
+    const struct ElfHeader *elfHeaderInfo;
+    const struct ElfProgramHeader *elfProgramHeader;
+    const struct ElfSectionHeader *elfSectionHeader;
     
     // ELF File Information
-    struct ELF_File_Information* elf_file_info;
-    const char* file_name;
+    struct ElfFileInformation *elfFileInfo;
+    const char *fileName;
 
     std::vector<std::pair<Elf32_Addr, std::string>> symbols; // Symbol - Address, Name
-    std::vector<const struct ELF_Program_Header*> executable_sections; // Section - Pointer to beginning of section, section size
+    std::vector<const struct ElfProgramHeader *> executableSections; // Section - Pointer to beginning of section, section size
 
-    std::vector<struct Disassembled_Entry> disassembled_code;
+    std::vector<struct DisassembledEntry> disassembledCode;
     
-    // uint8_t* rom_image; // ROM/RAM initially flashedd to ROM
+    // uint8_t *romImage; // ROM/RAM initially flashedd to ROM
 public:
-    ELF_Parse(const char*);
-    ~ELF_Parse();
-    bool elf_flash_sections();
-    bool generate_disassembled_text();
-    Elf32_Addr get_entry_pc();
-    std::vector<struct Disassembled_Entry> get_disassembled_code();
-    uint8_t* get_rom_image();
+    ElfParser(const char *);
+    ~ElfParser(void);
+    bool elfFlashSections(void);
+    bool generateDisassembledText(void);
+    Elf32_Addr getEntryPc(void);
+    std::vector<struct DisassembledEntry> &getDisassembledCode(void);
+    uint8_t* getRomImage(void);
 
-    std::vector<uint8_t> flash_image;
-    std::vector<uint8_t> rom_image; // ROM section
-    std::vector<uint8_t> ram_image; // RAM section
-    uint8_t* raw_image; // This is "flashed" to ROM in the emulator
-    uint32_t rom_start = 0;
-    uint32_t rom_size = 0;
-    uint32_t ram_start = 0;
-    uint32_t ram_size = 0;
+    std::vector<uint8_t> flashImage;
+    std::vector<uint8_t> romImage; // ROM section
+    std::vector<uint8_t> ramImage; // RAM section
+    uint8_t *rawImage; // This is "flashed" to ROM in the emulator
+    uint32_t romStart = 0;
+    uint32_t romSize = 0;
+    uint32_t ramStart = 0;
+    uint32_t ramSize = 0;
 };
 
 #endif // ELF_PARSE_H

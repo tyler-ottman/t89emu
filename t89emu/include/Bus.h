@@ -1,9 +1,10 @@
 #include <stdint.h>
+
 #include "Architecture.h"
-#include "ROMMemoryDevice.h"
-#include "RAMMemoryDevice.h"
-#include "VideoMemoryDevice.h"
 #include "ClintMemoryDevice.h"
+#include "RamMemoryDevice.h"
+#include "RomMemoryDevice.h"
+#include "VideoMemoryDevice.h"
 
 #ifndef BUS_H
 #define BUS_H
@@ -17,17 +18,17 @@ public:
 
     // For read/write, bus and memory devices return exception
     // status codes if something goes wrong
-    uint32_t write(uint32_t addr, uint32_t write_value, uint32_t access_size);
-    uint32_t read(uint32_t addr, uint32_t access_size, uint32_t* read_value);
+    uint32_t write(uint32_t addr, uint32_t writeValue, uint32_t accessSize);
+    uint32_t read(uint32_t addr, uint32_t accessSize, uint32_t *readValue);
 
-    ROMMemoryDevice* rom_device;
-    RAMMemoryDevice* ram_device;
-    VideoMemoryDevice* video_device;
-    ClintMemoryDevice* clint_device;
-    uint32_t rom_base;
-    uint32_t rom_end;
-    uint32_t ram_base;
-    uint32_t ram_end;
+    RomMemoryDevice *romDevice;
+    RamMemoryDevice *ramDevice;
+    VideoMemoryDevice *videoDevice;
+    ClintMemoryDevice *clintDevice;
+    uint32_t romBase;
+    uint32_t romEnd;
+    uint32_t ramBase;
+    uint32_t ramEnd;
 };
 
 #endif // BUS_H

@@ -1,10 +1,10 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+
 #include "ImmediateGenerator.h"
 
-uint32_t ImmediateGenerator::getImmediate(uint32_t instruction)
-{
+uint32_t ImmediateGenerator::getImmediate(uint32_t instruction) {
     uint32_t opcode = instruction & 0b1111111;
     uint32_t immediate = 0;
     uint32_t funct3;

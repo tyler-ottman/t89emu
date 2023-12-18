@@ -126,7 +126,7 @@ TEST(ALUControlUnit, Misc_Instr) {
     int funct7 = 0;
     int funct3 = 0;
     for (int x : ALUop) {
-        EXPECT_EQ(0, misc.getALUoperation(x, funct7, funct3));
+        EXPECT_EQ(0, misc.getALUOperation(x, funct7, funct3));
     }
 }
 
@@ -139,24 +139,24 @@ TEST(ALUControlUnit, ALUControlUnit) {
     int index = 0;
     std::vector<int> expected = {0, 8, 9, 4, 2, 3, 7}; // Expected ALU operation code
     for (int x : funct3) {
-        int ALU_operation = alucu.getALUoperation(ITYPE, funct7.at(0), x);
+        int ALU_operation = alucu.getALUOperation(ITYPE, funct7.at(0), x);
         EXPECT_EQ(expected.at(index++), ALU_operation);
     }
 
     // srli/srai
     funct7 = {0b0000000, 0b0100000};
-    EXPECT_EQ(5, alucu.getALUoperation(ITYPE, funct7.at(0), 0b101));
-    EXPECT_EQ(6, alucu.getALUoperation(ITYPE, funct7.at(1), 0b101));
+    EXPECT_EQ(5, alucu.getALUOperation(ITYPE, funct7.at(0), 0b101));
+    EXPECT_EQ(6, alucu.getALUOperation(ITYPE, funct7.at(1), 0b101));
 
     // Branch
-    EXPECT_EQ(1, alucu.getALUoperation(BTYPE, 0, 0));
+    EXPECT_EQ(1, alucu.getALUOperation(BTYPE, 0, 0));
 
     // add / sub R-type
     funct7 = {0b0000000, 0b0100000};
     expected = {0, 1};
     index = 0;
     for (int x : funct7) {
-        EXPECT_EQ(expected[index++], alucu.getALUoperation(RTYPE, x, 0b000));
+        EXPECT_EQ(expected[index++], alucu.getALUOperation(RTYPE, x, 0b000));
     }
 
     // SRL / SRA R-type
@@ -164,7 +164,7 @@ TEST(ALUControlUnit, ALUControlUnit) {
     expected = {5, 6};
     index = 0;
     for (int x : funct7) {
-        EXPECT_EQ(expected[index++], alucu.getALUoperation(RTYPE, x, 0b101));
+        EXPECT_EQ(expected[index++], alucu.getALUOperation(RTYPE, x, 0b101));
     }
 
     // sll, slt, sltu, xor, or, and
@@ -172,7 +172,7 @@ TEST(ALUControlUnit, ALUControlUnit) {
     expected = {7, 8, 9, 4, 2, 3};
     index = 0;
     for (int x : funct3) {
-        EXPECT_EQ(expected[index++], alucu.getALUoperation(RTYPE, 0, x));
+        EXPECT_EQ(expected[index++], alucu.getALUOperation(RTYPE, 0, x));
     }
 }
 

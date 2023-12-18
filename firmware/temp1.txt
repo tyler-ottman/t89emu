@@ -1,0 +1,67 @@
+Symbol table '.symtab' contains 65 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 80000000     0 SECTION LOCAL  DEFAULT    1 
+     2: 40000000     0 SECTION LOCAL  DEFAULT    2 
+     3: 40000010     0 SECTION LOCAL  DEFAULT    3 
+     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
+     5: 00000000     0 SECTION LOCAL  DEFAULT    5 
+     6: 00000000     0 SECTION LOCAL  DEFAULT    6 
+     7: 00000000     0 SECTION LOCAL  DEFAULT    7 
+     8: 00000000     0 SECTION LOCAL  DEFAULT    8 
+     9: 00000000     0 SECTION LOCAL  DEFAULT    9 
+    10: 00000000     0 SECTION LOCAL  DEFAULT   10 
+    11: 00000000     0 SECTION LOCAL  DEFAULT   11 
+    12: 00000000     0 SECTION LOCAL  DEFAULT   12 
+    13: 00000000     0 FILE    LOCAL  DEFAULT  ABS crt0.o
+    14: 80000000     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    15: 80000028     0 NOTYPE  LOCAL  DEFAULT    1 _spin
+    16: 00000000     0 FILE    LOCAL  DEFAULT  ABS bootup.c
+    17: 8000002c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    18: 40000010     4 OBJECT  LOCAL  DEFAULT    3 heap_end.0
+    19: 00000000     0 FILE    LOCAL  DEFAULT  ABS interrupt.o
+    20: 80000154     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    21: 800001c4     0 NOTYPE  LOCAL  DEFAULT    1 _reserved
+    22: 800001c8     0 NOTYPE  LOCAL  DEFAULT    1 _machine_software_interru
+    23: 800001cc     0 NOTYPE  LOCAL  DEFAULT    1 _machine_timer_interrupt
+    24: 800001d0     0 NOTYPE  LOCAL  DEFAULT    1 _machine_external_interru
+    25: 800001d4     0 NOTYPE  LOCAL  DEFAULT    1 _instruction_address_misa
+    26: 800001d8     0 NOTYPE  LOCAL  DEFAULT    1 _instruction_access_fault
+    27: 800001dc     0 NOTYPE  LOCAL  DEFAULT    1 _illegal_instruction
+    28: 800001e0     0 NOTYPE  LOCAL  DEFAULT    1 _load_address_misaligned
+    29: 800001e4     0 NOTYPE  LOCAL  DEFAULT    1 _load_access_fault
+    30: 800001e8     0 NOTYPE  LOCAL  DEFAULT    1 _store_address_misaligned
+    31: 800001ec     0 NOTYPE  LOCAL  DEFAULT    1 _store_access_fault
+    32: 800001f0     0 NOTYPE  LOCAL  DEFAULT    1 _environment_call_m_mode
+    33: 00000000     0 FILE    LOCAL  DEFAULT  ABS kernel.c
+    34: 800001f8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    35: 00000000     0 FILE    LOCAL  DEFAULT  ABS terminal.c
+    36: 80000248     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    37: 80000154     0 NOTYPE  GLOBAL DEFAULT    1 _vector_table
+    38: 8000002c   220 FUNC    GLOBAL DEFAULT    1 load_ram
+    39: 80000400    40 FUNC    GLOBAL DEFAULT    1 enable_graphics_mode
+    40: 40000800     0 NOTYPE  GLOBAL DEFAULT    2 __global_pointer$
+    41: 40000000     4 OBJECT  GLOBAL DEFAULT    2 mtimecmp_l
+    42: 80000268   104 FUNC    GLOBAL DEFAULT    1 init_blue_screen
+    43: 80000428     0 NOTYPE  GLOBAL DEFAULT    1 _etext
+    44: 40000010     0 NOTYPE  GLOBAL DEFAULT    3 _sbss
+    45: 80000448     0 NOTYPE  GLOBAL DEFAULT    1 _program_end
+    46: 80000350   136 FUNC    GLOBAL DEFAULT    1 print_str_line
+    47: 800002d0   128 FUNC    GLOBAL DEFAULT    1 print_str
+    48: 80000428     0 NOTYPE  GLOBAL DEFAULT    1 _srodata
+    49: 40000000     0 NOTYPE  GLOBAL DEFAULT    2 _sdata
+    50: 40000008     4 OBJECT  GLOBAL DEFAULT    2 keyboard_controller
+    51: 40000004     4 OBJECT  GLOBAL DEFAULT    2 mtimecmp_h
+    52: 80000108    76 FUNC    GLOBAL DEFAULT    1 _sbrk
+    53: 40000018     0 NOTYPE  GLOBAL DEFAULT    3 _ebss
+    54: 800001f8    80 FUNC    GLOBAL DEFAULT    1 kernel_main
+    55: 40000014     4 OBJECT  GLOBAL DEFAULT    3 terminal
+    56: 40100000     0 NOTYPE  GLOBAL DEFAULT    1 __stack_top
+    57: 80000000     0 NOTYPE  GLOBAL DEFAULT    1 _start
+    58: 800003d8    40 FUNC    GLOBAL DEFAULT    1 enable_text_mode
+    59: 40000010     0 NOTYPE  GLOBAL DEFAULT    2 _edata
+    60: 40000018     0 NOTYPE  GLOBAL DEFAULT  ABS _heapbase
+    61: 80000248    32 FUNC    GLOBAL DEFAULT    1 init_terminal
+    62: 80000000     0 NOTYPE  GLOBAL DEFAULT    1 _stext
+    63: 4000000c     4 OBJECT  GLOBAL DEFAULT    2 msip
+    64: 80000448     0 NOTYPE  GLOBAL DEFAULT    1 _erodata
