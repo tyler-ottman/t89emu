@@ -1,10 +1,14 @@
 #include "AluControlUnit.h"
 
 AluControlUnit::AluControlUnit() {
-    //                    addi,   slli,   slti,   sltiu,  xori,   srl/ri, ori,    andi
+    //                   addi,   slli,   slti,   sltiu,  xori,   srl/ri, ori,    andi
     this->iOperations = {0b0000, 0b0111, 0b1000, 0b1001, 0b0100, 0xeeee, 0b0010, 0b0011};
-    //                    +/-,    sll,    slt,    sltu,   xor,    srl/a,  or,     and
+    //                   +/-,    sll,    slt,    sltu,   xor,    srl/a,  or,     and
     this->rOperations = {0xeeee, 0b0111, 0b1000, 0b1001, 0b0100, 0xeeee, 0b0010, 0b0011};
+}
+
+AluControlUnit::~AluControlUnit() {
+    
 }
 
 int AluControlUnit::getAluOperation(int opcode, int funct7, int funct3) {

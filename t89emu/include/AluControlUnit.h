@@ -5,15 +5,16 @@
 #ifndef ALUCONTROLUNIT_H
 #define ALUCONTROLUNIT_H
 
-class AluControlUnit
-{
+class AluControlUnit {
+public:
+    AluControlUnit(void);
+    ~AluControlUnit();
+
+    int getAluOperation(int opcode, int funct7, int funct3);
+
 private:
     std::vector<int> iOperations;
     std::vector<int> rOperations;
-
-public:
-    AluControlUnit();
-    int getAluOperation(int, int, int);
 };
 
 #endif // ALUCONTROLUNIT_H

@@ -42,3 +42,35 @@ uint32_t Bus::read(uint32_t addr, uint32_t accessSize, uint32_t *readValue) {
         return LOAD_ACCESS_FAULT;
     }
 }
+
+uint32_t Bus::getRomBase() {
+    return romBase;
+}
+
+uint32_t Bus::getRomEnd() {
+    return romEnd;
+}
+
+uint32_t Bus::getRamBase() {
+    return ramBase;
+}
+
+uint32_t Bus::getRamEnd() {
+    return ramEnd;
+}
+
+ClintMemoryDevice *Bus::getClintDevice() {
+    return clintDevice;
+}
+
+RamMemoryDevice *Bus::getRamMemoryDevice() {
+    return ramDevice;
+}
+
+RomMemoryDevice *Bus::getRomMemoryDevice() {
+    return romDevice;
+}
+
+VideoMemoryDevice *Bus::getVideoDevice() {
+    return videoDevice;
+}

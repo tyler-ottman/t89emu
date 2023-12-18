@@ -1,11 +1,18 @@
 #include "Alu.h"
 
+Alu::Alu() {
+
+}
+
+Alu::~Alu() {
+    
+}
+
 // 32-bit ALU Operations
-uint32_t Alu::execute(uint32_t A, uint32_t B, int AluOp) 
-{
+uint32_t Alu::execute(uint32_t A, uint32_t B, int aluOp) {
     uint32_t msb;
     
-    switch (AluOp) {
+    switch (aluOp) {
     case ADD: // add
         // C++ implicitly interprets uint32_t operations as 2s compliment
         // The hardware implementation of 32-bit adder is up to the user

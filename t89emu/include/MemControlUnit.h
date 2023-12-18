@@ -7,7 +7,10 @@
 
 class MemControlUnit {
 public:
-    int getMemSize(uint32_t);
+    MemControlUnit(void);
+    ~MemControlUnit();
+    
+    int getMemSize(uint32_t funct3);
 };
 
 #endif // MEMCONTROLUNIT_H

@@ -1,17 +1,44 @@
+#include <algorithm>
+
 #include "ElfParser.h"
 
 ElfParser::ElfParser(const char* filepath) {
 	fileName = filepath;
+
 	elfFileInfo = new ElfFileInformation;
 	if(!elfFileInfo || !elfInitHeaders()) {
 		std::cerr << "Error: ELF initialization failed\n";
 		exit(EXIT_FAILURE);
 	}
+	elfFlashSections(); // Generate ROM image    
+    generateDisassembledText(); // Generate Disassembled Text
 }
 
 ElfParser::~ElfParser() {
 	delete elfFileInfo;
 	// delete romImage;
+}
+
+void ElfParser::flashRom(uint8_t *romDevice) {
+	// Load ROM + RAM into ROM Device
+	std::copy(romImage.begin(), romImage.end(), &romDevice[0]);
+	std::copy(ramImage.begin(), ramImage.end(), &romDevice[romImage.size()]);
+}
+
+std::vector<struct DisassembledEntry> &ElfParser::getDisassembledCode() {
+	return disassembledCode;
+}
+
+Elf32_Addr ElfParser::getEntryPc() {
+	return elfHeaderInfo->entry;
+}
+
+uint32_t ElfParser::getRamStart() {
+	return ramStart;
+}
+
+uint32_t ElfParser::getRomStart() {
+	return romStart;
 }
 
 bool ElfParser::elfInitHeaders() {
@@ -56,29 +83,6 @@ bool ElfParser::elfInitHeaders() {
 			(elfHeaderInfo->version == EV_CURRENT));
 }
 
-// Return struct pointer to desired section given section name
-const ElfSectionHeader *ElfParser::getSectionHeader(const char *name) {
-	// Must use string table section to read name of other sections
-	for (int idx = 0; idx < elfHeaderInfo->shnum; idx++) {
-		// Current Section header idx
-		const struct ElfSectionHeader *sHdr = (const struct ElfSectionHeader *)(elfFileInfo->elfData + elfHeaderInfo->shoff + idx * elfHeaderInfo->shentsize);
-		
-		// shstrndx header (contains names of all sections), used to get name of section header idx
-		const struct ElfSectionHeader *shstrndxHdr = (const struct ElfSectionHeader *)(elfFileInfo->elfData + elfHeaderInfo->shoff + elfHeaderInfo->shstrndx * elfHeaderInfo->shentsize);
-		const char* sectionName = (const char *)(elfFileInfo->elfData + shstrndxHdr->offset + sHdr->name);
-		
-		if (!strncmp(sectionName, name, strlen(name))) {return sHdr;}
-	}
-	return nullptr;
-}
-
-// Return struct pointer to desired section given nth entry in program header table
-const ElfProgramHeader *ElfParser::getProgramHeader(int nentry) {
-	if ((nentry < 0) || ((nentry >= elfHeaderInfo->phnum))) {return nullptr;}
-	const struct ElfProgramHeader *pHdr = (const struct ElfProgramHeader *)(elfFileInfo->elfData + elfHeaderInfo->phoff + nentry * elfHeaderInfo->phentsize);
-	return pHdr;
-}
-
 // Flash all loadable sections as one contiguous byte array to ROM
 bool ElfParser::elfFlashSections() {
 	// Iterate through program table entries
@@ -117,32 +121,7 @@ bool ElfParser::elfFlashSections() {
 		}
 	}
 
-	// for (auto const &entry : flashImage) {
-	// 	printf("%02x ", entry);
-	// }
 	return true;
-}
-
-std::pair<Elf32_Addr, std::string> *ElfParser::findSymbolAtAddress(Elf32_Addr addr) {
-	for (auto &symbol : symbols) {
-		if (symbol.first == addr) {
-			return &symbol;
-		}
-	}
-	return nullptr;
-}
-
-uint8_t *ElfParser::getRomImage() {
-	// Add ROM, then RAM to flash image
-	flashImage.insert(flashImage.end(), romImage.begin(), romImage.end());
-	flashImage.insert(flashImage.end(), ramImage.begin(), ramImage.end());
-
-	uint32_t flashSize = flashImage.size();
-	rawImage = (uint8_t *)malloc(flashSize * sizeof(uint8_t));
-	for (uint32_t idx = 0; idx < flashSize; idx++) {
-		rawImage[idx] = flashImage.at(idx);
-	}
-	return rawImage;
 }
 
 bool ElfParser::generateDisassembledText() {
@@ -178,8 +157,8 @@ bool ElfParser::generateDisassembledText() {
 		if (!strcmp("$x", symbolName) || (strlen(symbolName) == 0) || (startSym->info == STT_FILE) || (startSym->info == STT_OBJECT)) {
 			continue;
 		}
-
 	}
+
 	// Merge Symbols and Instructions
 	for (const auto &section: executableSections) {
 		// Starting Address / Size of section
@@ -209,12 +188,36 @@ bool ElfParser::generateDisassembledText() {
 	return true;
 }
 
-std::vector<struct DisassembledEntry> &ElfParser::getDisassembledCode() {
-	return disassembledCode;
+// Return struct pointer to desired section given section name
+const ElfSectionHeader *ElfParser::getSectionHeader(const char *name) {
+	// Must use string table section to read name of other sections
+	for (int idx = 0; idx < elfHeaderInfo->shnum; idx++) {
+		// Current Section header idx
+		const struct ElfSectionHeader *sHdr = (const struct ElfSectionHeader *)(elfFileInfo->elfData + elfHeaderInfo->shoff + idx * elfHeaderInfo->shentsize);
+		
+		// shstrndx header (contains names of all sections), used to get name of section header idx
+		const struct ElfSectionHeader *shstrndxHdr = (const struct ElfSectionHeader *)(elfFileInfo->elfData + elfHeaderInfo->shoff + elfHeaderInfo->shstrndx * elfHeaderInfo->shentsize);
+		const char* sectionName = (const char *)(elfFileInfo->elfData + shstrndxHdr->offset + sHdr->name);
+		
+		if (!strncmp(sectionName, name, strlen(name))) {return sHdr;}
+	}
+	return nullptr;
 }
 
-Elf32_Addr ElfParser::getEntryPc() {
-	return elfHeaderInfo->entry;
+// Return struct pointer to desired section given nth entry in program header table
+const ElfProgramHeader *ElfParser::getProgramHeader(int nentry) {
+	if ((nentry < 0) || ((nentry >= elfHeaderInfo->phnum))) {return nullptr;}
+	const struct ElfProgramHeader *pHdr = (const struct ElfProgramHeader *)(elfFileInfo->elfData + elfHeaderInfo->phoff + nentry * elfHeaderInfo->phentsize);
+	return pHdr;
+}
+
+std::pair<Elf32_Addr, std::string> *ElfParser::findSymbolAtAddress(Elf32_Addr addr) {
+	for (auto &symbol : symbols) {
+		if (symbol.first == addr) {
+			return &symbol;
+		}
+	}
+	return nullptr;
 }
 
 std::string ElfParser::disassembleInstruction(Elf32_Addr addr, Elf32_Word instruction) {
@@ -242,7 +245,7 @@ std::string ElfParser::disassembleInstruction(Elf32_Addr addr, Elf32_Word instru
 	uint32_t rs2 = (instruction >> 20) & 0b11111;
 	uint32_t rd = (instruction >> 7) & 0b11111;
 	uint32_t immediate = immgen->getImmediate(instruction);
-	uint32_t csr_addr = (instruction >> 20) & 0xfff;
+	uint32_t csrAddr = (instruction >> 20) & 0xfff;
 
 	char instructionStr[64];
 	switch (opcode) {
@@ -318,7 +321,7 @@ std::string ElfParser::disassembleInstruction(Elf32_Addr addr, Elf32_Word instru
 			break;
 		default:
 			// CSRRW / CSRRS / CSRRC
-			sprintf(instructionStr, "%-8s%s,%s,%s", csrInstructions.at(funct3).c_str(), registerNames.at(rd).c_str(), getCsrName(csr_addr).c_str(), registerNames.at(rs1).c_str());
+			sprintf(instructionStr, "%-8s%s,%s,%s", csrInstructions.at(funct3).c_str(), registerNames.at(rd).c_str(), getCsrName(csrAddr).c_str(), registerNames.at(rs1).c_str());
 			break;
 		}
 		break;

@@ -1,16 +1,18 @@
 #ifndef TRAP_H
 #define TRAP_H
 
-#include "Csr.h"
 #include "ClintMemoryDevice.h"
-#include "ProgramCounter.h"
+#include "Csr.h"
 #include "NextPc.h"
+#include "ProgramCounter.h"
 
 class Trap {
 public:
-    Trap();
+    Trap(void);
     ~Trap();
-    void takeTrap(Csr *, ProgramCounter *, NextPc *, uint32_t);
+
+    void takeTrap(Csr *csr, ProgramCounter *pc, NextPc *nextPc,
+                  uint32_t mcause);
 };
 
 #endif // TRAP_H

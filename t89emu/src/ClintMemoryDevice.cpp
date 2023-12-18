@@ -79,3 +79,7 @@ bool ClintMemoryDevice::checkInterrupts(Csr *csr) {
 
     return false;
 }
+
+uint32_t ClintMemoryDevice::getInterruptType() {
+    return interruptType;
+}

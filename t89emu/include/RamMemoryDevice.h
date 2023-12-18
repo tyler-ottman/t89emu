@@ -10,7 +10,8 @@
 
 class RamMemoryDevice : public MemoryDevice {
 public:
-    RamMemoryDevice(uint32_t, uint32_t);
+    RamMemoryDevice(uint32_t base, uint32_t size);
+    
     uint32_t read(uint32_t addr, uint32_t size, uint32_t *readValue);
     uint32_t write(uint32_t addr, uint32_t writeValue, uint32_t size);
 };

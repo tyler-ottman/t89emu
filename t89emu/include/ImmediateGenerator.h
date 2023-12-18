@@ -5,10 +5,12 @@
 #ifndef IMMEDIATEGENERATOR_H
 #define IMMEDIATEGENERATOR_H
 
-class ImmediateGenerator
-{
+class ImmediateGenerator {
 public:
-    uint32_t getImmediate(uint32_t);
+    ImmediateGenerator(void);
+    ~ImmediateGenerator();
+    
+    uint32_t getImmediate(uint32_t instruction);
 };
 
 #endif // IMMEDIATEGENERATOR_H

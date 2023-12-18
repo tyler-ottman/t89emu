@@ -25,6 +25,7 @@
 class VideoMemoryDevice : public MemoryDevice {
 public:
     VideoMemoryDevice(uint32_t base, uint32_t size);
+    
     uint32_t read(uint32_t addr, uint32_t size, uint32_t *readValue);
     uint32_t write(uint32_t addr, uint32_t value, uint32_t size);
 };

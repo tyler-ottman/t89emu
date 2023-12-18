@@ -16,7 +16,10 @@
 
 class Alu {
 public:
-    uint32_t execute(uint32_t, uint32_t, int);
+    Alu(void);
+    ~Alu();
+    
+    uint32_t execute(uint32_t A, uint32_t B, int aluOp);
 };
 
 #endif // ALU_H

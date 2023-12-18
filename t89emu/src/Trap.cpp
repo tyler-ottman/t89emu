@@ -10,17 +10,17 @@ Trap::~Trap() {
 
 }
 
-void Trap::takeTrap(Csr* csr, ProgramCounter* pc, NextPc* nextPc, uint32_t mcause) {
+void Trap::takeTrap(Csr *csr, ProgramCounter *pc, NextPc *nextPc, uint32_t mcause) {
     // Save current PC to machine exception program counter
-    csr->mepc = pc->getPc();
+    csr->setMepc(pc->getPc());
 
     // If ECALL save PC + 4
     if (mcause == ECALL_FROM_M_MODE) {
-        csr->mepc += 4;
+        csr->setMepc(csr->getMepc() + 4);
     }
     
     // Write cause of exception/interrupt to mcause
-    csr->mcause = mcause;
+    csr->setMcause(mcause);
 
     // If MIE was enabled, store in MPIE
     if (csr->getMie()) {
@@ -36,17 +36,17 @@ void Trap::takeTrap(Csr* csr, ProgramCounter* pc, NextPc* nextPc, uint32_t mcaus
     csr->resetMie();   // Globally disable interrupts
 
     // Set PC to jump to proper interrupt/exception handler in vector table
-    uint32_t vector_table_offset;
+    uint32_t vectorTableOffset;
 
     if (mcause >= 0x80000000) {
         // Interrupt
-        vector_table_offset = mcause - 0x80000000;
+        vectorTableOffset = mcause - 0x80000000;
     } else {
         // Exception
-        vector_table_offset = 16 + mcause;
+        vectorTableOffset = 16 + mcause;
     }
 
-    nextPc->nextPc = csr->mtvec + 4 * vector_table_offset;
-    pc->setPc(csr->mtvec + 4 * vector_table_offset);
+    nextPc->setNextPc(csr->getMtvec() + 4 * vectorTableOffset);
+    pc->setPc(csr->getMtvec() + 4 * vectorTableOffset);
     // printf("trapping to PC: %08x\n", pc->PC);
 }

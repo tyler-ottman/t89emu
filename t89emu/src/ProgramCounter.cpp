@@ -6,6 +6,10 @@ ProgramCounter::ProgramCounter() {
     pc = 0;
 }
 
+ProgramCounter::~ProgramCounter() {
+    
+}
+
 void ProgramCounter::setPc(uint32_t nextPc) {
     pc = nextPc;
 }

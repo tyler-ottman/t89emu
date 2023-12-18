@@ -1,41 +1,5 @@
 #include "Cpu.h"
 
-void Cpu::debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csrAddr, uint32_t curInstruction) {
-	if(curInstruction == 0) {exit(1);}
-	std::cout << std::hex << "Current Instruction: " << curInstruction << std::endl;
-	switch (opcode) {
-	case LUI: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case ITYPE: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case RTYPE: std::cout << "rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case LOAD: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case STORE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
-	case BTYPE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
-	case JAL: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case AUIPC: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
-	case JALR: std::cout << "immediate: " << immediate << " rd: " << rd << " rs: " << rs1 << " opcode: " << opcode << std::endl; break;
-	case PRIV: // ecall/csr
-		if (funct3 == 0) {
-			std::cout << "ecall" << std::endl;
-		}
-		break;
-	}
-}
-
-void Cpu::debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rdData, uint32_t rs2Data, uint32_t rs1Data, uint32_t pcAddr) {
-	switch (opcode) {
-		case LUI: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case ITYPE: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case RTYPE: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case LOAD: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case STORE: std::cout << "Wrote " << rs2Data << " to address " << rs1Data + immediate << std::endl << std::endl; break;
-		case BTYPE: std::cout << "Next PC: " << pcAddr << std::endl << std::endl; break;
-		case JAL: std::cout << "Next PC: " << pcAddr << ". Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case AUIPC: std::cout << "Wrote " << pcAddr - 4 + immediate << " to register " << rd << std::endl << std::endl; break;
-		case JALR: std::cout << "Next PC: " << pcAddr << ". Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
-		case PRIV: std::cout << "Jump to handler at: " << pcAddr << std::endl << std::endl; break;
-	}
-}
-
 Cpu::Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize, int debug = 0) {
 	rf = new RegisterFile;
 	pc = new ProgramCounter;
@@ -62,14 +26,13 @@ Cpu::~Cpu() {
 	delete trap;
 }
 
-void Cpu::nextInstruction()
-{
+void Cpu::nextInstruction() {
 	// Update Clint Device every cycle
-	bus->clintDevice->nextCycle(csr);
+	bus->getClintDevice()->nextCycle(csr);
 
 	// Check for interrupts
-	if (bus->clintDevice->checkInterrupts(csr)) {
-		trap->takeTrap(csr, pc, nextPc, bus->clintDevice->interruptType);
+	if (bus->getClintDevice()->checkInterrupts(csr)) {
+		trap->takeTrap(csr, pc, nextPc, bus->getClintDevice()->getInterruptType());
 	}
 
 	uint32_t exceptionCode = executeInstruction();
@@ -86,6 +49,46 @@ void Cpu::nextInstruction()
 	}
 }
 
+Alu *Cpu::getAluModule() {
+	return alu;
+}
+
+AluControlUnit *Cpu::getAluControlUnitModule() {
+	return aluc;
+}
+
+Bus *Cpu::getBusModule() {
+	return bus;
+}
+
+Csr *Cpu::getCsrModule() {
+	return csr;
+}
+
+ImmediateGenerator *Cpu::getImmediateGeneratorModule() {
+	return immgen;
+}
+
+MemControlUnit *Cpu::getMemControlUnitModule() {
+	return mcu;
+}
+
+NextPc *Cpu::getNextPcModule() {
+	return nextPc;
+}
+
+ProgramCounter *Cpu::getProgramCounterModule() {
+	return pc;
+}
+
+RegisterFile *Cpu::getRegisterFileModule() {
+	return rf;
+}
+
+Trap *Cpu::getTrapModule() {
+	return trap;
+}
+
 uint32_t Cpu::executeInstruction() {
 	// Fetch Stage
 	uint32_t pcAddr = pc->getPc();						 // Current PC
@@ -96,7 +99,6 @@ uint32_t Cpu::executeInstruction() {
 		return exceptionCode;
 	}
 
-
 	// Decode Stage
 	uint32_t opcode = curInstruction & 0b1111111;			   // opcode field
 	uint32_t funct3 = (curInstruction >> 12) & 0b111;		   // funct3 field
@@ -105,7 +107,7 @@ uint32_t Cpu::executeInstruction() {
 	uint32_t rs2 = (curInstruction >> 20) & 0b11111;		   // Register Source 2
 	uint32_t rd = (curInstruction >> 7) & 0b11111;			   // Register Desination
 	uint32_t immediate = immgen->getImmediate(curInstruction); // Instruction Immediate
-	uint32_t csr_addr = (curInstruction >> 20) & 0xfff;	   // CSR Address
+	uint32_t csrAddr = (curInstruction >> 20) & 0xfff;	   	   // CSR Address
 
 	// Execution flow dependent on instrution type
 	uint32_t accessSize;
@@ -187,18 +189,18 @@ uint32_t Cpu::executeInstruction() {
 			}
 			break;
 		case 0b001:									// CSRRW
-			rf->write(csr->readCSR(csr_addr), rd);	// Write current value of CSR to rd
-			csr->writeCSR(csr_addr, rf->read(rs1)); // Store value of rs1 into CSR
+			rf->write(csr->readCsr(csrAddr), rd);	// Write current value of CSR to rd
+			csr->writeCsr(csrAddr, rf->read(rs1)); // Store value of rs1 into CSR
 			break;
 		case 0b010:								    // CSRRS
-			rf->write(csr->readCSR(csr_addr), rd);  // Write current value of CSR to rd
+			rf->write(csr->readCsr(csrAddr), rd);  // Write current value of CSR to rd
 			if (rs1 != 0)
-				csr->writeCSR(csr_addr, rf->read(rs1) | csr->readCSR(csr_addr)); // Use rs1 as a bit mask to set CSR bits
+				csr->writeCsr(csrAddr, rf->read(rs1) | csr->readCsr(csrAddr)); // Use rs1 as a bit mask to set CSR bits
 			break;
 		case 0b011:								   // CSRRC
-			rf->write(csr->readCSR(csr_addr), rd); // Write current value of CSR to rd
+			rf->write(csr->readCsr(csrAddr), rd); // Write current value of CSR to rd
 			if (rs1 != 0)
-				csr->writeCSR(csr_addr, (!rf->read(rs1)) & csr->readCSR(csr_addr)); // Usr rs1 as a bit mask to reset CSR bits
+				csr->writeCsr(csrAddr, (!rf->read(rs1)) & csr->readCsr(csrAddr)); // Usr rs1 as a bit mask to reset CSR bits
 			break;
 		default:
 			// Immediate CSR Instructions not yet supported
@@ -211,14 +213,50 @@ uint32_t Cpu::executeInstruction() {
 	}
 
 	// Update Program Counter
-	exceptionCode = nextPc->calculateNextPc(immediate, opcode, funct3, A, B, csr->mepc);
+	exceptionCode = nextPc->calculateNextPc(immediate, opcode, funct3, A, B, csr->getMepc());
 	if (exceptionCode != STATUS_OK) {
 		return exceptionCode;
 	}
 
-	pc->setPc(nextPc->nextPc);
+	pc->setPc(nextPc->getNextPc());
 
 	// pc->setPC(nextpc->calculateNextPC(immediate, opcode, funct3, A, B, csr->mepc));
 	
 	return STATUS_OK;
+}
+
+void Cpu::debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csrAddr, uint32_t curInstruction) {
+	if (curInstruction == 0) {exit(1);}
+	std::cout << std::hex << "Current Instruction: " << curInstruction << std::endl;
+	switch (opcode) {
+	case LUI: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case ITYPE: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case RTYPE: std::cout << "rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case LOAD: std::cout << "immediate: " << immediate << " rs1: " << rs1 << " funct3: " << funct3 << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case STORE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
+	case BTYPE: std::cout << "immediate: " << immediate << " rs2: " << rs2 << " rs1: " << rs1 << " funct3: " << funct3 << " opcode: " << opcode << std::endl; break;
+	case JAL: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case AUIPC: std::cout << "immediate: " << immediate << " rd: " << rd << " opcode: " << opcode << std::endl; break;
+	case JALR: std::cout << "immediate: " << immediate << " rd: " << rd << " rs: " << rs1 << " opcode: " << opcode << std::endl; break;
+	case PRIV: // ecall/csr
+		if (funct3 == 0) {
+			std::cout << "ecall" << std::endl;
+		}
+		break;
+	}
+}
+
+void Cpu::debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rdData, uint32_t rs2Data, uint32_t rs1Data, uint32_t pcAddr) {
+	switch (opcode) {
+		case LUI: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case ITYPE: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case RTYPE: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case LOAD: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case STORE: std::cout << "Wrote " << rs2Data << " to address " << rs1Data + immediate << std::endl << std::endl; break;
+		case BTYPE: std::cout << "Next PC: " << pcAddr << std::endl << std::endl; break;
+		case JAL: std::cout << "Next PC: " << pcAddr << ". Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case AUIPC: std::cout << "Wrote " << pcAddr - 4 + immediate << " to register " << rd << std::endl << std::endl; break;
+		case JALR: std::cout << "Next PC: " << pcAddr << ". Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
+		case PRIV: std::cout << "Jump to handler at: " << pcAddr << std::endl << std::endl; break;
+	}
 }

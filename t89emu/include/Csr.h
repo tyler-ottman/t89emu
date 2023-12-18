@@ -45,6 +45,42 @@
 
 class Csr {
 public:
+    Csr(void);
+    ~Csr();
+
+    uint32_t readCsr(uint32_t address);
+    void writeCsr(uint32_t address, uint32_t data);
+
+    // CSR Bitfield operations
+    void setMie(void);
+    void setMpie(void);
+    void setMpp(int mask);
+    void setMeip(void);
+    void setMtip(void);
+    void setMsip(void);
+    void resetMie(void);
+    void resetMpie(void);
+    void resetMpp(void);
+    void resetMeip(void);
+    void resetMtip(void);
+    void resetMsip(void);
+    uint32_t getMie(void);
+    uint32_t getMpie(void);
+    uint32_t getMpp(void);
+    uint32_t getMeie(void);
+    uint32_t getMtie(void);
+    uint32_t getMsie(void);
+    uint32_t getMeip(void);
+    uint32_t getMtip(void);
+    uint32_t getMsip(void);
+
+    // CSR Standard operations
+    void setMepc(uint32_t mepc);
+    void setMcause(uint32_t mcause);
+    uint32_t getMepc(void);
+    uint32_t getMtvec(void);
+
+private:
     // Machine Instruction Set Architecture (I)
     uint32_t misa;
 
@@ -70,34 +106,6 @@ public:
     uint32_t mepc;
     uint32_t mscratch; // Maybe no implementation
     uint32_t mtval;
-
-    inline void setMie() {mstatus |= (1 << MSTATUS_MIE_MASK);}
-    inline void setMpie() {mstatus |= (1 << MSTATUS_MPIE_MASK);}
-    inline void setMpp(int mask) {mstatus |= ((mask & 0b11) << MSTATUS_MPP_MASK);}
-    inline void setMeip() {mip |= (1 << MIP_MEIP_MASK);}
-    inline void setMtip() {mip |= (1 << MIP_MTIP_MASK);}
-    inline void setMsip() {mip |= (1 << MIP_MSIP_MASK);}
-
-    inline void resetMie() {mstatus &= ~(1 << MSTATUS_MIE_MASK);}
-    inline void resetMpie() {mstatus &= ~(1 << MSTATUS_MPIE_MASK);}
-    inline void resetMpp() {mstatus &= ~(0b11 << MSTATUS_MPP_MASK);}
-    inline void resetMeip() {mip &= ~(1 << MIP_MEIP_MASK);}
-    inline void resetMtip() {mip &= ~(1 << MIP_MTIP_MASK);}
-    inline void resetMsip() {mip &= ~(1 << MIP_MSIP_MASK);}
-
-    inline uint32_t getMie() {return ((mstatus >> MSTATUS_MIE_MASK) & 0b1);}
-    inline uint32_t getMpie() {return ((mstatus >> MSTATUS_MPIE_MASK) & 0b1);}
-    inline uint32_t getMpp() {return ((mstatus >> MSTATUS_MPP_MASK) & 0b11);}
-    inline uint32_t getMeie() {return ((mie >> MIE_MEIE_MASK) &0b1);}
-    inline uint32_t getMtie() {return ((mie >> MIE_MTIE_MASK) &0b1);}
-    inline uint32_t getMsie() {return ((mie >> MIE_MSIE_MASK) &0b1);}
-    inline uint32_t getMeip() {return ((mip >> MIP_MEIP_MASK) &0b1);}
-    inline uint32_t getMtip() {return ((mip >> MIP_MTIP_MASK) &0b1);}
-    inline uint32_t getMsip() {return ((mip >> MIP_MSIP_MASK) &0b1);}
-
-    Csr();
-    uint32_t readCSR(uint32_t);
-    void writeCSR(uint32_t, uint32_t);
 };
 
 #endif // CSR_H
