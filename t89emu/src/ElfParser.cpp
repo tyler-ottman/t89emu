@@ -8,8 +8,8 @@ ElfParser::ElfParser(const char* path) {
 		std::cerr << "Error: ELF initialization failed\n";
 		exit(EXIT_FAILURE);
 	}
-
-	generateImage(); // Generate Image that will be flashed to ROM    
+   
+	generateImage();
     generateDisassembledCode(); // Generate Disassembled Text
 }
 
@@ -19,7 +19,10 @@ ElfParser::~ElfParser() {
 }
 
 void ElfParser::flashRom(RomMemoryDevice *romDevice) {
-	// Load ROM + RAM into ROM Device
+	// Generate Image that will be flashed to ROM
+	
+	
+	// Flash loadable ROM + RAM into ROM Device
 	uint8_t *buffer = romDevice->getBuffer();
 	std::copy(romImage.begin(), romImage.end(), &buffer[0]);
 	std::copy(ramImage.begin(), ramImage.end(), &buffer[romImage.size()]);
@@ -27,6 +30,10 @@ void ElfParser::flashRom(RomMemoryDevice *romDevice) {
 
 std::vector<struct DisassembledEntry> &ElfParser::getDisassembledCode() {
 	return disassembledCode;
+}
+
+bool ElfParser::hasDebugging() {
+	return getSectionHeader(".debug_info") != NULL;
 }
 
 Elf32_Addr ElfParser::getEntryPc() {
@@ -88,8 +95,7 @@ bool ElfParser::initHeaders(const char *path) {
 // Flash all loadable sections as one contiguous byte array to ROM
 bool ElfParser::generateImage() {
 	// Iterate through program table entries
-	int p_num = elfHeaderInfo->phnum;
-	for (int idx = 0; idx < p_num; idx++) {
+	for (int idx = 0; idx < elfHeaderInfo->phnum; idx++) {
 		const struct ElfProgramHeader *pHdr = getProgramHeader(idx);
 
 		// Determine if section should be loaded to emulator memory
@@ -116,11 +122,6 @@ bool ElfParser::generateImage() {
 				                            + pHdr->offset + jdx);
 				romImage.push_back(*data);
 			}
-		}
-
-		// If section is executable, add to disassembled text 
-		if ((pHdr->flags & 1) == PF_X) {
-			executableSections.push_back(pHdr);
 		}
 	}
 
@@ -167,7 +168,16 @@ bool ElfParser::generateDisassembledCode() {
 		}
 	}
 
-	// Merge Symbols and Instructions
+	for (int idx = 0; idx < elfHeaderInfo->phnum; idx++) {
+		const struct ElfProgramHeader *pHdr = getProgramHeader(idx);
+
+		// If program section is executable, add it
+		if ((pHdr->flags & 1) == PF_X) {
+			executableSections.push_back(pHdr);
+		}
+	}
+
+	// Merge Symbols and Instructions (Executable Sections)
 	for (const auto &section: executableSections) {
 		// Starting Address / Size of section
 		Elf32_Word section_size = (section->memsz < section->filesz)
@@ -201,6 +211,14 @@ bool ElfParser::generateDisassembledCode() {
         }
 	}
 	return true;
+}
+
+void ElfParser::printDebugSection(const char *name) {
+	const ElfSectionHeader *debug = getSectionHeader(name);
+	if (debug) {
+		std::cout << "Section: " << name << " -> offset: " << debug->offset
+		          << ", size: " << debug->size << std::endl;
+	}
 }
 
 // Return struct pointer to desired section given section name

@@ -23,10 +23,6 @@ uint8_t *MemoryDevice::getAddress(uint32_t addr) {
     return (uint8_t *)(mem + addr_offset);
 }
 
-uint32_t MemoryDevice::getBaseAddress() {
-    return baseAddress;
-}
-
 uint32_t MemoryDevice::getDeviceSize() {
     return deviceSize;
 }

@@ -23,7 +23,9 @@ public:
     virtual uint32_t write(uint32_t addr, uint32_t write_value,
                            uint32_t size) = 0;
 
-    uint32_t getBaseAddress(void);
+    inline uint32_t getBaseAddress(void) {return baseAddress;}
+    inline uint32_t getEndAddress(void) {return baseAddress + deviceSize;}
+
     uint32_t getDeviceSize(void);
     uint8_t *getBuffer(void);
 

@@ -23,30 +23,38 @@ Bus::~Bus() {
 
 uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t accessSize) {
     // Check if addresse falls within a valid range in memory
-    if ((addr >= romBase) && (addr < romEnd))
+    if ((addr >= romDevice->getBaseAddress()) &&
+        (addr < romDevice->getEndAddress())) {
         return (romDevice->write(addr, data, accessSize));
-    else if ((addr >= ramBase) && (addr < ramEnd))
+    } else if ((addr >= ramDevice->getBaseAddress()) &&
+               (addr < ramDevice->getEndAddress())) {
         return (ramDevice->write(addr, data, accessSize));
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END))
+    } else if ((addr >= videoDevice->getBaseAddress()) &&
+               (addr < videoDevice->getEndAddress())) {
         return (videoDevice->write(addr, data, accessSize));
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END))
+    } else if ((addr >= clintDevice->getBaseAddress()) &&
+               (addr < clintDevice->getEndAddress())) {
         return (clintDevice->write(addr, data, accessSize));
-    else {
+    } else {
         // Invalid address access
         return STORE_ACCESS_FAULT;
     }
 }
 
 uint32_t Bus::read(uint32_t addr, uint32_t accessSize, uint32_t *readValue) {
-    if ((addr >= romBase) && (addr < romEnd))
+    if ((addr >= romDevice->getBaseAddress()) &&
+        (addr < romDevice->getEndAddress())) {
         return (romDevice->read(addr, accessSize, readValue));
-    else if ((addr >= ramBase) && (addr < ramEnd))
+    } else if ((addr >= ramDevice->getBaseAddress()) &&
+               (addr < ramDevice->getEndAddress())) {
         return (ramDevice->read(addr, accessSize, readValue));
-    else if ((addr >= VIDEO_BASE) && (addr < VIDEO_END))
+    } else if ((addr >= videoDevice->getBaseAddress()) &&
+               (addr < videoDevice->getEndAddress())) {
         return (videoDevice->read(addr, accessSize, readValue));
-    else if ((addr >= CLINT_BASE) && (addr < CLINT_END))
+    } else if ((addr >= clintDevice->getBaseAddress()) &&
+               (addr < clintDevice->getEndAddress())) {
         return (clintDevice->read(addr, accessSize, readValue));
-    else {
+    } else {
         // Invalid address access
         return LOAD_ACCESS_FAULT;
     }

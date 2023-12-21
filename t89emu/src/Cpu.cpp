@@ -148,9 +148,9 @@ uint32_t Cpu::executeInstruction() {
 		break;
 	case LOAD:
 		accessSize = mcu->getMemSize(funct3);
-                exceptionCode = bus->read(rf->read(rs1) + immediate, accessSize,
-                                          &readValue);
-                if (exceptionCode != STATUS_OK) {
+        exceptionCode = bus->read(rf->read(rs1) + immediate, accessSize,
+                                  &readValue);
+        if (exceptionCode != STATUS_OK) {
 			// "Throw" exception
 			return exceptionCode;
 		}
@@ -158,9 +158,9 @@ uint32_t Cpu::executeInstruction() {
 		break;
 	case STORE:
 		accessSize = mcu->getMemSize(funct3);
-                exceptionCode = bus->write(rf->read(rs1) + immediate,
-                                           rf->read(rs2), accessSize);
-                if (exceptionCode != STATUS_OK) {
+        exceptionCode = bus->write(rf->read(rs1) + immediate,
+                                   rf->read(rs2), accessSize);
+        if (exceptionCode != STATUS_OK) {
 			// "Throw" exception
 			return exceptionCode;
 		}

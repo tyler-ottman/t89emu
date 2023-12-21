@@ -125,15 +125,18 @@ public:
     void flashRom(RomMemoryDevice *romDevice);
     std::vector<struct DisassembledEntry> &getDisassembledCode(void);
 
+    bool hasDebugging(void);
     Elf32_Addr getEntryPc(void);
     uint32_t getRamStart(void);
     uint32_t getRomStart(void);
 
-private:
+protected:
     // Initialize ELF Parsing
     bool initHeaders(const char *path);
     bool generateImage(void);
     bool generateDisassembledCode(void);
+
+    void printDebugSection(const char *name);
 
     const ElfSectionHeader *getSectionHeader(const char *name);
     const ElfProgramHeader *getProgramHeader(int nentry);

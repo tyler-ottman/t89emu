@@ -64,6 +64,10 @@ Gui::Gui(char *elfFile, int debug) {
     // Flash ELF Loadable sections to ROM Device
     elfParser->flashRom(t89->getBusModule()->getRomMemoryDevice());
 
+    if (elfParser->hasDebugging()) {
+        std::cout << "-g flag enabled\n";
+    }
+
     if (debug) {
         runDebugApplication();
     } else {
