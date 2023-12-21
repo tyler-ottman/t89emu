@@ -12,14 +12,12 @@ DwarfParser::DwarfParser(const char *fileName) : ElfParser::ElfParser(fileName) 
     
 }
 
-DwarfParser::~DwarfParser() {
-
-}
+DwarfParser::~DwarfParser() {}
 
 void DwarfParser::printDebugSection(const char *name) {
-	const ElfSectionHeader *debug = getSectionHeader(name);
-	if (debug) {
-		std::cout << "Section: " << name << " -> offset: " << debug->offset
-		          << ", size: " << debug->size << std::endl;
-	}
+    const ElfSectionHeader *debug = getSectionHeader(name);
+    if (debug) {
+        std::cout << "Section: " << name << " -> offset: " << debug->offset
+                  << ", size: " << debug->size << std::endl;
+    }
 }
