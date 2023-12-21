@@ -52,6 +52,12 @@ private:
     void renderMemoryViewer(void);
     void renderRegisterBank(void);
 
+    // Rendered modules
+    ClintMemoryDevice *csrMemProbe;
+    RamMemoryDevice *ramProbe;
+    RomMemoryDevice *romProbe;
+    VideoMemoryDevice *vramProbe;
+
     float myTexW;
     float myTexH;
     GLuint textureID;

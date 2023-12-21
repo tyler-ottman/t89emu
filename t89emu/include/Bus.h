@@ -10,11 +10,13 @@
 #include "RomMemoryDevice.h"
 #include "VideoMemoryDevice.h"
 
+#define BUS_EXPERIMENTAL
+#ifndef BUS_EXPERIMENTAL
+
 class Bus {
 public:
     Bus(uint32_t romStart, uint32_t romSize, uint32_t ramStart,
         uint32_t ramSize);
-    // Bus(void);
     ~Bus();
 
     // For read/write, bus and memory devices return exception
@@ -31,9 +33,6 @@ public:
     RamMemoryDevice *getRamMemoryDevice(void);
     RomMemoryDevice *getRomMemoryDevice(void);
     VideoMemoryDevice *getVideoDevice(void);
-    // int addDevice(MemoryDevice *device);
-
-    // MemoryDevice *getDevice(int deviceId);
 
 private:
     uint32_t romBase;
@@ -46,8 +45,24 @@ private:
     RamMemoryDevice *ramDevice;
     RomMemoryDevice *romDevice;
     VideoMemoryDevice *videoDevice;
-
-    // std::vector<MemoryDevice *> devices;
 };
+
+#else
+
+class Bus {
+public:
+    Bus(void);
+    ~Bus();
+
+    uint32_t read(uint32_t addr, uint32_t accessSize, uint32_t *readValue);
+    uint32_t write(uint32_t addr, uint32_t writeValue, uint32_t accessSize);
+
+    int addDevice(MemoryDevice *device);
+
+private:
+    std::vector<MemoryDevice *> devices;
+};
+
+#endif // BUS_EXPERIMENTAL
 
 #endif // BUS_H

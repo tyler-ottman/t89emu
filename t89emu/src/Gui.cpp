@@ -57,12 +57,24 @@ Gui::Gui(char *elfFile, int debug) {
     t89 = new Mcu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
                   RAM_SIZE, debug);
 
+#ifndef BUS_EXPERIMENTAL
+    csrMemProbe = t89->getBusModule()->getClintDevice();
+    ramProbe = t89->getBusModule()->getRamMemoryDevice();
+    romProbe = t89->getBusModule()->getRomMemoryDevice();
+    vramProbe = t89->getBusModule()->getVideoDevice();
+#else
+    csrMemProbe = t89->getClintDevice();
+    ramProbe = t89->getRamDevice();
+    romProbe = t89->getRomDevice();
+    vramProbe = t89->getVideoDevice();
+#endif // BUS_EXPERIMENTAL
+
     // Set entry PC
     t89->getProgramCounterModule()->setPc(elfParser->getEntryPc());
     t89->getNextPcModule()->setNextPc(elfParser->getEntryPc());
     
     // Flash ELF Loadable sections to ROM Device
-    elfParser->flashRom(t89->getBusModule()->getRomMemoryDevice());
+    elfParser->flashRom(romProbe);
 
     if (elfParser->isDebuggable()) {
         std::cout << "-g flag enabled\n";
@@ -263,7 +275,7 @@ void Gui::renderCsrBank() {
     std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l",
                                            "mtimecmp_h", "keyboard"};
 
-    uint8_t *csrMemBuffer = t89->getBusModule()->getClintDevice()->getBuffer();
+    uint8_t *csrMemBuffer = csrMemProbe->getBuffer();
 
     ImGui::Begin("CSR");
     if (ImGui::BeginTable("CSRs", 2, flags)) {
@@ -432,8 +444,7 @@ void Gui::renderFrame() {
 }
 
 void Gui::renderIoPanel() {
-    // Keyboard State
-    uint8_t *csrMemBuffer = t89->getBusModule()->getClintDevice()->getBuffer();
+    uint8_t *csrMemBuffer = csrMemProbe->getBuffer();
     uint32_t *keyboardCsr = (uint32_t *)&csrMemBuffer[16];
 
     ImGui::Begin("External I/O");
@@ -459,16 +470,16 @@ void Gui::renderIoPanel() {
 }
 
 void Gui::renderLcdDisplay() {
-    uint32_t videoMode =
-        *((uint8_t *)t89->getBusModule()->getVideoDevice()->getBuffer());
+    uint32_t videoMode = *(vramProbe->getBuffer());
+
     char lineStr[TEXT_MODE_VERTICAL_LINES + 1];  // Print line by line
 
     // VRAM Module
     ImGui::Begin("VRAM Module");
     if (videoMode == VGA_TEXT_MODE) {
         ImGui::PushFont(egaFont);
-        char *vgaTextBuffer =
-            (char *)(t89->getBusModule()->getVideoDevice()->getBuffer() + 16);
+
+        char *vgaTextBuffer = (char *)(vramProbe->getBuffer() + 16);
         for (int i = 0; i < TEXT_MODE_HORIZONTAL_LINES; i++) {
             memcpy(lineStr, vgaTextBuffer + TEXT_MODE_VERTICAL_LINES * i,
                    TEXT_MODE_VERTICAL_LINES);
@@ -490,8 +501,7 @@ void Gui::renderLcdDisplay() {
         ImVec4 borderCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);  // 50% opaque white
 
         uint8_t *vramBuffer =
-            (uint8_t *)(t89->getBusModule()->getVideoDevice()->getBuffer() +
-                        16 + VIDEO_TEXT_BUFFER_SIZE);
+            (uint8_t *)(vramProbe->getBuffer() + 16 + VIDEO_TEXT_BUFFER_SIZE);
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -532,15 +542,13 @@ void Gui::renderMemoryViewer() {
         ImGui::SameLine();
         if (ImGui::Button("PC")) jumpAddr = 0;  // Jump to PC
         ImGui::SameLine();
-        if (ImGui::Button("SP"))
-            jumpAddr = (t89->getBusModule()->getRomEnd() -
-                        t89->getBusModule()->getRomBase());  // Jump to SP
+
+        if (ImGui::Button("SP"))  // Jump to SP
+            jumpAddr = romProbe->getEndAddress() - romProbe->getBaseAddress();
         ImGui::SameLine();
-        if (ImGui::Button("VRAM"))
-            jumpAddr = (t89->getBusModule()->getRomEnd() -
-                        t89->getBusModule()->getRomBase()) +
-                       (t89->getBusModule()->getRamEnd() -
-                        t89->getBusModule()->getRamBase());  // Jump to VRAM
+        if (ImGui::Button("VRAM"))  // Jump to VRAM
+            jumpAddr = romProbe->getEndAddress() - romProbe->getBaseAddress() +
+                       ramProbe->getEndAddress() - ramProbe->getBaseAddress();
 
         ImGui::EndTable();
     }
@@ -567,16 +575,13 @@ void Gui::renderMemoryViewer() {
         ImGui::TableSetupColumn("2", 0, 60);
         ImGui::TableSetupColumn("3", 0, 330);
         ImGui::TableSetupColumn("4", 0, 150);
-        addMemorySection(
-            t89->getBusModule()->getRomMemoryDevice()->getDeviceSize(),
-            t89->getBusModule()->getRomMemoryDevice()->getBaseAddress(),
-            t89->getBusModule()->getRomMemoryDevice()->getBuffer(), "CODE");
-        addMemorySection(
-            t89->getBusModule()->getRamMemoryDevice()->getDeviceSize(),
-            t89->getBusModule()->getRamMemoryDevice()->getBaseAddress(),
-            t89->getBusModule()->getRamMemoryDevice()->getBuffer(), "DATA");
-        addMemorySection(VIDEO_SIZE, VIDEO_BASE,
-                         t89->getBusModule()->getVideoDevice()->getBuffer(),
+
+        addMemorySection(romProbe->getDeviceSize(), romProbe->getBaseAddress(),
+                         romProbe->getBuffer(), "CODE");
+        addMemorySection(ramProbe->getDeviceSize(), ramProbe->getBaseAddress(),
+                         ramProbe->getBuffer(), "DATA");
+        addMemorySection(vramProbe->getDeviceSize(),
+                         vramProbe->getBaseAddress(), vramProbe->getBuffer(),
                          "VRAM");
 
         ImGui::EndTable();

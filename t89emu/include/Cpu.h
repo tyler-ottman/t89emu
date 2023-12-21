@@ -36,6 +36,14 @@ public:
 	RegisterFile *getRegisterFileModule(void);
 	Trap *getTrapModule(void);
 
+#ifndef BUS_EXPERIMENTAL
+#else
+	RomMemoryDevice *getRomDevice(void) {return rom;}
+	RamMemoryDevice *getRamDevice(void) {return ram;}
+	VideoMemoryDevice *getVideoDevice(void) {return vram;}
+	ClintMemoryDevice *getClintDevice(void) {return clint;}
+#endif // BUS_EXPERIMENTAL
+
 private:
 	// Execute a normal RV32I instruction
 	// If the instruction is executed successfully, function returns true
@@ -51,6 +59,7 @@ private:
                           uint32_t rdData, uint32_t rs2Data,
                           uint32_t rs1Data, uint32_t pcAddr);
 
+	// RISC Core-specific modules 
     Alu *alu;
 	AluControlUnit *aluc;
 	Bus *bus;
@@ -62,7 +71,14 @@ private:
 	RegisterFile *rf;
 	Trap *trap;
 
-	int clintId;
+#ifndef BUS_EXPERIMENTAL
+#else
+	// Peripheral modules
+	RomMemoryDevice *rom;
+	RamMemoryDevice *ram;
+	VideoMemoryDevice *vram;
+	ClintMemoryDevice *clint;
+#endif // BUS_EXPERIMENTAL
 };
 
 #endif // MCU_H

@@ -10,11 +10,20 @@ Mcu::Mcu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
     immgen = new ImmediateGenerator;
     mcu = new MemControlUnit;
     nextPc = new NextPc;
+#ifndef BUS_EXPERIMENTAL
     bus = new Bus(romBase, romSize, ramBase, ramSize);
-	// bus = new Bus;
+#else
+	bus = new Bus();
+	rom = new RomMemoryDevice(romBase, romSize);
+	ram = new RamMemoryDevice(ramBase, ramSize);
+	vram = new VideoMemoryDevice(VIDEO_BASE, VIDEO_SIZE);
+	clint = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
+	bus->addDevice(rom);
+	bus->addDevice(ram);
+	bus->addDevice(vram);
+	bus->addDevice(clint);
+#endif // BUS_EXPERIMENTAL
     trap = new Trap;
-
-
 }
 
 Mcu::~Mcu() {
@@ -32,6 +41,7 @@ Mcu::~Mcu() {
 
 void Mcu::nextInstruction() {
 	// Update Clint Device every cycle
+#ifndef BUS_EXPERIMENTAL
 	bus->getClintDevice()->nextCycle(csr);
 
     // Check for interrupts
@@ -39,14 +49,14 @@ void Mcu::nextInstruction() {
         trap->takeTrap(csr, pc, nextPc,
                        bus->getClintDevice()->getInterruptType());
     }
+#else
+	clint->nextCycle(csr);
 
-	// ClintMemoryDevice *clint = (ClintMemoryDevice *)bus->getDevice(clintId);
-	// clint->nextCycle(csr);
-
-    // // Check for interrupts
-    // if (clint->checkInterrupts(csr)) {
-    //     trap->takeTrap(csr, pc, nextPc, clint->getInterruptType());
-    // }
+    // Check for interrupts
+    if (clint->checkInterrupts(csr)) {
+        trap->takeTrap(csr, pc, nextPc, clint->getInterruptType());
+    }
+#endif // BUS_EXPERIMENTAL
 
     uint32_t exceptionCode = executeInstruction();
     if (exceptionCode != STATUS_OK) {
