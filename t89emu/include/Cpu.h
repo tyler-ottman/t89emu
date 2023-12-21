@@ -3,8 +3,8 @@
 #include <iostream>
 #include <fstream>
 
-#ifndef CPU_H
-#define CPU_H
+#ifndef MCU_H
+#define MCU_H
 
 #include "Alu.h"
 #include "AluControlUnit.h"
@@ -17,11 +17,11 @@
 #include "RegisterFile.h"
 #include "Trap.h"
 
-class Cpu {
+class Mcu {
 public:
-	Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
+	Mcu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
 	    int debug);
-	~Cpu();
+	~Mcu();
 	
 	void nextInstruction(void);
 
@@ -61,6 +61,8 @@ private:
 	ProgramCounter *pc;
 	RegisterFile *rf;
 	Trap *trap;
+
+	int clintId;
 };
 
-#endif // CPU_H
+#endif // MCU_H

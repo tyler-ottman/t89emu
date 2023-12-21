@@ -1,6 +1,14 @@
 #ifndef ARCHITECTURE_H
 #define ARCHITECTURE_H
 
+#define ASSERT(cond, msg)                           \
+{                                                   \
+    if (!(cond)) {                                  \
+        std::cout << msg;                           \
+        exit(EXIT_FAILURE);                         \
+    }                                               \
+}
+
 #define BYTE                                1
 #define HALFWORD                            2
 #define WORD                                4

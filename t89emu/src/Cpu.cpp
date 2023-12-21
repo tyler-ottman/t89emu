@@ -1,6 +1,6 @@
 #include "Cpu.h"
 
-Cpu::Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
+Mcu::Mcu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
          int debug = 0) {
     rf = new RegisterFile;
     pc = new ProgramCounter;
@@ -11,10 +11,13 @@ Cpu::Cpu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
     mcu = new MemControlUnit;
     nextPc = new NextPc;
     bus = new Bus(romBase, romSize, ramBase, ramSize);
+	// bus = new Bus;
     trap = new Trap;
+
+
 }
 
-Cpu::~Cpu() {
+Mcu::~Mcu() {
 	delete rf;
 	delete pc;
 	delete bus;
@@ -27,72 +30,80 @@ Cpu::~Cpu() {
 	delete trap;
 }
 
-void Cpu::nextInstruction() {
+void Mcu::nextInstruction() {
 	// Update Clint Device every cycle
 	bus->getClintDevice()->nextCycle(csr);
 
-        // Check for interrupts
-        if (bus->getClintDevice()->checkInterrupts(csr)) {
-            trap->takeTrap(csr, pc, nextPc,
-                           bus->getClintDevice()->getInterruptType());
-        }
+    // Check for interrupts
+    if (bus->getClintDevice()->checkInterrupts(csr)) {
+        trap->takeTrap(csr, pc, nextPc,
+                       bus->getClintDevice()->getInterruptType());
+    }
 
-        uint32_t exceptionCode = executeInstruction();
-        if (exceptionCode != STATUS_OK) {
-            // Hard to emulate accurately, but previous call to
-            // execute_instruction() fails because exception is thrown. In a
-            // real system, the CSRs and PC will change in the same cycle, so
-            // the trap bit causes the PC to switch (mux) from the faulting
-            // instruction to the jump instruction in the vector table
-            trap->takeTrap(csr, pc, nextPc, exceptionCode);
+	// ClintMemoryDevice *clint = (ClintMemoryDevice *)bus->getDevice(clintId);
+	// clint->nextCycle(csr);
 
-            // Trap phase of cycle emulated (usually means control lines switch)
-            // Now execute the jump instruction in the vector table
-            executeInstruction();
-        }
+    // // Check for interrupts
+    // if (clint->checkInterrupts(csr)) {
+    //     trap->takeTrap(csr, pc, nextPc, clint->getInterruptType());
+    // }
+
+    uint32_t exceptionCode = executeInstruction();
+    if (exceptionCode != STATUS_OK) {
+        // Hard to emulate accurately, but previous call to
+        // execute_instruction() fails because exception is thrown. In a
+        // real system, the CSRs and PC will change in the same cycle, so
+        // the trap bit causes the PC to switch (mux) from the faulting
+        // instruction to the jump instruction in the vector table
+        trap->takeTrap(csr, pc, nextPc, exceptionCode);
+
+        // Trap phase of cycle emulated (usually means control lines switch)
+        // Now execute the jump instruction in the vector table
+        executeInstruction();
+    }
 }
 
-Alu *Cpu::getAluModule() {
+Alu *Mcu::getAluModule() {
 	return alu;
 }
 
-AluControlUnit *Cpu::getAluControlUnitModule() {
+AluControlUnit *Mcu::getAluControlUnitModule() {
 	return aluc;
 }
 
-Bus *Cpu::getBusModule() {
+Bus *Mcu::getBusModule() {
 	return bus;
 }
 
-Csr *Cpu::getCsrModule() {
+Csr *Mcu::getCsrModule() {
 	return csr;
 }
 
-ImmediateGenerator *Cpu::getImmediateGeneratorModule() {
+ImmediateGenerator *Mcu::getImmediateGeneratorModule() {
 	return immgen;
 }
 
-MemControlUnit *Cpu::getMemControlUnitModule() {
+MemControlUnit *Mcu::getMemControlUnitModule() {
 	return mcu;
 }
 
-NextPc *Cpu::getNextPcModule() {
+NextPc *Mcu::getNextPcModule() {
 	return nextPc;
 }
 
-ProgramCounter *Cpu::getProgramCounterModule() {
+ProgramCounter *Mcu::getProgramCounterModule() {
 	return pc;
 }
 
-RegisterFile *Cpu::getRegisterFileModule() {
+RegisterFile *Mcu::getRegisterFileModule() {
 	return rf;
 }
 
-Trap *Cpu::getTrapModule() {
+Trap *Mcu::getTrapModule() {
 	return trap;
 }
 
-uint32_t Cpu::executeInstruction() {
+uint32_t Mcu::executeInstruction() {
     // Fetch Stage
     uint32_t pcAddr = pc->getPc();  // Current PC
     uint32_t curInstruction;
@@ -237,7 +248,7 @@ uint32_t Cpu::executeInstruction() {
 	return STATUS_OK;
 }
 
-void Cpu::debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csrAddr, uint32_t curInstruction) {
+void Mcu::debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint32_t rs1, uint32_t rs2, uint32_t rd, uint32_t immediate, uint32_t csrAddr, uint32_t curInstruction) {
 	if (curInstruction == 0) {exit(1);}
 	std::cout << std::hex << "Current Instruction: " << curInstruction << std::endl;
 	switch (opcode) {
@@ -258,7 +269,7 @@ void Cpu::debugPreExecute(uint32_t opcode, uint32_t funct3, uint32_t funct7, uin
 	}
 }
 
-void Cpu::debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rdData, uint32_t rs2Data, uint32_t rs1Data, uint32_t pcAddr) {
+void Mcu::debugPostExecute(uint32_t opcode, uint32_t rd, uint32_t immediate, uint32_t rdData, uint32_t rs2Data, uint32_t rs1Data, uint32_t pcAddr) {
 	switch (opcode) {
 		case LUI: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;
 		case ITYPE: std::cout << "Wrote " << rdData << " to register " << rd << std::endl << std::endl; break;

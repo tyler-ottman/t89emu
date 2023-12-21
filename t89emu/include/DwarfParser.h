@@ -3,14 +3,6 @@
 
 #include "ElfParser.h"
 
-#define ASSERT(cond, msg)                           \
-{                                                   \
-    if (!(cond)) {                                  \
-        std::cout << msg;                           \
-        exit(EXIT_FAILURE);                         \
-    }                                               \
-}
-
 // Unit Header Unit Type Encodings
 enum UnitType {
     DW_UT_compile                       = 0x01,
@@ -121,6 +113,8 @@ public:
     DwarfParser(const char *fileName);
     ~DwarfParser();
 
+    void printDebugSection(const char *name);
+    
 private:
     uint8_t *debugAbbrev;
     uint8_t *debugInfo;

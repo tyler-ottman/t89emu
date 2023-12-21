@@ -54,7 +54,7 @@ Gui::Gui(char *elfFile, int debug) {
     elfParser = new ElfParser(elfFile);
 
     // Initialize Emulator
-    t89 = new Cpu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
+    t89 = new Mcu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
                   RAM_SIZE, debug);
 
     // Set entry PC
@@ -64,7 +64,7 @@ Gui::Gui(char *elfFile, int debug) {
     // Flash ELF Loadable sections to ROM Device
     elfParser->flashRom(t89->getBusModule()->getRomMemoryDevice());
 
-    if (elfParser->hasDebugging()) {
+    if (elfParser->isDebuggable()) {
         std::cout << "-g flag enabled\n";
     }
 

@@ -60,7 +60,7 @@ private:
     std::vector<std::pair<std::string, uint32_t>> registers;
     
     ElfParser *elfParser;
-    Cpu *t89;
+    Mcu *t89;
 
     bool isStepEnabled;
     bool isRunEnabled;

@@ -14,6 +14,10 @@ Bus::Bus(uint32_t romStart, uint32_t romSize, uint32_t ramStart,
     clintDevice = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
 }
 
+// Bus::Bus() {
+    
+// }
+
 Bus::~Bus() {
     delete romDevice;
     delete ramDevice;
@@ -39,6 +43,14 @@ uint32_t Bus::write(uint32_t addr, uint32_t data, uint32_t accessSize) {
         // Invalid address access
         return STORE_ACCESS_FAULT;
     }
+
+    // for (MemoryDevice *device : devices) {
+    //     if (addr >= device->getBaseAddress() && addr <= device->getEndAddress()) {
+    //         return device->write(addr, data, accessSize);
+    //     }
+    // }
+
+    // return STORE_ACCESS_FAULT;
 }
 
 uint32_t Bus::read(uint32_t addr, uint32_t accessSize, uint32_t *readValue) {
@@ -58,7 +70,28 @@ uint32_t Bus::read(uint32_t addr, uint32_t accessSize, uint32_t *readValue) {
         // Invalid address access
         return LOAD_ACCESS_FAULT;
     }
+
+    // for (MemoryDevice *device : devices) {
+    //     if (addr >= device->getBaseAddress() && addr <= device->getEndAddress()) {
+    //         return device->read(addr, accessSize, readValue);
+    //     }
+    // }
+
+    // return LOAD_ACCESS_FAULT;
 }
+
+// int Bus::addDevice(MemoryDevice *device) {
+//     devices.push_back(device);
+//     return devices.size() - 1;
+// }
+
+// MemoryDevice *Bus::getDevice(int deviceId) {
+//     if (deviceId > devices.size()) {
+//         return nullptr;
+//     }
+
+//     return devices[deviceId];
+// }
 
 uint32_t Bus::getRomBase() {
     return romBase;

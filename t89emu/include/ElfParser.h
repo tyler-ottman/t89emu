@@ -123,20 +123,18 @@ public:
     ~ElfParser();
     
     void flashRom(RomMemoryDevice *romDevice);
+    
     std::vector<struct DisassembledEntry> &getDisassembledCode(void);
-
-    bool hasDebugging(void);
     Elf32_Addr getEntryPc(void);
     uint32_t getRamStart(void);
     uint32_t getRomStart(void);
 
+    bool isDebuggable(void);
+    
 protected:
     // Initialize ELF Parsing
-    bool initHeaders(const char *path);
-    bool generateImage(void);
+    bool initStructures(const char *path);
     bool generateDisassembledCode(void);
-
-    void printDebugSection(const char *name);
 
     const ElfSectionHeader *getSectionHeader(const char *name);
     const ElfProgramHeader *getProgramHeader(int nentry);
@@ -151,10 +149,8 @@ protected:
     struct ElfFileInformation *elfFileInfo;
 
     // ROM/RAM Information
-    std::vector<uint8_t> romImage; // ROM section
-    std::vector<uint8_t> ramImage; // RAM section
-    uint32_t romStart;
-    uint32_t ramStart;
+    const struct ElfProgramHeader *ramHeader;
+    const struct ElfProgramHeader *romHeader;
 
     // List of all executable sections within ELF file
     std::vector<const struct ElfProgramHeader *> executableSections;

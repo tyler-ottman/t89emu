@@ -2,38 +2,38 @@
 
 #include "ElfParser.h"
 
-ElfParser::ElfParser(const char* path) {
-	elfFileInfo = new ElfFileInformation;
-	if(!elfFileInfo || !initHeaders(path)) {
-		std::cerr << "Error: ELF initialization failed\n";
-		exit(EXIT_FAILURE);
-	}
-   
-	generateImage();
-    generateDisassembledCode(); // Generate Disassembled Text
+ElfParser::ElfParser(const char *path)
+    : ramHeader(nullptr), romHeader(nullptr) {
+    elfFileInfo = new ElfFileInformation();
+    ASSERT(elfFileInfo && initStructures(path),
+           "ElfParser.cpp: ELF Initialization Failed\n");
 }
 
 ElfParser::~ElfParser() {
 	delete elfFileInfo;
-	// delete romImage;
 }
 
+// Flash loadable ROM + RAM into ROM Device
 void ElfParser::flashRom(RomMemoryDevice *romDevice) {
-	// Generate Image that will be flashed to ROM
-	
-	
-	// Flash loadable ROM + RAM into ROM Device
-	uint8_t *buffer = romDevice->getBuffer();
-	std::copy(romImage.begin(), romImage.end(), &buffer[0]);
-	std::copy(ramImage.begin(), ramImage.end(), &buffer[romImage.size()]);
+	uint8_t *buf = romDevice->getBuffer();
+
+	// Order is important, flash ROM, then RAM
+	auto loadableSections = {romHeader, ramHeader};
+	for (const ElfProgramHeader *pHdr : loadableSections) {
+		Elf32_Word sectionSize = (pHdr->memsz < pHdr->filesz) 
+		                         ? pHdr->memsz : pHdr->filesz;
+		for (size_t i = 0; i < sectionSize; i++) {
+			*(buf++) = *((uint8_t *)(elfFileInfo->elfData + pHdr->offset + i));
+		}	
+	}
 }
 
 std::vector<struct DisassembledEntry> &ElfParser::getDisassembledCode() {
-	return disassembledCode;
-}
+	if (disassembledCode.empty()) {
+		generateDisassembledCode();
+	}
 
-bool ElfParser::hasDebugging() {
-	return getSectionHeader(".debug_info") != NULL;
+	return disassembledCode;
 }
 
 Elf32_Addr ElfParser::getEntryPc() {
@@ -41,14 +41,18 @@ Elf32_Addr ElfParser::getEntryPc() {
 }
 
 uint32_t ElfParser::getRamStart() {
-	return ramStart;
+	return ramHeader->paddr;
 }
 
 uint32_t ElfParser::getRomStart() {
-	return romStart;
+	return romHeader->paddr;
 }
 
-bool ElfParser::initHeaders(const char *path) {
+bool ElfParser::isDebuggable() {
+	return getSectionHeader(".debug_info") != NULL;
+}
+
+bool ElfParser::initStructures(const char *path) {
 	FILE *fp = fopen(path, "rb");
 	if (fp == NULL) {
 		std::cerr << "Error: could not open " << path << "\n";
@@ -76,52 +80,37 @@ bool ElfParser::initHeaders(const char *path) {
 		return false;
 	}
 
-	// Load ELF Header information to struct
-	elfHeaderInfo = (struct ElfHeader *)elfFileInfo->elfData;
-
 	// Verify ELF format
-	return ((elfHeaderInfo->ident[EI_MAG0] == 0x7f) &&
-			(elfHeaderInfo->ident[EI_MAG1] == 'E') &&
-			(elfHeaderInfo->ident[EI_MAG2] == 'L') &&
-			(elfHeaderInfo->ident[EI_MAG3] == 'F') &&
-			(elfHeaderInfo->ident[EI_CLASS] == ELFCLASS32) &&
-			(elfHeaderInfo->ident[EI_DATA] == ELFDATA2LSB) &&
-			(elfHeaderInfo->ident[EI_VERSION] == EV_CURRENT) &&
-			(elfHeaderInfo->type == ET_EXEC) &&
-			(elfHeaderInfo->machine == EM_RISCV) &&
-			(elfHeaderInfo->version == EV_CURRENT));
-}
+	elfHeaderInfo = (struct ElfHeader *)elfFileInfo->elfData;
+    if (!((elfHeaderInfo->ident[EI_MAG0] == 0x7f) &&
+          (elfHeaderInfo->ident[EI_MAG1] == 'E') &&
+          (elfHeaderInfo->ident[EI_MAG2] == 'L') &&
+          (elfHeaderInfo->ident[EI_MAG3] == 'F') &&
+          (elfHeaderInfo->ident[EI_CLASS] == ELFCLASS32) &&
+          (elfHeaderInfo->ident[EI_DATA] == ELFDATA2LSB) &&
+          (elfHeaderInfo->ident[EI_VERSION] == EV_CURRENT) &&
+          (elfHeaderInfo->type == ET_EXEC) &&
+          (elfHeaderInfo->machine == EM_RISCV) &&
+          (elfHeaderInfo->version == EV_CURRENT))) {
+        return false;
+    }
 
-// Flash all loadable sections as one contiguous byte array to ROM
-bool ElfParser::generateImage() {
-	// Iterate through program table entries
+	// Locate ROM/RAM program section headers
 	for (int idx = 0; idx < elfHeaderInfo->phnum; idx++) {
 		const struct ElfProgramHeader *pHdr = getProgramHeader(idx);
 
-		// Determine if section should be loaded to emulator memory
-		if (pHdr->type != PT_LOAD) {continue;}
-
-		// Size of section
-		Elf32_Word sectionSize = (pHdr->memsz < pHdr->filesz) 
-								 ? pHdr->memsz : pHdr->filesz;
-
-		// If section is readable/write, mark as RAM
+		// If section not loadable, continue
+		if (pHdr->type != PT_LOAD) {
+			continue;
+		}
+		
+		// Check if section is ROM/RAM
 		if ((pHdr->flags & PF_R) && (pHdr->flags & PF_W)) {
-			// Add section to RAM image
-			ramStart = pHdr->paddr;
-			for (size_t jdx = 0; jdx < sectionSize; jdx++) {
-				uint8_t *data = (uint8_t *)(elfFileInfo->elfData
-				                            + pHdr->offset + jdx);
-				ramImage.push_back(*data);
-			}
-		} else if ((pHdr->flags & PF_R) && (pHdr->flags & PF_X)) {
-			// Add section to ROM image
-			romStart = pHdr->paddr;
-			for (size_t jdx = 0; jdx < sectionSize; jdx++) {
-				uint8_t *data = (uint8_t *)(elfFileInfo->elfData
-				                            + pHdr->offset + jdx);
-				romImage.push_back(*data);
-			}
+			ASSERT(!ramHeader, "ElfParser.cpp: duplicate RAM section.");
+			ramHeader = pHdr;
+		} else if ((pHdr->flags & PF_R) && (pHdr->flags & PF_X) && !romHeader) {
+			ASSERT(!romHeader, "ElfParser.cpp: duplicate ROM section.");
+			romHeader = pHdr;
 		}
 	}
 
@@ -211,14 +200,6 @@ bool ElfParser::generateDisassembledCode() {
         }
 	}
 	return true;
-}
-
-void ElfParser::printDebugSection(const char *name) {
-	const ElfSectionHeader *debug = getSectionHeader(name);
-	if (debug) {
-		std::cout << "Section: " << name << " -> offset: " << debug->offset
-		          << ", size: " << debug->size << std::endl;
-	}
 }
 
 // Return struct pointer to desired section given section name
