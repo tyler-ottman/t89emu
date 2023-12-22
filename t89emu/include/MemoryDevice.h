@@ -7,7 +7,7 @@
 
 class MemoryDevice {
 public:
-    MemoryDevice(void);
+    MemoryDevice(uint32_t baseAddress, uint32_t deviceSize);
     virtual ~MemoryDevice();
 
     virtual bool checkAlignment(uint32_t addr, uint32_t size);

@@ -3,14 +3,16 @@
 #include "Gui.h"
 
 int main(int argc, char **argv) {
-    if (argc != 3) {
+    if (argc != 2) {
         std::cerr << "Invalid Arguments\n";
         exit(EXIT_FAILURE);
     }
-    
-    // Debug Mode
-    int debug = (atoi(argv[2]) == 1) ? 1 : 0;
-    Gui interface(argv[1], debug);
 
-    return 0;
+    ElfParser *parser = new ElfParser(argv[1]);
+    Mcu *t89 = Mcu::getInstance(parser->getRomStart(), parser->getRamStart(),
+                                parser->getEntryPc());
+    parser->flashRom(t89->getRomDevice());
+
+    Gui *emulator = new Gui(parser, 0);
+    emulator->runApplication();
 }

@@ -40,7 +40,6 @@ private:
     uint32_t ramBase;
     uint32_t ramEnd;
     
-    // TODO: UART, PLIC
     ClintMemoryDevice *clintDevice;
     RamMemoryDevice *ramDevice;
     RomMemoryDevice *romDevice;
@@ -60,6 +59,7 @@ public:
     int addDevice(MemoryDevice *device);
 
 private:
+    // Todo: UART, PLIC
     std::vector<MemoryDevice *> devices;
 };
 

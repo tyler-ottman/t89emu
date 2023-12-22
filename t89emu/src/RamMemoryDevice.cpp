@@ -2,11 +2,9 @@
 
 #include <iostream>
 
-RamMemoryDevice::RamMemoryDevice(uint32_t base, uint32_t size) {
-    baseAddress = base;
-    deviceSize = size;
-
-    mem = new uint8_t[deviceSize]();
+RamMemoryDevice::RamMemoryDevice(uint32_t base, uint32_t size)
+    : MemoryDevice::MemoryDevice(base, size) {
+    
 }
 
 uint32_t RamMemoryDevice::read(uint32_t addr, uint32_t size,

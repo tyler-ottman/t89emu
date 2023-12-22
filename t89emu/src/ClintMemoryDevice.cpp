@@ -1,12 +1,9 @@
 #include <iostream>
 #include "ClintMemoryDevice.h"
 
-ClintMemoryDevice::ClintMemoryDevice(uint32_t base, uint32_t size) {
-    baseAddress = base;
-    deviceSize = size;
-    interruptType = 0;
-
-    mem = new uint8_t[deviceSize]();
+ClintMemoryDevice::ClintMemoryDevice(uint32_t base, uint32_t size)
+    : MemoryDevice::MemoryDevice(base, size), interruptType(0) {
+    
 }
 
 uint32_t ClintMemoryDevice::read(uint32_t addr, uint32_t size,

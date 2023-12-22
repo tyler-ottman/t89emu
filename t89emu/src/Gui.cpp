@@ -10,7 +10,7 @@ static void glfw_error_callback(int error, const char *description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Gui::Gui(char *elfFile, int debug) {
+Gui::Gui(ElfParser *elfParser, int debug) : elfParser(elfParser) {
     std::vector<std::string> registerNames = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -40,8 +40,6 @@ Gui::Gui(char *elfFile, int debug) {
     glGenTextures(1, &textureID); // Initialize Texture ID for VRAM
     
     buttons = {TAB, W, A, S, D};
-    myTexW = SCREEN_WIDTH;
-    myTexH = SCREEN_HEIGHT;
 
     isStepEnabled = false;
     isRunEnabled = false;
@@ -50,50 +48,31 @@ Gui::Gui(char *elfFile, int debug) {
     io.Fonts->AddFontDefault();
     egaFont = io.Fonts->AddFontFromFileTTF("./egaFont.ttf", 10.8);
 
-    // Parse ELF file to load ROM/RAM, disassembler
-    elfParser = new ElfParser(elfFile);
-
-    // Initialize Emulator
-    t89 = new Mcu(elfParser->getRomStart(), ROM_SIZE, elfParser->getRamStart(),
-                  RAM_SIZE, debug);
-
 #ifndef BUS_EXPERIMENTAL
-    csrMemProbe = t89->getBusModule()->getClintDevice();
-    ramProbe = t89->getBusModule()->getRamMemoryDevice();
-    romProbe = t89->getBusModule()->getRomMemoryDevice();
-    vramProbe = t89->getBusModule()->getVideoDevice();
+    csrMemProbe = Mcu::getInstance()->getBusModule()->getClintDevice();
+    ramProbe = Mcu::getInstance()->getBusModule()->getRamMemoryDevice();
+    romProbe = Mcu::getInstance()->getBusModule()->getRomMemoryDevice();
+    vramProbe = Mcu::getInstance()->getBusModule()->getVideoDevice();
 #else
-    csrMemProbe = t89->getClintDevice();
-    ramProbe = t89->getRamDevice();
-    romProbe = t89->getRomDevice();
-    vramProbe = t89->getVideoDevice();
+    csrMemProbe = Mcu::getInstance()->getClintDevice();
+    ramProbe = Mcu::getInstance()->getRamDevice();
+    romProbe = Mcu::getInstance()->getRomDevice();
+    vramProbe = Mcu::getInstance()->getVideoDevice();
 #endif // BUS_EXPERIMENTAL
-
-    // Set entry PC
-    t89->getProgramCounterModule()->setPc(elfParser->getEntryPc());
-    t89->getNextPcModule()->setNextPc(elfParser->getEntryPc());
+    rfProbe = Mcu::getInstance()->getRegisterFileModule();
+    pcProbe = Mcu::getInstance()->getProgramCounterModule();
+    csrProbe = Mcu::getInstance()->getCsrModule();
     
-    // Flash ELF Loadable sections to ROM Device
-    elfParser->flashRom(romProbe);
-
-    if (elfParser->isDebuggable()) {
-        std::cout << "-g flag enabled\n";
-    }
-
-    if (debug) {
-        runDebugApplication();
-    } else {
-        runMainApplication();
-    }
+    textureW = vramProbe->getGWidth();
+    textureH = vramProbe->getGHeight();
 }
 
 Gui::~Gui() {
 
 }
 
-void Gui::runDebugApplication() {
+void Gui::runApplication() {
     // Main loop
-    std::cout << "Starting debug application" << std::endl;
     while (!glfwWindowShouldClose(window)) {
         // Poll and handle events (inputs, window resize, etc.)
         glfwPollEvents();
@@ -102,15 +81,14 @@ void Gui::runDebugApplication() {
             int numInstructions = 0;
             while ((numInstructions < INSTRUCTIONS_PER_FRAME) &&
                    (std::find(breakpoints.begin(), breakpoints.end(),
-                    *(t89->getProgramCounterModule()->getPcPtr())) ==
-                    breakpoints.end())) {
-                t89->nextInstruction();
+                              *(pcProbe->getPcPtr())) == breakpoints.end())) {
+                Mcu::getInstance()->nextInstruction();
                 numInstructions++;
             }
         }
 
         if (isStepEnabled) {
-            t89->nextInstruction();
+            Mcu::getInstance()->nextInstruction();
         }
 
         // Start the Dear ImGui frame
@@ -126,32 +104,6 @@ void Gui::runDebugApplication() {
         renderIoPanel();
         renderLcdDisplay();
         renderDisassembledCodeSection();
-        renderControlPanel();
-        renderFrame();
-    }
-}
-
-void Gui::runMainApplication() {
-    // Main loop
-    while (!glfwWindowShouldClose(window)) {
-        // Poll and handle events (inputs, window resize, etc.)
-        glfwPollEvents();
-        // int num_instructions = 0;
-        if (isRunEnabled) {
-            int numInstructions = 0;
-            while ((numInstructions < INSTRUCTIONS_PER_FRAME)) {
-                t89->nextInstruction();
-                numInstructions++;
-            }
-        }
-
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        renderIoPanel();
-        renderLcdDisplay();
         renderControlPanel();
         renderFrame();
     }
@@ -186,7 +138,7 @@ int Gui::initApplication(char *glslVersion) {
 #endif
 
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "t89-OS", NULL, NULL);
+    window = glfwCreateWindow(1280, 720, "t89emu", NULL, NULL);
     if (window == NULL) exit(EXIT_FAILURE);
     glfwMakeContextCurrent(window);
     return 0;
@@ -300,8 +252,7 @@ void Gui::renderCsrBank() {
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X",
-                    t89->getCsrModule()->readCsr(csrAddress.at(row)));
+            sprintf(buf, "0x%08X", csrProbe->readCsr(csrAddress.at(row)));
             ImGui::TextUnformatted(buf);
         }
 
@@ -364,7 +315,7 @@ void Gui::renderDisassembledCodeSection() {
 
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
-    uint32_t *pcPtr = t89->getProgramCounterModule()->getPcPtr();
+    uint32_t *pcPtr = pcProbe->getPcPtr();
     std::vector<struct DisassembledEntry> &disassembledCode =
         elfParser->getDisassembledCode();
 
@@ -472,7 +423,7 @@ void Gui::renderIoPanel() {
 void Gui::renderLcdDisplay() {
     uint32_t videoMode = *(vramProbe->getBuffer());
 
-    char lineStr[TEXT_MODE_VERTICAL_LINES + 1];  // Print line by line
+    char lineStr[vramProbe->getTWidth() + 1];  // Print line by line
 
     // VRAM Module
     ImGui::Begin("VRAM Module");
@@ -480,17 +431,17 @@ void Gui::renderLcdDisplay() {
         ImGui::PushFont(egaFont);
 
         char *vgaTextBuffer = (char *)(vramProbe->getBuffer() + 16);
-        for (int i = 0; i < TEXT_MODE_HORIZONTAL_LINES; i++) {
-            memcpy(lineStr, vgaTextBuffer + TEXT_MODE_VERTICAL_LINES * i,
-                   TEXT_MODE_VERTICAL_LINES);
-            for (int j = 0; j < TEXT_MODE_VERTICAL_LINES; j++) {
+        for (size_t i = 0; i < vramProbe->getTHeight(); i++) {
+            memcpy(lineStr, vgaTextBuffer + vramProbe->getTWidth() * i,
+                   vramProbe->getTWidth());
+            for (size_t j = 0; j < vramProbe->getTWidth(); j++) {
                 if (lineStr[j] == '\0') {
                     // Allow GUI to print entire line by replacing null byte
                     // with space
                     lineStr[j] = ' ';
                 }
             }
-            lineStr[TEXT_MODE_VERTICAL_LINES] = '\0';
+            lineStr[vramProbe->getTWidth()] = '\0';
             ImGui::Text("%s", lineStr);
         }
         ImGui::PopFont();
@@ -501,15 +452,16 @@ void Gui::renderLcdDisplay() {
         ImVec4 borderCol = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);  // 50% opaque white
 
         uint8_t *vramBuffer =
-            (uint8_t *)(vramProbe->getBuffer() + 16 + VIDEO_TEXT_BUFFER_SIZE);
+            (uint8_t *)(vramProbe->getBuffer() + 16 +
+                        vramProbe->getTWidth() * vramProbe->getTHeight());
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, myTexW, myTexH, 0, GL_RGBA,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureW, textureH, 0, GL_RGBA,
                      GL_UNSIGNED_BYTE, vramBuffer);
-        ImGui::Image((void *)(intptr_t)textureID, ImVec2(myTexW, myTexH), uvMin,
-                     uvMax, tintCol, borderCol);
+        ImGui::Image((void *)(intptr_t)textureID, ImVec2(textureW, textureH),
+                     uvMin, uvMax, tintCol, borderCol);
     }
 
     ImGui::End();
@@ -627,7 +579,7 @@ void Gui::renderRegisterBank() {
             // Register Value
             ImGui::TableSetColumnIndex(1);
             // registers.at(row).second = rand() % 4294967295;
-            sprintf(buf, "0x%08X", t89->getRegisterFileModule()->read(row));
+            sprintf(buf, "0x%08X", rfProbe->read(row));
             if (contents_type == CT_Text)
                 ImGui::TextUnformatted(buf);
             else if (contents_type == CT_FillButton)

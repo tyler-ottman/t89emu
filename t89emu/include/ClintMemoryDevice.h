@@ -7,17 +7,15 @@
 #ifndef CLINTMEMORYDEVICE_H
 #define CLINTMEMORYDEVICE_H
 
-// Clint Device (Memory-mapped CSRs)
-#define CLINT_BASE              0x30000000
+// Size and offsets do not change across Clint devices
 #define CLINT_SIZE              0x18
-#define CLINT_END               (CLINT_BASE + CLINT_SIZE)
 
-#define MCYCLE_OFFSET           0
-#define MTIMECMP_OFFSET         8
+#define MCYCLE_OFFSET           0x0
+#define MTIMECMP_OFFSET         0x8
 
 // Machine software interrupt pending bit must be
 // in memory for harts to generate software interrupts
-#define MSIP_OFFSET             20 // Todo: move keyboard register to plic
+#define MSIP_OFFSET             0x14
 
 class ClintMemoryDevice : public MemoryDevice {
 public:

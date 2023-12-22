@@ -1,10 +1,14 @@
 #include "VideoMemoryDevice.h"
 
-VideoMemoryDevice::VideoMemoryDevice(uint32_t base, uint32_t size) {
-    baseAddress = base;
-    deviceSize = size;
-
-    mem = new uint8_t[deviceSize]();
+VideoMemoryDevice::VideoMemoryDevice(uint32_t base, uint32_t size,
+                                     uint32_t gWidth, uint32_t gHeight,
+                                     uint32_t tWidth, uint32_t tHeight)
+    : MemoryDevice::MemoryDevice(base, size),
+      gWidth(gWidth),
+      gHeight(gHeight),
+      tWidth(tWidth),
+      tHeight(tHeight) {
+    
 }
 
 uint32_t VideoMemoryDevice::read(uint32_t addr, uint32_t size,
@@ -37,4 +41,20 @@ uint32_t VideoMemoryDevice::write(uint32_t addr, uint32_t writeValue,
     }
 
     return STATUS_OK;
+}
+
+uint32_t VideoMemoryDevice::getGWidth() {
+    return gWidth;
+}
+
+uint32_t VideoMemoryDevice::getGHeight() {
+    return gHeight;
+}
+
+uint32_t VideoMemoryDevice::getTWidth() {
+    return tWidth;
+}
+
+uint32_t VideoMemoryDevice::getTHeight() {
+    return tHeight;
 }

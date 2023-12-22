@@ -1,7 +1,8 @@
 #include "MemoryDevice.h"
 
-MemoryDevice::MemoryDevice() {
-
+MemoryDevice::MemoryDevice(uint32_t baseAddress, uint32_t deviceSize)
+    : baseAddress(baseAddress), deviceSize(deviceSize) {
+    mem = new uint8_t[deviceSize]();
 }
 
 MemoryDevice::~MemoryDevice() {

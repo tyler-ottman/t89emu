@@ -1,42 +1,32 @@
 #include "Mcu.h"
 
-Mcu::Mcu(uint32_t romBase, uint32_t romSize, uint32_t ramBase, uint32_t ramSize,
-         int debug = 0) {
-    rf = new RegisterFile;
-    pc = new ProgramCounter;
-    csr = new Csr;
-    alu = new Alu;
-    aluc = new AluControlUnit;
-    immgen = new ImmediateGenerator;
-    mcu = new MemControlUnit;
-    nextPc = new NextPc;
-#ifndef BUS_EXPERIMENTAL
-    bus = new Bus(romBase, romSize, ramBase, ramSize);
-#else
-    bus = new Bus();
-    rom = new RomMemoryDevice(romBase, romSize);
-    ram = new RamMemoryDevice(ramBase, ramSize);
-    vram = new VideoMemoryDevice(VIDEO_BASE, VIDEO_SIZE);
-    clint = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
-    bus->addDevice(rom);
-    bus->addDevice(ram);
-    bus->addDevice(vram);
-    bus->addDevice(clint);
-#endif // BUS_EXPERIMENTAL
-    trap = new Trap;
-}
+// CONFIGURABLE Device Information
 
-Mcu::~Mcu() {
-    delete rf;
-    delete pc;
-    delete bus;
-    delete csr;
-    delete alu;
-    delete aluc;
-    delete immgen;
-    delete mcu;
-    delete nextPc;
-    delete trap;
+// Clint Memory Device
+#define CLINT_BASE                      0x30000000
+
+// RAM/ROM base address defined by linker
+#define RAM_SIZE                        1048576 // 1 MB
+#define ROM_SIZE                        2097152 // 2 MB
+
+// Video Memory Device (See Hardware Documentation)
+#define SCREEN_WIDTH                    512
+#define SCREEN_HEIGHT                   288
+#define TEXT_WIDTH                      64
+#define TEXT_HEIGHT                     21
+#define VIDEO_BASE                      0x20000000
+#define VIDEO_SIZE                      (16 + TEXT_HEIGHT * TEXT_WIDTH + SCREEN_WIDTH * SCREEN_HEIGHT)
+
+Mcu *Mcu::instance = nullptr;
+
+Mcu *Mcu::getInstance(uint32_t romBase, uint32_t ramBase, uint32_t entryPc) {
+    if (instance) {
+        return instance;
+    }
+
+    instance = new Mcu(romBase, ramBase, entryPc);
+
+    return instance;
 }
 
 void Mcu::nextInstruction() {
@@ -111,6 +101,48 @@ RegisterFile *Mcu::getRegisterFileModule() {
 
 Trap *Mcu::getTrapModule() {
     return trap;
+}
+
+Mcu::Mcu(uint32_t romBase, uint32_t ramBase, uint32_t entryPc) {
+    rf = new RegisterFile;
+    pc = new ProgramCounter;
+    csr = new Csr;
+    alu = new Alu;
+    aluc = new AluControlUnit;
+    immgen = new ImmediateGenerator;
+    mcu = new MemControlUnit;
+    nextPc = new NextPc;
+#ifndef BUS_EXPERIMENTAL
+    bus = new Bus(romBase, romSize, ramBase, ramSize);
+#else
+    bus = new Bus();
+    rom = new RomMemoryDevice(romBase, ROM_SIZE);
+    ram = new RamMemoryDevice(ramBase, RAM_SIZE);
+    vram = new VideoMemoryDevice(VIDEO_BASE, VIDEO_SIZE, SCREEN_WIDTH,
+                                 SCREEN_HEIGHT, TEXT_WIDTH, TEXT_HEIGHT);
+    clint = new ClintMemoryDevice(CLINT_BASE, CLINT_SIZE);
+    bus->addDevice(rom);
+    bus->addDevice(ram);
+    bus->addDevice(vram);
+    bus->addDevice(clint);
+#endif // BUS_EXPERIMENTAL
+    trap = new Trap;
+
+    pc->setPc(entryPc);
+    nextPc->setNextPc(entryPc);
+}
+
+Mcu::~Mcu() {
+    delete rf;
+    delete pc;
+    delete bus;
+    delete csr;
+    delete alu;
+    delete aluc;
+    delete immgen;
+    delete mcu;
+    delete nextPc;
+    delete trap;
 }
 
 uint32_t Mcu::executeInstruction() {

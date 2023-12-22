@@ -32,10 +32,9 @@
 
 class Gui {
 public:
-    Gui(char *elfFile, int debug);
+    Gui(ElfParser *elfParser, int debug);
     ~Gui();
-    void runDebugApplication(void);
-    void runMainApplication(void);
+    void runApplication(void);
 
 private:
     int initApplication(char *glslVersion);
@@ -57,16 +56,19 @@ private:
     RamMemoryDevice *ramProbe;
     RomMemoryDevice *romProbe;
     VideoMemoryDevice *vramProbe;
+    RegisterFile *rfProbe;
+    ProgramCounter *pcProbe;
+    Csr *csrProbe;
 
-    float myTexW;
-    float myTexH;
+    float textureW;
+    float textureH;
     GLuint textureID;
     GLFWwindow *window;
     std::vector<int> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
     
+    // For Rendering Disassembled Code
     ElfParser *elfParser;
-    Mcu *t89;
 
     bool isStepEnabled;
     bool isRunEnabled;

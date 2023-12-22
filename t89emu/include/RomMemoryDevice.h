@@ -5,9 +5,6 @@
 #ifndef ROM_MEMORYDEVICE_H
 #define ROM_MEMORYDEVICE_H
 
-// ROM base address defined by linker, maximum possible size is fixed
-#define ROM_SIZE 2097152 // 2 MB
-
 class RomMemoryDevice : public MemoryDevice {
 public:
     RomMemoryDevice(uint32_t base, uint32_t size);
