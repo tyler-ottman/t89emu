@@ -1,3 +1,6 @@
+#ifndef GUI_H
+#define GUI_H
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #endif
@@ -26,9 +29,6 @@
 #define D 549
 
 #define INSTRUCTIONS_PER_FRAME 1000000
-
-#ifndef GUI_H
-#define GUI_H
 
 class Gui {
 public:

@@ -1,3 +1,6 @@
+#ifndef ELF_PARSE_H
+#define ELF_PARSE_H
+
 #include <iostream>
 #include <stdint.h>
 #include <stdio.h>
@@ -113,9 +116,6 @@ struct DisassembledEntry {
     Elf32_Word address;
     std::string line;
 };
-
-#ifndef ELF_PARSE_H
-#define ELF_PARSE_H
 
 class ElfParser {
 public:
