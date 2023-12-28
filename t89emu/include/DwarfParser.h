@@ -2,12 +2,14 @@
 #define DWARFPARSER_H
 
 #include <map>
+#include <string>
 
 #include "DwarfEncodings.h"
 #include "ElfParser.h"
 
 class CompileUnit;
 class DebugInfoEntry;
+class StringTable;
 
 struct BaseUnitHeader {
     uint32_t unitLength;
@@ -15,6 +17,30 @@ struct BaseUnitHeader {
     uint8_t unitType;
     uint8_t addressSize;
     uint32_t debugAbbrevOffset;
+};
+
+// Data associated with a DIE Attribute Entry
+class DebugData {
+public:
+    DebugData(FormEncoding form);
+    ~DebugData();
+
+    // For reading data from .debug_info byteStream
+    static uint8_t decodeUInt8(const uint8_t **data);
+    static uint16_t decodeUInt16(const uint8_t **data);
+    static uint32_t decodeUInt32(const uint8_t **data);
+    static int64_t decodeLeb128(const uint8_t **data);
+    static size_t decodeULeb128(const uint8_t **data);
+
+    void write(uint8_t *buff, size_t len);
+
+    // Use after parsing .debug_info
+    uint64_t getUInt(void);
+
+private:
+    std::vector<uint8_t> data;
+    bool isString;
+    FormEncoding form;
 };
 
 class AttributeEntry {
@@ -89,7 +115,7 @@ public:
     DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
     ~DebugInfoEntry();
 
-    void addAttribute(AttributeEncoding encoding, size_t field);
+    void addAttribute(AttributeEncoding encoding, DebugData *data);
 
     AbbrevEntry *getAbbrevEntry(void);
     size_t getCode(void);
@@ -102,7 +128,7 @@ private:
     CompileUnit *compileUnit;
     
     AbbrevEntry *abbrevEntry;
-    std::map<AttributeEncoding, size_t> attributes;
+    std::map<AttributeEncoding, DebugData *> attributes; // {Attribute, Data}
 
     std::vector<DebugInfoEntry *> children;
     DebugInfoEntry *parent;
@@ -113,7 +139,8 @@ private:
 
 class CompileUnit {
 public:
-    CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart);
+    CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
+                uint8_t *debugStrStart);
     ~CompileUnit();
 
     AbbrevEntry *getAbbrevEntry(size_t dieCode);
@@ -125,7 +152,7 @@ private:
     void generateDebugInfo(DebugInfoEntry *node);
 
     // Given an attribute's form, read bytes from byteStream accordingly
-    size_t decodeInfo(FormEncoding form);
+    DebugData *decodeInfo(FormEncoding form);
 
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
@@ -133,17 +160,31 @@ private:
     // CU Abbreviation Table
     AbbrevTable *abbrevTable;
 
+    // Debug String Section
+    StringTable *stringTable;
+
     DebugInfoEntry *root;
 
     // Starts at first byte of first DIE entry within CU
     uint8_t *byteStream;
 };
 
+class StringTable {
+public:
+    StringTable(char *debugStr);
+    ~StringTable();
+
+    std::string getString(size_t offset);
+
+private:
+    char *debugStr;
+};
+
 class DwarfParser : public ElfParser {
 public:
     DwarfParser(const char *fileName);
     ~DwarfParser();
-    
+
 private:
     std::vector<CompileUnit *> compileUnits;
 };
