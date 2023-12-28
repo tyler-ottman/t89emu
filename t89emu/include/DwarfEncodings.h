@@ -14,7 +14,7 @@ enum UnitType {
 };
 
 // Tag Encodings
-enum TagEncodings {
+enum TagEncoding {
     DW_TAG_array_type                   = 0x01,
     DW_TAG_class_type,
     DW_TAG_entry_point,
@@ -95,13 +95,13 @@ enum TagEncodings {
 };
 
 // Child Determination Encodings
-enum ChildEncodings {
+enum ChildEncoding {
     DW_CHILDREN_no,
     DW_CHILDREN_yes
 };
 
 // Attribute Encodings
-enum AttributeEncodings {
+enum AttributeEncoding {
     DW_AT_sibling                       = 0x1,
     DW_AT_location,
     DW_AT_name,
@@ -247,7 +247,7 @@ enum AttributeEncodings {
 };
 
 // Attribute Form Encodings
-enum FormEncodings {
+enum FormEncoding {
     DW_FORM_addr                        = 0x01,
     FormReserved0,
     DW_FORM_block2,

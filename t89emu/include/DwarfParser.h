@@ -6,6 +6,9 @@
 #include "DwarfEncodings.h"
 #include "ElfParser.h"
 
+class CompileUnit;
+class DebugInfoEntry;
+
 struct BaseUnitHeader {
     uint32_t unitLength;
     uint16_t version;
@@ -16,16 +19,16 @@ struct BaseUnitHeader {
 
 class AttributeEntry {
 public:
-    AttributeEntry(size_t name, size_t form, size_t special);
+    AttributeEntry(AttributeEncoding name, FormEncoding form, size_t special);
     ~AttributeEntry();
 
-    size_t getName(void);
-    size_t getForm(void);
+    AttributeEncoding getName(void);
+    FormEncoding getForm(void);
     size_t getSpecial(void);
 
 private:
-    size_t name;
-    size_t form;
+    AttributeEncoding name;
+    FormEncoding form;
     size_t special;
 };
 
@@ -73,26 +76,67 @@ public:
     uint8_t getAddressSize(void);
     uint32_t getDebugAbbrevOffset(void);
 
-private:
     struct FullCompileUnitHeader {
         struct BaseUnitHeader base;
     };
 
+private:
     FullCompileUnitHeader header;
+};
+
+class DebugInfoEntry {
+public:
+    DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
+    ~DebugInfoEntry();
+
+    void addAttribute(AttributeEncoding encoding, size_t field);
+
+    AbbrevEntry *getAbbrevEntry(void);
+    size_t getCode(void);
+    DebugInfoEntry *getParent(void);
+
+    void setAbbrevEntry(AbbrevEntry *abbrevEntry);
+    void setCode(size_t dieCode);
+
+private:
+    CompileUnit *compileUnit;
+    
+    AbbrevEntry *abbrevEntry;
+    std::map<AttributeEncoding, size_t> attributes;
+
+    std::vector<DebugInfoEntry *> children;
+    DebugInfoEntry *parent;
+    
+    size_t code;
+    std::string name;
 };
 
 class CompileUnit {
 public:
-    CompileUnit(uint8_t *debugInfoCompileUnitHeader, uint8_t *debugAbbrevStart);
+    CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart);
     ~CompileUnit();
 
+    AbbrevEntry *getAbbrevEntry(size_t dieCode);
+    size_t getAddrSize(void);
     size_t getLength(void);
 
 private:
+    // Recursively create Tree DIE structure in memory
+    void generateDebugInfo(DebugInfoEntry *node);
+
+    // Given an attribute's form, read bytes from byteStream accordingly
+    size_t decodeInfo(FormEncoding form);
+
+    // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
 
-    // Compile Unit Abbreviation Table
+    // CU Abbreviation Table
     AbbrevTable *abbrevTable;
+
+    DebugInfoEntry *root;
+
+    // Starts at first byte of first DIE entry within CU
+    uint8_t *byteStream;
 };
 
 class DwarfParser : public ElfParser {
