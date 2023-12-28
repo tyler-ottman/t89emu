@@ -269,7 +269,7 @@ enum FormEncoding {
     DW_FORM_ref4,
     DW_FORM_ref8,
     DW_FORM_ref_udata,
-    DW_FORM_indirec,
+    DW_FORM_indirect,
     DW_FORM_sec_offset,
     DW_FORM_exprloc,
     DW_FORM_flag_present,

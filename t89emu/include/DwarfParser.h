@@ -26,11 +26,11 @@ public:
     ~DebugData();
 
     // For reading data from .debug_info byteStream
-    static uint8_t decodeUInt8(const uint8_t **data);
-    static uint16_t decodeUInt16(const uint8_t **data);
-    static uint32_t decodeUInt32(const uint8_t **data);
-    static int64_t decodeLeb128(const uint8_t **data);
-    static size_t decodeULeb128(const uint8_t **data);
+    static uint8_t decodeUInt8(uint8_t **data);
+    static uint16_t decodeUInt16(uint8_t **data);
+    static uint32_t decodeUInt32(uint8_t **data);
+    static int64_t decodeLeb128(uint8_t **data);
+    static size_t decodeULeb128(uint8_t **data);
 
     void write(uint8_t *buff, size_t len);
 
@@ -152,7 +152,7 @@ private:
     void generateDebugInfo(DebugInfoEntry *node);
 
     // Given an attribute's form, read bytes from byteStream accordingly
-    DebugData *decodeInfo(FormEncoding form);
+    DebugData *decodeInfo(AttributeEntry *entry);
 
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
