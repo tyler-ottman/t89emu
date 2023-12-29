@@ -31,6 +31,8 @@ public:
     int64_t decodeLeb128(void);
     size_t decodeULeb128(void);
 
+    const uint8_t *getData(void);
+
 private:
     uint8_t *data;
 };
@@ -38,17 +40,19 @@ private:
 // Data associated with a DIE Attribute Entry
 class DebugData {
 public:
-    DebugData(void);
+    DebugData(FormEncoding form);
     ~DebugData();
 
     void write(uint8_t *buff, size_t len);
+    bool isString(void);
 
-    // Use after parsing .debug_info
+    FormEncoding getForm(void);
     uint64_t getUInt(void);
+    const char *getString(void);
 
 private:
     std::vector<uint8_t> data;
-    bool isString;
+    FormEncoding form;
 };
 
 class AttributeEntry {
@@ -126,6 +130,7 @@ public:
     ~DebugInfoEntry();
 
     void addAttribute(AttributeEncoding encoding, DebugData *data);
+    void printEntry(void);
 
     AbbrevEntry *getAbbrevEntry(void);
     size_t getCode(void);
@@ -150,7 +155,7 @@ private:
 class CompileUnit {
 public:
     CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                uint8_t *debugStrStart);
+                uint8_t *debugStrStart, uint8_t *debugLineStrStart);
     ~CompileUnit();
 
     AbbrevEntry *getAbbrevEntry(size_t dieCode);
@@ -164,30 +169,36 @@ private:
     // Given an attribute's form, read bytes from byteStream accordingly
     DebugData *decodeInfo(AttributeEntry *entry);
 
+    void printDebugInfoEntry(DebugInfoEntry *node);
+
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
 
     // CU Abbreviation Table
     AbbrevTable *abbrevTable;
 
-    // Debug String Section
-    StringTable *stringTable;
+    // String Tables (.debug_info, .debug_line_str)
+    StringTable *debugStr;
+    StringTable *debugLineStr;
 
     DebugInfoEntry *root;
 
     // Starts at first byte of first DIE entry within CU
     DataStream *debugStream;
+
+    // Starting address of CU within .debug_info
+    uintptr_t debugStart;
 };
 
 class StringTable {
 public:
-    StringTable(char *debugStr);
+    StringTable(char *tableStart);
     ~StringTable();
 
     std::string getString(size_t offset);
 
 private:
-    char *debugStr;
+    char *tableStart;
 };
 
 class DwarfParser : public ElfParser {

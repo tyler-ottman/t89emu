@@ -54,7 +54,9 @@ size_t DataStream::decodeULeb128() {
     return result;
 }
 
-DebugData::DebugData() {}
+const uint8_t *DataStream::getData() { return data; }
+
+DebugData::DebugData(FormEncoding form) : form(form) {}
 
 DebugData::~DebugData() {}
 
@@ -64,23 +66,78 @@ void DebugData::write(uint8_t *buff, size_t len) {
     }
 }
 
+bool DebugData::isString() {
+    return form == DW_FORM_string || form == DW_FORM_strp ||
+           form == DW_FORM_line_strp;
+}
+
+FormEncoding DebugData::getForm() { return form; }
+
+uint64_t DebugData::getUInt() {
+    uint64_t res = 0;
+
+    switch (form) {
+    case DW_FORM_addr:
+    case DW_FORM_block:
+    case DW_FORM_exprloc:
+    case DW_FORM_data1:
+    case DW_FORM_flag:
+    case DW_FORM_flag_present:
+    case DW_FORM_ref1:
+    case DW_FORM_strx1:
+    case DW_FORM_addrx1:
+    case DW_FORM_data2:
+    case DW_FORM_ref2:
+    case DW_FORM_strx2:
+    case DW_FORM_addrx2:
+    case DW_FORM_strx3:
+    case DW_FORM_addrx3:
+    case DW_FORM_data4:
+    case DW_FORM_ref_addr:
+    case DW_FORM_ref4:
+    case DW_FORM_sec_offset:
+    case DW_FORM_line_strp:
+    case DW_FORM_strx4:
+    case DW_FORM_addrx4:
+    case DW_FORM_data8:
+    case DW_FORM_ref8:
+    case DW_FORM_ref_sig8:
+    case DW_FORM_sdata:
+    case DW_FORM_udata:
+    case DW_FORM_ref_udata: 
+    case DW_FORM_strx:
+    case DW_FORM_addrx:
+    case DW_FORM_loclistx:
+    case DW_FORM_rnglistx:
+    case DW_FORM_implicit_const: {
+        for (size_t i = 0; i < data.size(); i++) {
+            res |= (uint64_t)data[i] << (8*i);
+        }
+        break;
+    }
+
+    default: // FORM does not support reading as int
+        std::cerr << "Unsupported form: " << form << std::endl;
+        exit(1);
+    }
+    return res;
+}
+
+const char *DebugData::getString() {
+    return (new std::string(data.begin(), data.end()))->c_str();
+}
+
 AttributeEntry::AttributeEntry(AttributeEncoding name, FormEncoding form,
                                size_t special)
     : name(name), form(form), special(special) {}
 
 AttributeEntry::~AttributeEntry() {}
 
-AttributeEncoding AttributeEntry::getName() {
-    return name;
-}
+AttributeEncoding AttributeEntry::getName() { return name; }
 
-FormEncoding AttributeEntry::getForm() {
-    return form;
-}
+FormEncoding AttributeEntry::getForm() { return form; }
 
-size_t AttributeEntry::getSpecial() {
-    return special;
-}
+size_t AttributeEntry::getSpecial() { return special; }
 
 AbbrevEntry::AbbrevEntry(size_t dieCode, size_t dieTag, bool hasChild)
     : dieCode(dieCode), dieTag(dieTag), hasChild(hasChild) {}
@@ -97,9 +154,7 @@ void AbbrevEntry::addAttributeEntry(AttributeEntry *attEntry) {
     attEntries.push_back(attEntry);
 }
 
-size_t AbbrevEntry::getNumAttributes(void) {
-    return attEntries.size();
-}
+size_t AbbrevEntry::getNumAttributes(void) { return attEntries.size(); }
 
 AttributeEntry *AbbrevEntry::getAttributeEntry(size_t index) {
     if (index < 0 || index >= attEntries.size()) {
@@ -108,17 +163,11 @@ AttributeEntry *AbbrevEntry::getAttributeEntry(size_t index) {
     return attEntries[index];
 }
 
-size_t AbbrevEntry::getDieCode() {
-    return dieCode;
-}
+size_t AbbrevEntry::getDieCode() { return dieCode; }
 
-size_t AbbrevEntry::getDieTag() {
-    return dieTag;
-}
+size_t AbbrevEntry::getDieTag() { return dieTag; }
 
-bool AbbrevEntry::hasChildren() {
-    return hasChild;
-}
+bool AbbrevEntry::hasChildren() { return hasChild; }
 
 AbbrevTable::AbbrevTable(uint8_t *abbrevTableStart) {
     abbrevData = new DataStream(abbrevTableStart);
@@ -171,21 +220,13 @@ CompileUnitHeader::CompileUnitHeader(uint8_t *debugInfoCompileUnitHeader) {
 
 CompileUnitHeader::~CompileUnitHeader() {}
 
-uint32_t CompileUnitHeader::getUnitLength() {
-    return header.base.unitLength;
-}
+uint32_t CompileUnitHeader::getUnitLength() { return header.base.unitLength; }
 
-uint16_t CompileUnitHeader::getUnitVersion() {
-    return header.base.version;
-}
+uint16_t CompileUnitHeader::getUnitVersion() { return header.base.version; }
 
-uint8_t CompileUnitHeader::getUnitType() {
-    return header.base.unitType;
-}
+uint8_t CompileUnitHeader::getUnitType() { return header.base.unitType; }
 
-uint8_t CompileUnitHeader::getAddressSize() {
-    return header.base.addressSize;
-}
+uint8_t CompileUnitHeader::getAddressSize() { return header.base.addressSize; }
 
 uint32_t CompileUnitHeader::getDebugAbbrevOffset() {
     return header.base.debugAbbrevOffset;
@@ -204,35 +245,42 @@ void DebugInfoEntry::addAttribute(AttributeEncoding encoding, DebugData *data) {
     attributes.insert({encoding, data});
 }
 
-AbbrevEntry *DebugInfoEntry::getAbbrevEntry() {
-    return abbrevEntry;
+void DebugInfoEntry::printEntry() {
+    printf("\nCode: 0x%lx, TAG: 0x%lx\n", code, abbrevEntry->getDieTag());
+    for (size_t i = 0; i < abbrevEntry->getNumAttributes(); i++) {
+        // Use abbrevEntry so attributes printed in correct order
+        AttributeEntry *attEntry = abbrevEntry->getAttributeEntry(i);
+        printf("\tAT: 0x%04lx, FORM: 0x%02lx, ", (size_t)attEntry->getName(),
+               (size_t)attEntry->getForm());
+        DebugData *data = attributes[attEntry->getName()];
+        if (data->isString()) { printf("str: %s\n", data->getString()); }
+        else { printf("val: %lx\n", data->getUInt()); }
+    }
 }
 
-size_t DebugInfoEntry::getCode() {
-    return code;
-}
+AbbrevEntry *DebugInfoEntry::getAbbrevEntry() { return abbrevEntry; }
 
-DebugInfoEntry *DebugInfoEntry::getParent() {
-    return parent;
-}
+size_t DebugInfoEntry::getCode() { return code; }
+
+DebugInfoEntry *DebugInfoEntry::getParent() { return parent; }
 
 void DebugInfoEntry::setAbbrevEntry(AbbrevEntry *abbrevEntry) {
     this->abbrevEntry = abbrevEntry;
 }
 
-void DebugInfoEntry::setCode(size_t dieCode) {
-    code = dieCode;
-}
+void DebugInfoEntry::setCode(size_t dieCode) { code = dieCode; }
 
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                         uint8_t *debugStrStart) {
+                         uint8_t *debugStrStart, uint8_t *debugLineStrStart) {
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
     abbrevTable = new AbbrevTable(debugAbbrevStart +
                                   compileUnitHeader->getDebugAbbrevOffset());
     size_t headerLen = sizeof(CompileUnitHeader::FullCompileUnitHeader);
     debugStream = new DataStream(debugInfoCUHeader + headerLen);
     root = new DebugInfoEntry(this, nullptr);
-    stringTable = new StringTable((char *)debugStrStart);
+    debugStr = new StringTable((char *)debugStrStart);
+    debugLineStr = new StringTable((char *)debugLineStrStart);
+    debugStart = (uintptr_t)debugInfoCUHeader;
 
     generateDebugInfo(root);
 }
@@ -269,20 +317,25 @@ void CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     ASSERT(dieAbbrevEntry, "dieAbbrevEntry not found\n");
     for (size_t i = 0; i < dieAbbrevEntry->getNumAttributes(); i++) {
         AttributeEntry *attEntry = dieAbbrevEntry->getAttributeEntry(i);
-        // DebugData *data = decodeInfo(attEntry);
-        // node->addAttribute(attEntry->getName(), data);
+        DebugData *data = decodeInfo(attEntry);
+        node->addAttribute(attEntry->getName(), data);
     }
 
+    node->printEntry();
+
     // Next DIE node is child, sibling, or null entry
-    // DebugInfoEntry *next = new DebugInfoEntry(
-    //     this, dieAbbrevEntry->hasChildren() ? node : node->getParent());
+    DebugInfoEntry *next = new DebugInfoEntry(
+        this, dieAbbrevEntry->hasChildren() ? node : node->getParent());
     
-    // generateDebugInfo(next);
+    // Check if end of CU reached
+    if ((uintptr_t)debugStream->getData() != debugStart + getLength()) {
+        generateDebugInfo(next);
+    }
 }
 
 DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
     FormEncoding form = entry->getForm();
-    DebugData *dieData = new DebugData();
+    DebugData *dieData = new DebugData(form);
     size_t streamLen = 0;
 
     switch (form) {    
@@ -324,7 +377,6 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
     case DW_FORM_ref_addr:
     case DW_FORM_ref4:
     case DW_FORM_sec_offset:
-    case DW_FORM_line_strp:
     case DW_FORM_strx4:
     case DW_FORM_addrx4: streamLen = 4; break;
     
@@ -351,9 +403,13 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
         break;
     }
 
-    case DW_FORM_strp: { // Read offset, then copy string from .debug_str
+     // Read offset, copy string from either .debug_str or .debug_line_str
+    case DW_FORM_strp: {
+    case DW_FORM_line_strp:
         int offset = debugStream->decodeUInt32();
-        std::string str = stringTable->getString(offset);
+
+        StringTable *strTable = form == DW_FORM_strp ? debugStr : debugLineStr;
+        std::string str = strTable->getString(offset);
         dieData->write((uint8_t *)str.c_str(), str.size());
         break;
     }
@@ -384,18 +440,18 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
         dieData->write(&byte, sizeof(byte));
     }
 
-    return nullptr;
+    return dieData;
 }
 
-StringTable::StringTable(char *debugStr) : debugStr(debugStr) {}
+StringTable::StringTable(char *tableStart) : tableStart(tableStart) {}
 
 StringTable::~StringTable() {}
 
 std::string StringTable::getString(size_t offset) {
     std::string res;
-    
-    for (int i = offset; debugStr[i] != '\0'; i++) {
-        res += debugStr[i];
+
+    for (int i = offset; tableStart[i] != '\0'; i++) {
+        res += tableStart[i];
     }
 
     return res;
@@ -404,12 +460,19 @@ std::string StringTable::getString(size_t offset) {
 DwarfParser::DwarfParser(const char *fileName)
     : ElfParser::ElfParser(fileName) {
     const ElfSectionHeader *debugInfoHeader = getSectionHeader(".debug_info");
-    uint8_t *debugInfoCUHeader = elfFileInfo->elfData + debugInfoHeader->offset;
+    const ElfSectionHeader *debugAbbrevHeader =
+        getSectionHeader(".debug_abbrev");
+    const ElfSectionHeader *debugStrHeader = getSectionHeader(".debug_str");
+    const ElfSectionHeader *debugLineStrHeader =
+        getSectionHeader(".debug_line_str");
+
+    uint8_t *fileStart = elfFileInfo->elfData;
+
+    uint8_t *debugInfoCUHeader = fileStart + debugInfoHeader->offset;
     uint8_t *debugInfoEnd = debugInfoCUHeader + debugInfoHeader->size;
-    uint8_t *debugAbbrevStart =
-        elfFileInfo->elfData + getSectionHeader(".debug_abbrev")->offset;
-    uint8_t *debugStrStart =
-        elfFileInfo->elfData + getSectionHeader(".debug_str")->offset;
+    uint8_t *debugAbbrevStart = fileStart + debugAbbrevHeader->offset;
+    uint8_t *debugStrStart = fileStart + debugStrHeader->offset;
+    uint8_t *debugLineStrStart = fileStart + debugLineStrHeader->offset;
 
     // Initialize Compile Units
     for (;;) {
@@ -418,8 +481,8 @@ DwarfParser::DwarfParser(const char *fileName)
             break;
         }
 
-        CompileUnit *compileUnit =
-            new CompileUnit(debugInfoCUHeader, debugAbbrevStart, debugStrStart);
+        CompileUnit *compileUnit = new CompileUnit(debugInfoCUHeader,
+            debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
 
         // Point to next CU Header
