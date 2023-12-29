@@ -130,6 +130,7 @@ public:
     ~DebugInfoEntry();
 
     void addAttribute(AttributeEncoding encoding, DebugData *data);
+    void addChild(DebugInfoEntry *child);
     void printEntry(void);
 
     AbbrevEntry *getAbbrevEntry(void);
@@ -164,7 +165,7 @@ public:
 
 private:
     // Recursively create Tree DIE structure in memory
-    void generateDebugInfo(DebugInfoEntry *node);
+    DebugInfoEntry *generateDebugInfo(DebugInfoEntry *node);
 
     // Given an attribute's form, read bytes from byteStream accordingly
     DebugData *decodeInfo(AttributeEntry *entry);

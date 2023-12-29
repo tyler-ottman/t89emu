@@ -245,6 +245,10 @@ void DebugInfoEntry::addAttribute(AttributeEncoding encoding, DebugData *data) {
     attributes.insert({encoding, data});
 }
 
+void DebugInfoEntry::addChild(DebugInfoEntry *child) {
+    children.push_back(child);
+}
+
 void DebugInfoEntry::printEntry() {
     printf("\nCode: 0x%lx, TAG: 0x%lx\n", code, abbrevEntry->getDieTag());
     for (size_t i = 0; i < abbrevEntry->getNumAttributes(); i++) {
@@ -303,11 +307,11 @@ size_t CompileUnit::getLength() {
     return 4 + compileUnitHeader->getUnitLength();
 }
 
-void CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
+DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     size_t code = debugStream->decodeULeb128();
     if (code == 0) { // End of siblings, travel back up tree
         delete node;
-        return;
+        return nullptr;
     }
 
     node->setCode(code);
@@ -323,14 +327,20 @@ void CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
 
     node->printEntry();
 
-    // Next DIE node is child, sibling, or null entry
-    DebugInfoEntry *next = new DebugInfoEntry(
-        this, dieAbbrevEntry->hasChildren() ? node : node->getParent());
-    
-    // Check if end of CU reached
-    if ((uintptr_t)debugStream->getData() != debugStart + getLength()) {
-        generateDebugInfo(next);
+    // Check if end of CU reached or if leaf node
+    if (((uintptr_t)debugStream->getData() == debugStart + getLength())) {
+        return nullptr;
+    } else if (!dieAbbrevEntry->hasChildren()) {
+        return node;
     }
+
+    // Traverse child subtrees
+    DebugInfoEntry *child;
+    while ((child = generateDebugInfo(new DebugInfoEntry(this, node)))) {
+        node->addChild(child);
+    }
+
+    return node;    
 }
 
 DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
