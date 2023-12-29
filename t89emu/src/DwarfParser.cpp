@@ -1,37 +1,34 @@
 #include "DwarfParser.h"
 
-DebugData::DebugData(FormEncoding form) : form(form) {}
+DataStream::DataStream(uint8_t *data) : data(data) {}
 
-DebugData::~DebugData() {}
+DataStream::~DataStream() {}
 
-uint8_t DebugData::decodeUInt8(uint8_t **data) {
-    const uint8_t *bytes = *data;
-    uint16_t res = bytes[0];
-    (*data)++;
+uint8_t DataStream::decodeUInt8() {
+    uint16_t res = data[0];
+    data++;
     return res;
 }
 
-uint16_t DebugData::decodeUInt16(uint8_t **data) {
-    const uint8_t *bytes = *data;
-    uint16_t res = bytes[0] | bytes[1] << 8;
-    *data += 2;
+uint16_t DataStream::decodeUInt16() {
+    uint16_t res = data[0] | data[1] << 8;
+    data += 2;
     return res;
 }
 
-uint32_t DebugData::decodeUInt32(uint8_t **data) {
-    const uint8_t *bytes = *data;
-    uint16_t res = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
-    *data += 4;
+uint32_t DataStream::decodeUInt32() {
+    uint16_t res = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
+    data += 4;
     return res;
 }
 
-int64_t DebugData::decodeLeb128(uint8_t **data) {
+int64_t DataStream::decodeLeb128() {
     size_t result = 0;
     size_t shift = 0;
     uint8_t byte;
     
     for (;;) {
-        byte = *(*data)++;
+        byte = *(data++);
         result |= (0x7f & byte) << shift;
         shift += 7;
         if ((0x80 & byte) == 0) { break; }
@@ -44,18 +41,22 @@ int64_t DebugData::decodeLeb128(uint8_t **data) {
     return result;
 }
 
-size_t DebugData::decodeULeb128(uint8_t **data) {
+size_t DataStream::decodeULeb128() {
     size_t result = 0;
     size_t shift = 0;
     
     for (;;) {
-        result |= (0x7f & **data) << shift;
-        if (!(0x80 & *(*data)++)) { break; }
+        result |= (0x7f & *data) << shift;
+        if (!(0x80 & *(data++))) { break; }
         shift += 7;
     }
 
     return result;
 }
+
+DebugData::DebugData() {}
+
+DebugData::~DebugData() {}
 
 void DebugData::write(uint8_t *buff, size_t len) {
     for (size_t i = 0; i < len; i++) {
@@ -120,26 +121,25 @@ bool AbbrevEntry::hasChildren() {
 }
 
 AbbrevTable::AbbrevTable(uint8_t *abbrevTableStart) {
-    uint8_t *abbrevData = abbrevTableStart;
+    abbrevData = new DataStream(abbrevTableStart);
 
     for (;;) {
-        size_t dieCode = DebugData::decodeULeb128(&abbrevData);
+        size_t dieCode = abbrevData->decodeULeb128();
         if (dieCode == 0) { // End of Compile Unit
             break;
         }
 
-        size_t dieTag = DebugData::decodeULeb128(&abbrevData);
-        size_t hasChild = DebugData::decodeULeb128(&abbrevData);
+        size_t dieTag = abbrevData->decodeULeb128();
+        size_t hasChild = abbrevData->decodeULeb128();
         AbbrevEntry *abbrevEntry = new AbbrevEntry(dieCode, dieTag, hasChild);
 
         for (;;) {
             AttributeEncoding name =
-                (AttributeEncoding)DebugData::decodeULeb128(&abbrevData);
-            FormEncoding form =
-                (FormEncoding)DebugData::decodeULeb128(&abbrevData);
+                (AttributeEncoding)abbrevData->decodeULeb128();
+            FormEncoding form = (FormEncoding)abbrevData->decodeULeb128();
             if (name == 0 && form == 0) { break; }
             size_t special = (form == DW_FORM_implicit_const)
-                             ? DebugData::decodeULeb128(&abbrevData) : 0;
+                             ? abbrevData->decodeULeb128() : 0;
 
             abbrevEntry->addAttributeEntry(
                 new AttributeEntry(name, form, special));
@@ -154,6 +154,8 @@ AbbrevTable::~AbbrevTable() {
         delete abbrevEntry.second;
     }
     abbrevEntries.clear();
+
+    delete abbrevData;
 }
 
 AbbrevEntry *AbbrevTable::getAbbrevEntry(size_t dieCode) {
@@ -227,10 +229,11 @@ CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
     abbrevTable = new AbbrevTable(debugAbbrevStart +
                                   compileUnitHeader->getDebugAbbrevOffset());
-    byteStream =
-        debugInfoCUHeader + sizeof(CompileUnitHeader::FullCompileUnitHeader);
+    size_t headerLen = sizeof(CompileUnitHeader::FullCompileUnitHeader);
+    debugStream = new DataStream(debugInfoCUHeader + headerLen);
     root = new DebugInfoEntry(this, nullptr);
     stringTable = new StringTable((char *)debugStrStart);
+
     generateDebugInfo(root);
 }
 
@@ -253,7 +256,7 @@ size_t CompileUnit::getLength() {
 }
 
 void CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
-    size_t code = DebugData::decodeULeb128(&byteStream);
+    size_t code = debugStream->decodeULeb128();
     if (code == 0) { // End of siblings, travel back up tree
         delete node;
         return;
@@ -279,7 +282,7 @@ void CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
 
 DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
     FormEncoding form = entry->getForm();
-    DebugData *dieData = new DebugData(form);
+    DebugData *dieData = new DebugData();
     size_t streamLen = 0;
 
     switch (form) {    
@@ -289,20 +292,19 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
     
     case DW_FORM_block: // Read ULEB128 length, then block
     case DW_FORM_exprloc:
-        streamLen = DebugData::decodeULeb128(&byteStream);
+        streamLen = debugStream->decodeULeb128();
         break;
     case DW_FORM_block1: // Read 1-byte length, then block
-        streamLen = DebugData::decodeUInt8(&byteStream);
+        streamLen = debugStream->decodeUInt8();
         break;
     case DW_FORM_block2: // Read 2-byte length, then block
-        streamLen = DebugData::decodeUInt16(&byteStream);
+        streamLen = debugStream->decodeUInt16();
         break;
     case DW_FORM_block4: // Read 4-byte length, then block
-        streamLen = DebugData::decodeUInt32(&byteStream);
+        streamLen = debugStream->decodeUInt32();
         break;
 
-    case DW_FORM_flag_present: // Read 0-byte integer
-        break;
+    case DW_FORM_flag_present: break; // Read 0-byte integer
 
     case DW_FORM_data1: // Read 1-byte integer
     case DW_FORM_flag:
@@ -331,37 +333,38 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
     case DW_FORM_ref_sig8: streamLen = 8; break;
     
     case DW_FORM_data16: streamLen = 16; break; // Read 16-byte integer
-        
 
-    // Read LEB128
-    case DW_FORM_sdata: {
-        int64_t value = DebugData::decodeLeb128(&byteStream);
+    case DW_FORM_sdata: { // Read LEB128
+        int64_t value = debugStream->decodeLeb128();
         dieData->write((uint8_t *)&value, sizeof(int64_t));
         break;
     }
 
-    // Read ULEB128
-    case DW_FORM_udata: 
+    case DW_FORM_udata: // Read ULEB128
     case DW_FORM_ref_udata: 
     case DW_FORM_strx:
     case DW_FORM_addrx:
     case DW_FORM_loclistx:
     case DW_FORM_rnglistx: {
-        uint64_t value = DebugData::decodeULeb128(&byteStream);
+        uint64_t value = debugStream->decodeULeb128();
         dieData->write((uint8_t *)&value, sizeof(uint64_t));
         break;
     }
 
     case DW_FORM_strp: { // Read offset, then copy string from .debug_str
-        int offset = DebugData::decodeUInt32(&byteStream);
+        int offset = debugStream->decodeUInt32();
         std::string str = stringTable->getString(offset);
         dieData->write((uint8_t *)str.c_str(), str.size());
         break;
     }
 
-    case DW_FORM_string: // Read string directly from DIE
-        for (; byteStream[streamLen] != '\0'; streamLen++) {}
+    case DW_FORM_string: { // Read string directly from DIE
+        uint8_t c;
+        while ((c = debugStream->decodeUInt8()) != '\0') {
+            dieData->write(&c, sizeof(uint8_t));
+        }
         break;
+    }
 
     case DW_FORM_implicit_const: {// special value is attribute value
         size_t value = entry->getSpecial();
@@ -369,10 +372,16 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
         break;
     }
 
-    default:
+    default: // indirect, ref_sup4, strp_sup, ref_sup8
         std::cerr << "Unsupported form: " << form << std::endl;
         exit(0);
         break;
+    }
+
+    // If streamLen is used by a FORM, directly write bytes from debugStream
+    for (; streamLen > 0; streamLen--) {
+        uint8_t byte = debugStream->decodeUInt8();
+        dieData->write(&byte, sizeof(byte));
     }
 
     return nullptr;

@@ -19,18 +19,27 @@ struct BaseUnitHeader {
     uint32_t debugAbbrevOffset;
 };
 
+class DataStream {
+public:
+    DataStream(uint8_t *data);
+    ~DataStream();
+
+    // For reading data from byteStream
+    uint8_t decodeUInt8(void);
+    uint16_t decodeUInt16(void);
+    uint32_t decodeUInt32(void);
+    int64_t decodeLeb128(void);
+    size_t decodeULeb128(void);
+
+private:
+    uint8_t *data;
+};
+
 // Data associated with a DIE Attribute Entry
 class DebugData {
 public:
-    DebugData(FormEncoding form);
+    DebugData(void);
     ~DebugData();
-
-    // For reading data from .debug_info byteStream
-    static uint8_t decodeUInt8(uint8_t **data);
-    static uint16_t decodeUInt16(uint8_t **data);
-    static uint32_t decodeUInt32(uint8_t **data);
-    static int64_t decodeLeb128(uint8_t **data);
-    static size_t decodeULeb128(uint8_t **data);
 
     void write(uint8_t *buff, size_t len);
 
@@ -40,7 +49,6 @@ public:
 private:
     std::vector<uint8_t> data;
     bool isString;
-    FormEncoding form;
 };
 
 class AttributeEntry {
@@ -88,6 +96,8 @@ public:
 
 private:
     std::map<size_t, AbbrevEntry *> abbrevEntries;
+
+    DataStream *abbrevData;
 };
 
 // Compile Unit Header in .debug_info
@@ -166,7 +176,7 @@ private:
     DebugInfoEntry *root;
 
     // Starts at first byte of first DIE entry within CU
-    uint8_t *byteStream;
+    DataStream *debugStream;
 };
 
 class StringTable {
