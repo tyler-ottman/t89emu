@@ -139,7 +139,7 @@ FormEncoding AttributeEntry::getForm() { return form; }
 
 size_t AttributeEntry::getSpecial() { return special; }
 
-AbbrevEntry::AbbrevEntry(size_t dieCode, size_t dieTag, bool hasChild)
+AbbrevEntry::AbbrevEntry(size_t dieCode, TagEncoding dieTag, bool hasChild)
     : dieCode(dieCode), dieTag(dieTag), hasChild(hasChild) {}
 
 AbbrevEntry::~AbbrevEntry() {
@@ -165,7 +165,7 @@ AttributeEntry *AbbrevEntry::getAttributeEntry(size_t index) {
 
 size_t AbbrevEntry::getDieCode() { return dieCode; }
 
-size_t AbbrevEntry::getDieTag() { return dieTag; }
+TagEncoding AbbrevEntry::getDieTag() { return dieTag; }
 
 bool AbbrevEntry::hasChildren() { return hasChild; }
 
@@ -178,7 +178,7 @@ AbbrevTable::AbbrevTable(uint8_t *abbrevTableStart) {
             break;
         }
 
-        size_t dieTag = abbrevData->decodeULeb128();
+        TagEncoding dieTag = (TagEncoding)abbrevData->decodeULeb128();
         size_t hasChild = abbrevData->decodeULeb128();
         AbbrevEntry *abbrevEntry = new AbbrevEntry(dieCode, dieTag, hasChild);
 
@@ -250,15 +250,15 @@ void DebugInfoEntry::addChild(DebugInfoEntry *child) {
 }
 
 void DebugInfoEntry::printEntry() {
-    printf("\nCode: 0x%lx, TAG: 0x%lx\n", code, abbrevEntry->getDieTag());
+    printf("\nCode: 0x%02lx %s\n", code, printTag(abbrevEntry->getDieTag()));
     for (size_t i = 0; i < abbrevEntry->getNumAttributes(); i++) {
         // Use abbrevEntry so attributes printed in correct order
         AttributeEntry *attEntry = abbrevEntry->getAttributeEntry(i);
-        printf("\tAT: 0x%04lx, FORM: 0x%02lx, ", (size_t)attEntry->getName(),
-               (size_t)attEntry->getForm());
+        printf("\t%-30s%-23s", printAttribute(attEntry->getName()),
+               printForm(attEntry->getForm()));
         DebugData *data = attributes[attEntry->getName()];
-        if (data->isString()) { printf("str: %s\n", data->getString()); }
-        else { printf("val: %lx\n", data->getUInt()); }
+        if (data->isString()) { printf("(%s)\n", data->getString()); }
+        else { printf("(%lx)\n", data->getUInt()); }
     }
 }
 

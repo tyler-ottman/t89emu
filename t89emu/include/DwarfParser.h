@@ -72,7 +72,7 @@ private:
 
 class AbbrevEntry {
 public:
-    AbbrevEntry(size_t dieCode, size_t dieTag, bool hasChild);
+    AbbrevEntry(size_t dieCode, TagEncoding dieTag, bool hasChild);
     ~AbbrevEntry();
 
     void addAttributeEntry(AttributeEntry *attEntry);
@@ -80,12 +80,12 @@ public:
     size_t getNumAttributes(void);
     AttributeEntry *getAttributeEntry(size_t index);
     size_t getDieCode(void);
-    size_t getDieTag(void);
+    TagEncoding getDieTag(void);
     bool hasChildren(void);
 
 private:
     size_t dieCode;
-    size_t dieTag;
+    TagEncoding dieTag;
     bool hasChild;
 
     std::vector<AttributeEntry *> attEntries;
