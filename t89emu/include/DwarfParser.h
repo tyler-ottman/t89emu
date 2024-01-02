@@ -2,12 +2,15 @@
 #define DWARFPARSER_H
 
 #include <map>
+#include <memory>
+#include <stack>
 #include <string>
 
 #include "DwarfEncodings.h"
 #include "ElfParser.h"
 
 class CompileUnit;
+class DebugData;
 class DebugInfoEntry;
 class StringTable;
 
@@ -19,9 +22,22 @@ struct BaseUnitHeader {
     uint32_t debugAbbrevOffset;
 };
 
+// For processing Dwarf Expressions
+class StackMachine {
+public:
+    StackMachine(void);
+    ~StackMachine();
+
+    uint32_t processExpression(DebugData *expr);
+
+private:
+    std::stack<uint32_t> stack;
+};
+
 class DataStream {
 public:
-    DataStream(uint8_t *data);
+    DataStream(const uint8_t *data, size_t streamLen);
+    DataStream(const uint8_t *data);
     ~DataStream();
 
     // For reading data from byteStream
@@ -31,10 +47,13 @@ public:
     int64_t decodeLeb128(void);
     size_t decodeULeb128(void);
 
+    bool isStreamable(void);
     const uint8_t *getData(void);
 
 private:
-    uint8_t *data;
+    const uint8_t *data;
+    size_t index;
+    size_t streamLen;
 };
 
 // Data associated with a DIE Attribute Entry
@@ -46,8 +65,10 @@ public:
     void write(uint8_t *buff, size_t len);
     bool isString(void);
 
+    const uint8_t *getData(void);
     FormEncoding getForm(void);
     uint64_t getUInt(void);
+    size_t getLen(void);
     const char *getString(void);
 
 private:
@@ -115,12 +136,13 @@ public:
     uint8_t getUnitType(void);
     uint8_t getAddressSize(void);
     uint32_t getDebugAbbrevOffset(void);
+    size_t getHeaderLen(void);
 
+private:
     struct FullCompileUnitHeader {
         struct BaseUnitHeader base;
     };
 
-private:
     FullCompileUnitHeader header;
 };
 
@@ -134,6 +156,7 @@ public:
     void printEntry(void);
 
     AbbrevEntry *getAbbrevEntry(void);
+    DebugData *getAttribute(AttributeEncoding attribute);
     size_t getCode(void);
     DebugInfoEntry *getParent(void);
 
@@ -141,6 +164,8 @@ public:
     void setCode(size_t dieCode);
 
 private:
+    void processLocation(void);
+
     CompileUnit *compileUnit;
     
     AbbrevEntry *abbrevEntry;
@@ -148,9 +173,13 @@ private:
 
     std::vector<DebugInfoEntry *> children;
     DebugInfoEntry *parent;
-    
+
+    // StackMachine *exprloc;
+    // uint32_t location;
+    // bool isAddress; // location is address or offset
+
     size_t code;
-    std::string name;
+    // std::string name;
 };
 
 class CompileUnit {
@@ -170,10 +199,10 @@ private:
     // Given an attribute's form, read bytes from byteStream accordingly
     DebugData *decodeInfo(AttributeEntry *entry);
 
-    void printDebugInfoEntry(DebugInfoEntry *node);
-
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
+    size_t compileUnitLen; // Compile Unit Header + payload
+    size_t headerLen;
 
     // CU Abbreviation Table
     AbbrevTable *abbrevTable;

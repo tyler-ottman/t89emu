@@ -1,24 +1,54 @@
 #include "DwarfParser.h"
 
-DataStream::DataStream(uint8_t *data) : data(data) {}
+StackMachine::StackMachine() {}
+
+StackMachine::~StackMachine() {}
+
+uint32_t StackMachine::processExpression(DebugData *expression) {
+    DataStream exprStream(expression->getData(), expression->getLen());
+    
+    while (exprStream.isStreamable()) {
+        uint8_t operation = exprStream.decodeUInt8();
+        switch (operation) {
+        case DW_OP_addr: // Location of static variable
+            stack.push(exprStream.decodeUInt32());
+            break;
+        case DW_OP_fbreg:
+            stack.push(exprStream.decodeLeb128());
+            break;
+        default:
+            printf("StackMachine: Unknown OP: 0x%x\n", operation);
+            exit(1);
+        }
+    }
+
+    return stack.top();
+}
+
+DataStream::DataStream(const uint8_t *data, size_t streamLen)
+    : data(data), index(0), streamLen(streamLen) {}
+
+DataStream::DataStream(const uint8_t *data)
+    : data(data), index(0), streamLen(-1) {}
 
 DataStream::~DataStream() {}
 
 uint8_t DataStream::decodeUInt8() {
-    uint16_t res = data[0];
-    data++;
+    uint8_t res = data[index];
+    index++;
     return res;
 }
 
 uint16_t DataStream::decodeUInt16() {
-    uint16_t res = data[0] | data[1] << 8;
-    data += 2;
+    uint16_t res = data[index] | data[index + 1] << 8;
+    index += 2;
     return res;
 }
 
 uint32_t DataStream::decodeUInt32() {
-    uint16_t res = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
-    data += 4;
+    uint32_t res = data[index] | data[index + 1] << 8 | data[index + 2] << 16 |
+                   data[index + 3] << 24;
+    index += 4;
     return res;
 }
 
@@ -28,7 +58,7 @@ int64_t DataStream::decodeLeb128() {
     uint8_t byte;
     
     for (;;) {
-        byte = *(data++);
+        byte = data[index++];
         result |= (0x7f & byte) << shift;
         shift += 7;
         if ((0x80 & byte) == 0) { break; }
@@ -46,13 +76,15 @@ size_t DataStream::decodeULeb128() {
     size_t shift = 0;
     
     for (;;) {
-        result |= (0x7f & *data) << shift;
-        if (!(0x80 & *(data++))) { break; }
+        result |= (0x7f & data[index]) << shift;
+        if (!(0x80 & data[index++])) { break; }
         shift += 7;
     }
 
     return result;
 }
+
+bool DataStream::isStreamable() { return index < streamLen; }
 
 const uint8_t *DataStream::getData() { return data; }
 
@@ -70,6 +102,8 @@ bool DebugData::isString() {
     return form == DW_FORM_string || form == DW_FORM_strp ||
            form == DW_FORM_line_strp;
 }
+
+const uint8_t *DebugData::getData() { return data.data(); }
 
 FormEncoding DebugData::getForm() { return form; }
 
@@ -122,6 +156,8 @@ uint64_t DebugData::getUInt() {
     }
     return res;
 }
+
+size_t DebugData::getLen() { return data.size(); }
 
 const char *DebugData::getString() {
     return (new std::string(data.begin(), data.end()))->c_str();
@@ -232,6 +268,10 @@ uint32_t CompileUnitHeader::getDebugAbbrevOffset() {
     return header.base.debugAbbrevOffset;
 }
 
+size_t CompileUnitHeader::getHeaderLen() {
+    return sizeof(FullCompileUnitHeader);
+}
+
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
     : compileUnit(compileUnit), parent(parent), code(0) {}
 
@@ -243,6 +283,16 @@ DebugInfoEntry::~DebugInfoEntry() {
 
 void DebugInfoEntry::addAttribute(AttributeEncoding encoding, DebugData *data) {
     attributes.insert({encoding, data});
+
+    // switch (encoding) {
+    // case DW_AT_location:
+    //     processLocation();
+    //     break;
+    // case DW_AT_name:
+    //     name = std::string(data->getString());
+    //     break;
+    // default: break;
+    // }
 }
 
 void DebugInfoEntry::addChild(DebugInfoEntry *child) {
@@ -262,7 +312,23 @@ void DebugInfoEntry::printEntry() {
     }
 }
 
+void DebugInfoEntry::processLocation() {
+    // DebugData *locInfo = getAttribute(DW_AT_location);
+    // if (locInfo->getForm() == DW_FORM_exprloc) {
+    //     exprloc = new StackMachine();
+
+    //     location = exprloc->processExpression(locInfo);
+    // } else {
+    //     // loclist
+    // }
+}
+
 AbbrevEntry *DebugInfoEntry::getAbbrevEntry() { return abbrevEntry; }
+
+DebugData *DebugInfoEntry::getAttribute(AttributeEncoding attribute) {
+    return (attributes.find(attribute) != attributes.end())
+            ? attributes[attribute] : nullptr;
+}
 
 size_t DebugInfoEntry::getCode() { return code; }
 
@@ -277,10 +343,14 @@ void DebugInfoEntry::setCode(size_t dieCode) { code = dieCode; }
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
                          uint8_t *debugStrStart, uint8_t *debugLineStrStart) {
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
-    abbrevTable = new AbbrevTable(debugAbbrevStart +
-                                  compileUnitHeader->getDebugAbbrevOffset());
-    size_t headerLen = sizeof(CompileUnitHeader::FullCompileUnitHeader);
-    debugStream = new DataStream(debugInfoCUHeader + headerLen);
+    // size of length-field (4 bytes) + Rest of CU Header + DIEs
+    compileUnitLen = 4 + compileUnitHeader->getUnitLength();
+    headerLen = compileUnitHeader->getHeaderLen();
+
+    abbrevTable = new AbbrevTable(debugAbbrevStart
+                                  + compileUnitHeader->getDebugAbbrevOffset());
+    debugStream = new DataStream(debugInfoCUHeader + headerLen,
+                                 compileUnitLen - headerLen);
     root = new DebugInfoEntry(this, nullptr);
     debugStr = new StringTable((char *)debugStrStart);
     debugLineStr = new StringTable((char *)debugLineStrStart);
@@ -302,10 +372,7 @@ size_t CompileUnit::getAddrSize() {
     return compileUnitHeader->getAddressSize();
 }
 
-size_t CompileUnit::getLength() {
-    // size of length-field (4 bytes) + Rest of CU Header + DIEs
-    return 4 + compileUnitHeader->getUnitLength();
-}
+size_t CompileUnit::getLength() { return compileUnitLen; }
 
 DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     size_t code = debugStream->decodeULeb128();
@@ -313,7 +380,7 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
         delete node;
         return nullptr;
     }
-
+    
     node->setCode(code);
     node->setAbbrevEntry(getAbbrevEntry(node->getCode()));
     
@@ -325,10 +392,10 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
         node->addAttribute(attEntry->getName(), data);
     }
 
-    node->printEntry();
+    // node->printEntry();
 
     // Check if end of CU reached or if leaf node
-    if (((uintptr_t)debugStream->getData() == debugStart + getLength())) {
+    if (!debugStream->isStreamable()) {
         return nullptr;
     } else if (!dieAbbrevEntry->hasChildren()) {
         return node;
@@ -490,7 +557,7 @@ DwarfParser::DwarfParser(const char *fileName)
         if ((uintptr_t)debugInfoCUHeader >= ((uintptr_t)debugInfoEnd)) {
             break;
         }
-
+        
         CompileUnit *compileUnit = new CompileUnit(debugInfoCUHeader,
             debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
