@@ -1,6 +1,6 @@
 #include "DwarfParser.h"
 
-StackMachine::StackMachine() {}
+StackMachine::StackMachine() : opType(DW_OP_null) {}
 
 StackMachine::~StackMachine() {}
 
@@ -9,6 +9,8 @@ uint32_t StackMachine::processExpression(DebugData *expression) {
     
     while (exprStream.isStreamable()) {
         uint8_t operation = exprStream.decodeUInt8();
+        opType = opType == DW_OP_null ? (OperationEncoding)operation : opType;
+
         switch (operation) {
         case DW_OP_addr: // Location of static variable
             stack.push(exprStream.decodeUInt32());
@@ -24,6 +26,8 @@ uint32_t StackMachine::processExpression(DebugData *expression) {
 
     return stack.top();
 }
+
+OperationEncoding StackMachine::getType() { return opType; }
 
 DataStream::DataStream(const uint8_t *data, size_t streamLen)
     : data(data), index(0), streamLen(streamLen) {}
@@ -272,6 +276,52 @@ size_t CompileUnitHeader::getHeaderLen() {
     return sizeof(FullCompileUnitHeader);
 }
 
+Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
+    // Check if variable has name
+    DebugData *attEntry = debugEntry->getAttribute(DW_AT_name);
+    if (attEntry) {
+        name = attEntry->getString();
+    }
+
+    if(debugEntry->getAttribute(DW_AT_location)) {
+        processLocation();
+    }
+}
+
+Variable::~Variable() {}
+
+uint32_t Variable::getLocation() { return location; }
+
+void Variable::processLocation() {
+    DebugData *locInfo = debugEntry->getAttribute(DW_AT_location);
+    if (locInfo->getForm() == DW_FORM_exprloc) {
+        StackMachine *exprloc = new StackMachine();
+
+        // Hacky way to get the location type
+        location = exprloc->processExpression(locInfo);
+        locType = exprloc->getType();
+    } else {
+        // loclist
+    }
+}
+
+Scope::Scope(DebugInfoEntry *debugEntry) {
+    DebugData *nameAtt = debugEntry->getAttribute(DW_AT_name);
+    name = nameAtt ? nameAtt->getString() : "null";
+
+    DebugData *lowPcAtt = debugEntry->getAttribute(DW_AT_low_pc);
+    DebugData *highPcAtt = debugEntry->getAttribute(DW_AT_high_pc);
+
+    lowPc = lowPcAtt ? lowPcAtt->getUInt() : 0;
+    highPc = highPcAtt ? highPcAtt->getUInt() : 0;
+}
+
+Scope::~Scope() {}
+
+void Scope::addScope(Scope *childScope) { scopes.push_back(childScope); }
+
+void Scope::addVariable(Variable *childVar) { variables.push_back(childVar); }
+
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
     : compileUnit(compileUnit), parent(parent), code(0) {}
 
@@ -283,16 +333,6 @@ DebugInfoEntry::~DebugInfoEntry() {
 
 void DebugInfoEntry::addAttribute(AttributeEncoding encoding, DebugData *data) {
     attributes.insert({encoding, data});
-
-    // switch (encoding) {
-    // case DW_AT_location:
-    //     processLocation();
-    //     break;
-    // case DW_AT_name:
-    //     name = std::string(data->getString());
-    //     break;
-    // default: break;
-    // }
 }
 
 void DebugInfoEntry::addChild(DebugInfoEntry *child) {
@@ -312,17 +352,6 @@ void DebugInfoEntry::printEntry() {
     }
 }
 
-void DebugInfoEntry::processLocation() {
-    // DebugData *locInfo = getAttribute(DW_AT_location);
-    // if (locInfo->getForm() == DW_FORM_exprloc) {
-    //     exprloc = new StackMachine();
-
-    //     location = exprloc->processExpression(locInfo);
-    // } else {
-    //     // loclist
-    // }
-}
-
 AbbrevEntry *DebugInfoEntry::getAbbrevEntry() { return abbrevEntry; }
 
 DebugData *DebugInfoEntry::getAttribute(AttributeEncoding attribute) {
@@ -332,6 +361,14 @@ DebugData *DebugInfoEntry::getAttribute(AttributeEncoding attribute) {
 
 size_t DebugInfoEntry::getCode() { return code; }
 
+TagEncoding DebugInfoEntry::getTag() { return abbrevEntry->getDieTag(); }
+
+size_t DebugInfoEntry::getNumChildren() { return children.size(); }
+
+DebugInfoEntry *DebugInfoEntry::getChild(size_t index) {
+    return index < 0 || index >= children.size() ? nullptr : children[index];
+}
+
 DebugInfoEntry *DebugInfoEntry::getParent() { return parent; }
 
 void DebugInfoEntry::setAbbrevEntry(AbbrevEntry *abbrevEntry) {
@@ -340,8 +377,43 @@ void DebugInfoEntry::setAbbrevEntry(AbbrevEntry *abbrevEntry) {
 
 void DebugInfoEntry::setCode(size_t dieCode) { code = dieCode; }
 
+bool DebugInfoEntry::isScope() {
+    switch (abbrevEntry->getDieTag()) {
+    case DW_TAG_subprogram:
+    case DW_TAG_inlined_subroutine:
+    case DW_TAG_entry_point: return true;
+    default: return false;
+    }
+}
+
+// Some types that aren't C/C++ aren't listed here, and some types can only be
+// children to the ones below
+bool DebugInfoEntry::isVariable() {
+    switch (abbrevEntry->getDieTag()) {
+    case DW_TAG_array_type:
+    case DW_TAG_atomic_type:
+    case DW_TAG_base_type:
+    case DW_TAG_class_type:
+    case DW_TAG_const_type:
+    case DW_TAG_enumeration_type:
+    case DW_TAG_pointer_type:
+    case DW_TAG_ptr_to_member_type:
+    case DW_TAG_reference_type:
+    case DW_TAG_restrict_type:
+    case DW_TAG_rvalue_reference_type:
+    case DW_TAG_string_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_typedef:
+    case DW_TAG_union_type:
+    case DW_TAG_unspecified_type:
+    case DW_TAG_volatile_type: return true;
+    default: return false;
+    }
+}
+
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                         uint8_t *debugStrStart, uint8_t *debugLineStrStart) {
+                         uint8_t *debugStrStart, uint8_t *debugLineStrStart)
+    : rootScope(nullptr) {
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
     // size of length-field (4 bytes) + Rest of CU Header + DIEs
     compileUnitLen = 4 + compileUnitHeader->getUnitLength();
@@ -362,6 +434,10 @@ CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
 CompileUnit::~CompileUnit() {
     delete compileUnitHeader;
     delete abbrevTable;
+}
+
+void CompileUnit::generateScopes() {    
+    rootScope = generateScopes(root);
 }
 
 AbbrevEntry *CompileUnit::getAbbrevEntry(size_t dieCode) {
@@ -408,6 +484,22 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     }
 
     return node;    
+}
+
+Scope *CompileUnit::generateScopes(DebugInfoEntry *node) {
+    Scope *scope = new Scope(node);
+
+    // Add discovered variables/scopes to current scope
+    for (uint i = 0; i < node->getNumChildren(); i++) {
+        DebugInfoEntry *childEntry = node->getChild(i);
+        if (childEntry->isVariable()) {
+            scope->addVariable(new Variable(childEntry));
+        } else if (childEntry->isScope()) {
+            scope->addScope(generateScopes(childEntry));
+        }
+    }
+
+    return scope;
 }
 
 DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
@@ -561,6 +653,7 @@ DwarfParser::DwarfParser(const char *fileName)
         CompileUnit *compileUnit = new CompileUnit(debugInfoCUHeader,
             debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
+        compileUnit->generateScopes();
 
         // Point to next CU Header
         debugInfoCUHeader += compileUnit->getLength();

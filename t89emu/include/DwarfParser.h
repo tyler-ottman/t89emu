@@ -29,9 +29,11 @@ public:
     ~StackMachine();
 
     uint32_t processExpression(DebugData *expr);
+    OperationEncoding getType(void);
 
 private:
     std::stack<uint32_t> stack;
+    OperationEncoding opType; // FIrst operation parsed in expression
 };
 
 class DataStream {
@@ -146,6 +148,44 @@ private:
     FullCompileUnitHeader header;
 };
 
+class Variable {
+public:
+    Variable(DebugInfoEntry *debugEntry);
+    ~Variable();
+
+    uint32_t getLocation(void);
+
+private:
+    void processLocation(void);
+
+    DebugInfoEntry *debugEntry;
+
+    std::string name;
+    
+    OperationEncoding locType;
+    uint32_t location;
+};
+
+class Scope {
+public:
+    Scope(DebugInfoEntry *debugEntry);
+    ~Scope();
+
+    void addScope(Scope *childScope);
+    void addVariable(Variable *childVar);
+
+    void getLocalVariables(std::vector<Variable *>& res); 
+
+private:
+    std::string name;
+
+    std::vector<Scope *> scopes;
+    std::vector<Variable *> variables;
+
+    uint32_t lowPc;
+    uint32_t highPc;
+};
+
 class DebugInfoEntry {
 public:
     DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
@@ -158,14 +198,18 @@ public:
     AbbrevEntry *getAbbrevEntry(void);
     DebugData *getAttribute(AttributeEncoding attribute);
     size_t getCode(void);
+    TagEncoding getTag(void);
+    size_t getNumChildren(void);
+    DebugInfoEntry *getChild(size_t index);
     DebugInfoEntry *getParent(void);
 
     void setAbbrevEntry(AbbrevEntry *abbrevEntry);
     void setCode(size_t dieCode);
 
-private:
-    void processLocation(void);
+    bool isScope(void);
+    bool isVariable(void);
 
+private:
     CompileUnit *compileUnit;
     
     AbbrevEntry *abbrevEntry;
@@ -173,10 +217,6 @@ private:
 
     std::vector<DebugInfoEntry *> children;
     DebugInfoEntry *parent;
-
-    // StackMachine *exprloc;
-    // uint32_t location;
-    // bool isAddress; // location is address or offset
 
     size_t code;
     // std::string name;
@@ -188,6 +228,8 @@ public:
                 uint8_t *debugStrStart, uint8_t *debugLineStrStart);
     ~CompileUnit();
 
+    void generateScopes(void);
+
     AbbrevEntry *getAbbrevEntry(size_t dieCode);
     size_t getAddrSize(void);
     size_t getLength(void);
@@ -195,6 +237,9 @@ public:
 private:
     // Recursively create Tree DIE structure in memory
     DebugInfoEntry *generateDebugInfo(DebugInfoEntry *node);
+
+    // Recursively generate scopes, and identify variables within scopes
+    Scope *generateScopes(DebugInfoEntry *node);
 
     // Given an attribute's form, read bytes from byteStream accordingly
     DebugData *decodeInfo(AttributeEntry *entry);
@@ -212,6 +257,7 @@ private:
     StringTable *debugLineStr;
 
     DebugInfoEntry *root;
+    Scope *rootScope;
 
     // Starts at first byte of first DIE entry within CU
     DataStream *debugStream;

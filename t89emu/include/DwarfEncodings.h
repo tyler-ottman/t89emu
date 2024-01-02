@@ -317,13 +317,14 @@ enum FormEncoding {
 };
 
 #define OPERATION_ENCODING(EXPR)                \
-    EXPR(DW_OP_OpReserved0, 0x01)               \
-    EXPR(DW_OP_OpReserved1, 0x01)               \
+    EXPR(DW_OP_null, 0x00)                      \
+    EXPR(DW_OP_Reserved0, 0x01)                 \
+    EXPR(DW_OP_Reserved1, 0x02)                 \
     EXPR(DW_OP_addr, 0x03)                      \
-    EXPR(DW_OP_OpReserved2, 0x04)               \
-    EXPR(DW_OP_OpReserved3, 0x05)               \
+    EXPR(DW_OP_Reserved2, 0x04)                 \
+    EXPR(DW_OP_Reserved3, 0x05)                 \
     EXPR(DW_OP_deref, 0x06)                     \
-    EXPR(DW_OP_OpReserved4, 0x07)               \
+    EXPR(DW_OP_Reserved4, 0x07)                 \
     EXPR(DW_OP_const1u, 0x08)                   \
     EXPR(DW_OP_const1s, 0x09)                   \
     EXPR(DW_OP_const2u, 0x0a)                   \
