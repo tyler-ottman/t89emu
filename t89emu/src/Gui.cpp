@@ -6,8 +6,11 @@ struct funcs {
     }
 };  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
-Gui::Gui(ElfParser *elfParser, int debug)
-    : elfParser(elfParser), isStepEnabled(false), isRunEnabled(false) {
+Gui::Gui(ElfParser *elfParser, DwarfParser *dwarfParser, int debug)
+    : elfParser(elfParser),
+      dwarfParser(dwarfParser),
+      isStepEnabled(false),
+      isRunEnabled(false) {
     // Call vendor specific initializer code
     if (initImGuiInstance()) {
         exit(EXIT_FAILURE);
@@ -22,6 +25,7 @@ Gui::Gui(ElfParser *elfParser, int debug)
     rfProbe = mcu->getRegisterFileModule();
     pcProbe = mcu->getProgramCounterModule();
     csrProbe = mcu->getCsrModule();
+    immgenProbe = mcu->getImmediateGeneratorModule();
     
     textureW = vramProbe->getGWidth();
     textureH = vramProbe->getGHeight();
@@ -37,6 +41,37 @@ Gui::Gui(ElfParser *elfParser, int debug)
 
     // Initialize I/O Panel Viewer
     buttons = {ImGuiKey_Tab, ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D};
+
+    // Initialize Source Code Viewer
+    for (size_t i = 0; i < dwarfParser->getNumCompileUnits(); i++) {
+        CompileUnit *cu = dwarfParser->getCompileUnit(i);
+        SourceFileInfo *sourceInfo = new SourceFileInfo;
+        
+        // Full path to source file
+        std::stringstream stream;
+        stream << cu->getUnitDir() << "/" << cu->getUnitName();
+        sourceInfo->path = stream.str();
+
+        // Source file name
+        size_t found = sourceInfo->path.find_last_of("/");
+        sourceInfo->name = sourceInfo->path.substr(++found);
+
+        // Source file bytes
+        std::ifstream fs;
+        fs.open(sourceInfo->path, std::ifstream::in);
+        if (!fs.is_open()) {
+            printf("Could not open file: %s\n", sourceInfo->name.c_str());
+            exit(EXIT_FAILURE);
+        }
+
+        std::string line;
+        while (std::getline(fs, line)) {
+            sourceInfo->lines.push_back(line);
+        }
+
+        fs.close();
+        sourceFiles.push_back(sourceInfo);
+    }
 }
 
 Gui::~Gui() {
@@ -75,11 +110,13 @@ void Gui::runApplication() {
         // ImGui::ShowDemoWindow(&show_demo_window);
         renderMemoryViewer();
         renderRegisterBank();
-        renderCsrBank();
         renderIoPanel();
         renderLcdDisplay();
         renderDisassembledCodeSection();
         renderControlPanel();
+        renderDebugSource();
+
+        // Draw frame to screen
         renderFrame();
     }
 }
@@ -186,75 +223,6 @@ void Gui::renderControlPanel() {
     ImGui::End();
 }
 
-// Register Module
-void Gui::renderCsrBank() {
-    enum ContentsType { 
-        CT_Text, CT_FillButton
-    };
-
-    static ImGuiTableFlags flags =
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-    static bool displayHeaders = true;
-
-    std::vector<int> csrAddress = {MSTATUS, MISA,   MIE,   MTVEC, MSCRATCH,
-                                   MEPC,    MCAUSE, MTVAL, MIP};
-    std::vector<std::string> csrName = {"mstatus", "misa",     "mie",
-                                        "mtvec",   "mscratch", "mepc",
-                                        "mcause",  "mtval",    "mip"};
-
-    std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l",
-                                           "mtimecmp_h", "keyboard"};
-
-    uint8_t *csrMemBuffer = csrMemProbe->getBuffer();
-
-    ImGui::Begin("CSR");
-    if (ImGui::BeginTable("CSRs", 2, flags)) {
-        // Display headers so we can inspect their interaction with borders.
-        // (Headers are not the main purpose of this section of the demo, so we
-        // are not elaborating on them too much. See other sections for details)
-        if (displayHeaders) {
-            ImGui::TableSetupColumn("Register Name");
-            ImGui::TableSetupColumn("Value");
-            ImGui::TableHeadersRow();
-        }
-
-        char buf[32];
-        for (size_t row = 0; row < csrAddress.size(); row++) {
-            // CSR Entry
-            ImGui::TableNextRow();
-
-            // CSR Name
-            ImGui::TableSetColumnIndex(0);
-            sprintf(buf, "%s", csrName.at(row).c_str());
-            ImGui::TextUnformatted(buf);
-
-            // CSR Value
-            ImGui::TableSetColumnIndex(1);
-            sprintf(buf, "0x%08X", csrProbe->readCsr(csrAddress.at(row)));
-            ImGui::TextUnformatted(buf);
-        }
-
-        // Display Memory mapped control state registers
-        for (size_t row = 0; row < csrMemName.size(); row++) {
-            // CSR Entry
-            ImGui::TableNextRow();
-
-            // CSR Name
-            ImGui::TableSetColumnIndex(0);
-            sprintf(buf, "%s", csrMemName.at(row).c_str());
-            ImGui::TextUnformatted(buf);
-
-            // CSR Value
-            ImGui::TableSetColumnIndex(1);
-            uint32_t *csrValue = (uint32_t *)&csrMemBuffer[4 * row];
-            sprintf(buf, "0x%08X", *csrValue);
-            ImGui::TextUnformatted(buf);
-        }
-        ImGui::EndTable();
-    }
-    ImGui::End();
-}
-
 void Gui::renderDisassembledCodeSection() {
     const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
     ImGui::Begin("Disassembly");
@@ -294,43 +262,52 @@ void Gui::renderDisassembledCodeSection() {
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
     uint32_t pc = pcProbe->getPc();
-    std::vector<struct DisassembledEntry> &disassembledCode =
-        elfParser->getDisassembledCode();
+    std::vector<DisassembledEntry> &disassembly = elfParser->getDisassembledCode();
 
     float scroll_pos = 0.0;
     if (isStepEnabled) {
-        for (size_t idx = 0; idx < disassembledCode.size(); idx++) {
-            struct DisassembledEntry entry = disassembledCode.at(idx);
+        for (size_t idx = 0; idx < disassembly.size(); idx++) {
+            struct DisassembledEntry &entry = disassembly[idx];
             if (entry.isInstruction && (entry.address == pc)) {
-                scroll_pos = (idx - 7.0) * TEXT_BASE_HEIGHT;
+                scroll_pos = idx * TEXT_BASE_HEIGHT;
                 break;
             }
         }
     }
 
-    for (const auto &entry : disassembledCode) {
-        char addr_str[64];
-        sprintf(addr_str, "%08x", entry.address);
+    // Begin Table
+    static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
+    if (!ImGui::BeginTable("table1", 1, tableFlags)) {
+        return;
+    }
 
-        std::string disassembledLine = addr_str;
+    for (auto &entry : disassembly) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImU32 bgColor = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
 
         if (entry.isInstruction) {
             if (std::find(breakpoints.begin(), breakpoints.end(),
                           entry.address) != breakpoints.end()) {
-                // Red address to indicate breakpoint
-                ImGui::PushStyleColor(ImGuiCol_Text,
-                                      IM_COL32(0xff, 0x00, 0x00, 0xff));
-            } else {  // Green Address if no breakpoint
-                ImGui::PushStyleColor(ImGuiCol_Text,
-                                      IM_COL32(0x00, 0xab, 0x41, 255));
+                // Breakpoint (red)             
+                bgColor = ImGui::GetColorU32(ImVec4(1.0f, 0.5f, 0.5f, 0.25f));
+            } else if (entry.address == pcProbe->getPc()) {
+                // Current line (yellow)
+                bgColor = ImGui::GetColorU32(
+                    ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
             }
-            ImGui::Text("%s:", disassembledLine.c_str());
-        } else {  // Golden Yellow Name
+
             ImGui::PushStyleColor(ImGuiCol_Text,
-                                  IM_COL32(0xff, 0xdf, 0x00, 255));
+                                  IM_COL32(0x00, 0xab, 0x41, 0xff));
+            ImGui::Text("%08x:", entry.address);
+        } else {  // Symbol Name (Yellow)
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  IM_COL32(0xff, 0xdf, 0x00, 0xff));
             ImGui::Text("%s", entry.line.c_str());
         }
         ImGui::PopStyleColor();
+
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, bgColor);
 
         // Print Instruction
         if (entry.isInstruction) {
@@ -341,20 +318,15 @@ void Gui::renderDisassembledCodeSection() {
             ImGui::PopStyleColor();
         }
 
-        // // Emulator at current instruction, draw arrow
-        if (entry.isInstruction && (pc == entry.address)) {
-            ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                                  IM_COL32(0xff, 0x00, 0x00, 0xff));
-            ImGui::Text("<--");
-            ImGui::PopStyleColor();
-        }
-
         // If stepping through code, auto scroll to current instruction
         if (isStepEnabled) {
-            ImGui::SetScrollY(scroll_pos);
+            // ImGui::SetScrollY(scroll_pos);
+            ImGui::SetScrollFromPosY(scroll_pos - ImGui::GetScrollY());
         }
     }
+
+    // End Table
+    ImGui::EndTable();
 
     ImGui::EndChild();
     ImGui::End();
@@ -518,56 +490,120 @@ void Gui::renderMemoryViewer() {
 
         ImGui::EndTable();
     }
+    
     ImGui::EndChild();
     ImGui::End();
 }
 
+// Render General Purpose and Control State Registers
 void Gui::renderRegisterBank() {
-    // Register Module
-    enum ContentsType {
-        CT_Text,
-        CT_FillButton
-    };
-
     static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-    static bool display_headers = true;
-    static int contents_type = CT_Text;
+    std::vector<int> csrAddress = {CSR_MSTATUS, CSR_MISA,     CSR_MIE,
+                                   CSR_MTVEC,   CSR_MSCRATCH, CSR_MEPC,
+                                   CSR_MCAUSE,  CSR_MTVAL,    CSR_MIP};
+
+    std::vector<std::string> csrName = {"mstatus", "misa",     "mie",
+                                        "mtvec",   "mscratch", "mepc",
+                                        "mcause",  "mtval",    "mip"};
+
+    std::vector<std::string> csrMemName = {"mcycle_l", "mcycle_h", "mtimecmp_l",
+                                           "mtimecmp_h", "keyboard"};
+
     ImGui::Begin("Registers");
     if (ImGui::BeginTable("Registers", 2, flags)) {
-        // Display headers so we can inspect their interaction with borders.
-        // (Headers are not the main purpose of this section of the demo, so we
-        // are not elaborating on them too much. See other sections for details)
-        if (display_headers) {
-            ImGui::TableSetupColumn("Register Name");
-            ImGui::TableSetupColumn("Value");
-            ImGui::TableHeadersRow();
-        }
+        ImGui::TableSetupColumn("Register Name");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableHeadersRow();
 
+        // General Purpose Registers
         for (size_t row = 0; row < registers.size(); row++) {
             // Register Entry
             ImGui::TableNextRow();
 
             // Register Name
             ImGui::TableSetColumnIndex(0);
-            char buf[32];
-            sprintf(buf, "%s", registers.at(row).first.c_str());
-            if (contents_type == CT_Text)
-                ImGui::TextUnformatted(buf);
-            else if (contents_type == CT_FillButton)
-                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+            ImGui::Text("%s", registers[row].first.c_str());
 
             // Register Value
             ImGui::TableSetColumnIndex(1);
-            // registers.at(row).second = rand() % 4294967295;
-            sprintf(buf, "0x%08X", rfProbe->read(row));
-            if (contents_type == CT_Text)
-                ImGui::TextUnformatted(buf);
-            else if (contents_type == CT_FillButton)
-                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+            ImGui::Text("0x%08X", rfProbe->read(row));
         }
+
+        // Embedded CSRs
+        for (size_t row = 0; row < csrAddress.size(); row++) {
+            // CSR Entry
+            ImGui::TableNextRow();
+
+            // CSR Name
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%s", csrName.at(row).c_str());
+
+            // CSR Value
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("0x%08X", csrProbe->readCsr(csrAddress.at(row)));
+        }
+
+        // Memory Mapped CSRs
+        uint8_t *csrMemBuffer = csrMemProbe->getBuffer();
+        for (size_t row = 0; row < csrMemName.size(); row++) {
+            // CSR Entry
+            ImGui::TableNextRow();
+
+            // CSR Name
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%s", csrMemName.at(row).c_str());
+
+            // CSR Value
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("0x%08X", *((uint32_t *)&csrMemBuffer[4 * row]));
+        }
+
         ImGui::EndTable();
     }
     ImGui::End();
+}
+
+void Gui::renderDebugSource() {
+    ImGui::Begin("Source Code Debugger"); // Begin Window
+    
+    // Begin Tab Bar
+    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyScroll;
+    if (!ImGui::BeginTabBar("MyTabBar", tab_bar_flags)) { return; };
+
+    for (size_t i = 0; i < sourceFiles.size(); i++) {
+        SourceFileInfo *fileInfo = sourceFiles[i];
+
+        // Begin Tab Item
+        if (!ImGui::BeginTabItem(fileInfo->name.c_str())) { continue; }
+
+        // Begin Table
+        static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
+        if (!ImGui::BeginTable("table1", 1, tableFlags)) { continue; }
+
+        // Print source file lines
+        for (size_t row = 0; row < fileInfo->lines.size(); row++) {
+            ImGui::TableNextRow();
+
+            ImU32 bgColor = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, bgColor);
+
+            // Fill cells
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%4ld: %s\n", row, fileInfo->lines[row].c_str());
+        }
+
+        // End Table
+        ImGui::EndTable();
+
+        // End Tab Item
+        ImGui::EndTabItem();
+    }
+
+
+    ImGui::EndTabBar(); // End Tab Bar
+    ImGui::End(); // End Window
+
+    
 }
 
 // export PATH=/opt/riscv32/bin:$PATH

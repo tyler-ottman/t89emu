@@ -242,6 +242,8 @@ public:
     size_t getAddrSize(void);
     size_t getLength(void);
     Scope *getScope(uint32_t pc);
+    const char *getUnitName(void);
+    const char *getUnitDir(void);
 
     bool isPcInRange(uint32_t pc);
 
@@ -294,6 +296,8 @@ public:
     ~DwarfParser();
 
     Scope *getScope(uint32_t pc);
+    CompileUnit *getCompileUnit(size_t fileIdx);
+    size_t getNumCompileUnits(void);
 
 private:
     std::vector<CompileUnit *> compileUnits;

@@ -11,10 +11,12 @@
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <stdint.h>
 #include <unordered_map>
 #include <vector>
 
+#include "DwarfParser.h"
 #include "ElfParser.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -25,7 +27,7 @@
 
 class Gui {
 public:
-    Gui(ElfParser *elfParser, int debug);
+    Gui(ElfParser *elfParser, DwarfParser *dwarfParser, int debug);
     ~Gui();
     void runApplication(void);
 
@@ -36,13 +38,18 @@ private:
 
     // Render Modules
     void renderControlPanel(void);
-    void renderCsrBank(void);
     void renderDisassembledCodeSection(void);
     void renderFrame(void);
     void renderIoPanel(void);
     void renderLcdDisplay(void);
     void renderMemoryViewer(void);
     void renderRegisterBank(void);
+    void renderDebugSource(void);
+
+    std::string getInstructionStr(struct DisassembledEntry & entry);
+
+    // GLFW Window context
+    GLFWwindow *window;
 
     // Rendered modules
     ClintMemoryDevice *csrMemProbe;
@@ -52,16 +59,31 @@ private:
     RegisterFile *rfProbe;
     ProgramCounter *pcProbe;
     Csr *csrProbe;
+    ImmediateGenerator *immgenProbe;
 
+    // VRAM Module
     float textureW;
     float textureH;
     GLuint textureID;
-    GLFWwindow *window;
+
+    // I/O Panel
     std::vector<ImGuiKey> buttons;
+    
+    // General Purpose Registers
     std::vector<std::pair<std::string, uint32_t>> registers;
     
-    // For Rendering Disassembled Code
+    // Disassembled Information
     ElfParser *elfParser;
+
+    // Source-Level Information
+    struct SourceFileInfo {
+        std::string path;
+        std::string name;
+        std::vector<std::string> lines;
+    };
+
+    DwarfParser *dwarfParser;
+    std::vector<SourceFileInfo *> sourceFiles;
 
     bool isStepEnabled;
     bool isRunEnabled;

@@ -468,6 +468,14 @@ size_t CompileUnit::getAddrSize() {
 
 size_t CompileUnit::getLength() { return compileUnitLen; }
 
+const char *CompileUnit::getUnitName() {
+    return root->getAttribute(DW_AT_name)->getString();
+}
+
+const char *CompileUnit::getUnitDir() {
+    return root->getAttribute(DW_AT_comp_dir)->getString();
+}
+
 bool CompileUnit::isPcInRange(uint32_t pc) {
     return rootScope->isPcInRange(pc);
 }
@@ -683,7 +691,7 @@ DwarfParser::DwarfParser(const char *fileName)
             debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
         compileUnit->generateScopes();
-        compileUnit->printScopes();
+        // compileUnit->printScopes();
 
         // Point to next CU Header
         debugInfoCUHeader += compileUnit->getLength();
@@ -704,4 +712,12 @@ Scope *DwarfParser::getScope(uint32_t pc) {
         }
     }
     return nullptr;
+}
+
+CompileUnit *DwarfParser::getCompileUnit(size_t fileIdx) {
+    return compileUnits[fileIdx];
+}
+
+size_t DwarfParser::getNumCompileUnits() {
+    return compileUnits.size();
 }

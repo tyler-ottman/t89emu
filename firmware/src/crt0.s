@@ -16,7 +16,7 @@ _start:
     # sw a1, 0(a1)
 
     call load_ram                       # Load data to RAM
-    call kernel_main                           # OS main routine
+    call kernel_main                    # OS main routine
 
 _spin:
     jal _spin

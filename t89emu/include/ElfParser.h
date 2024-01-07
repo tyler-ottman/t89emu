@@ -113,7 +113,8 @@ struct ElfFileInformation {
 
 struct DisassembledEntry {
     bool isInstruction; // Line is either Function/Assembly name or Instruction
-    Elf32_Word address;
+    Elf32_Addr address;
+    Elf32_Word instruction;
     std::string line;
 };
 
@@ -139,7 +140,7 @@ protected:
     const ElfSectionHeader *getSectionHeader(const char *name);
     const ElfProgramHeader *getProgramHeader(int nentry);
     std::pair<Elf32_Addr, std::string> *getSymbolAtAddress(Elf32_Addr addr);
-    std::string getInstructionStr(Elf32_Addr addr, Elf32_Word instruction);
+    std::string generateInstructionStr(struct DisassembledEntry &entry);
     std::string getCsrName(int csrAddr);
 
     // ELF Header Information

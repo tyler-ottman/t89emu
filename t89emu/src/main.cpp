@@ -18,6 +18,6 @@ int main(int argc, char **argv) {
 
     DwarfParser *debugParser = new DwarfParser(argv[1]);
 
-    Gui *emulator = new Gui(parser, 0);
+    Gui *emulator = new Gui(parser, debugParser, 0);
     emulator->runApplication();
 }

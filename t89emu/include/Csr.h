@@ -2,6 +2,8 @@
 #define CSR_H
 
 #include <stdint.h>
+#include <string>
+#include <unordered_map>
 
 // Privilege Levels
 #define USER_MODE                   0b00
@@ -10,19 +12,21 @@
 #define MACHINE_MODE                0b11
 
 // CSR Machine Mode Addresses
-#define MSTATUS                     0x300
-#define MISA                        0x301
-#define MTVEC                       0x305
-#define MIE                         0x304
-#define MIP                         0x344
-#define MCAUSE                      0x342
-#define MEPC                        0x341
-#define MSCRATCH                    0x340
-#define MTVAL                       0x343
-#define MVENDORID                   0xF11
-#define MARCHID                     0xF12
-#define MIMPID                      0xF13
-#define MHARTID                     0xF14
+enum ControlStateRegisters {
+    CSR_MSTATUS = 0x300,
+    CSR_MISA = 0x301,
+    CSR_MTVEC = 0x305,
+    CSR_MIE = 0x304,
+    CSR_MIP = 0x344,
+    CSR_MCAUSE = 0x342,
+    CSR_MEPC = 0x341,
+    CSR_MSCRATCH = 0x340,
+    CSR_MTVAL = 0x343,
+    CSR_MVENDORID = 0xF11,
+    CSR_MARCHID = 0xF12,
+    CSR_MIMPID = 0xF13,
+    CSR_MHARTID = 0xF14
+};
 
 // Memory Mapped CSR Addressed
 #define MCYCLE_H                    CSR_BASE
@@ -81,31 +85,7 @@ public:
     uint32_t getMtvec(void);
 
 private:
-    // Machine Instruction Set Architecture (I)
-    uint32_t misa;
-
-    // Machine Vendor ID (no implementation)
-    uint32_t mvendorid;
-
-    // Machine Architecture ID (no implementation)
-    uint32_t marchid;
-
-    // Machine Implementation ID (no implementation)
-    uint32_t mimpid;
-
-    // Machine Hart ID
-    uint32_t mhartid;
-
-    // Machine Status
-    uint32_t mstatus;
-
-    uint32_t mtvec;
-    uint32_t mie;
-    uint32_t mip;
-    uint32_t mcause;
-    uint32_t mepc;
-    uint32_t mscratch; // Maybe no implementation
-    uint32_t mtval;
+    std::unordered_map<uint32_t, uint32_t> registers;
 };
 
 #endif // CSR_H

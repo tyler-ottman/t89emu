@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include "terminal.h"
 
-int kernel_main(void)
-{
+int kernel_main(void) {
     init_terminal();
 
     // Write 'Hello World!' to screen

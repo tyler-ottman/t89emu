@@ -200,7 +200,8 @@ bool ElfParser::generateDisassembledCode() {
                 *((uint32_t *)(elfFileInfo->elfData + section->offset + idx));
             disassembledLine.isInstruction = true;
             disassembledLine.address = curAddr;
-            disassembledLine.line = getInstructionStr(curAddr, instruction);
+            disassembledLine.instruction = instruction;
+            disassembledLine.line = generateInstructionStr(disassembledLine);
             disassembledCode.push_back(disassembledLine);
         }
     }
@@ -252,8 +253,7 @@ std::pair<Elf32_Addr, std::string> *ElfParser::getSymbolAtAddress(
     return nullptr;
 }
 
-std::string ElfParser::getInstructionStr(Elf32_Addr addr,
-                                         Elf32_Word instruction) {
+std::string ElfParser::generateInstructionStr(struct DisassembledEntry &entry) {
     const std::vector<std::string> registerNames = {
         "zero", "ra", "sp", "gp", "tp",  "t0",  "t1", "t2", "s0", "s1", "a0",
         "a1",   "a2", "a3", "a4", "a5",  "a6",  "a7", "s2", "s3", "s4", "s5",
@@ -272,7 +272,9 @@ std::string ElfParser::getInstructionStr(Elf32_Addr addr,
     const std::vector<std::string> csrInstructions = {"nan", "csrrw", "csrrs",
                                                       "csrrc"};
 
-    ImmediateGenerator *immgen = new ImmediateGenerator;
+    uint32_t instruction = entry.instruction;
+    uint32_t addr = entry.address;
+    ImmediateGenerator *immgen = new ImmediateGenerator();
 
     int opcode = instruction & 0x7f;
     uint32_t funct3 = (instruction >> 12) & 0b111;
@@ -327,18 +329,14 @@ std::string ElfParser::getInstructionStr(Elf32_Addr addr,
         case 0b101:	// srai / srli
             switch(funct7) {
             case 0b0100000:
-                sprintf(instructionStr, "%-8s%s,%s,0x%x",
-                        "srai",
+                sprintf(instructionStr, "%-8s%s,%s,0x%x", "srai",
                         registerNames.at(rd).c_str(),
-                        registerNames.at(rs1).c_str(),
-                        immediate);
+                        registerNames.at(rs1).c_str(), immediate);
                 break;
             case 0b0000000:
-                sprintf(instructionStr, "%-8s%s,%s,0x%x",
-                        "srli",
+                sprintf(instructionStr, "%-8s%s,%s,0x%x", "srli",
                         registerNames.at(rd).c_str(),
-                        registerNames.at(rs1).c_str(),
-                        immediate);
+                        registerNames.at(rs1).c_str(), immediate);
                 break;
             }
             break;
@@ -379,7 +377,7 @@ std::string ElfParser::getInstructionStr(Elf32_Addr addr,
                 sprintf(instructionStr, "%-8s%s,%s,%s", "srl",
                         registerNames.at(rd).c_str(),
                         registerNames.at(rs1).c_str(),
-                                    registerNames.at(rs2).c_str());
+                        registerNames.at(rs2).c_str());
                 break;
             case 0b0100000:
                 sprintf(instructionStr, "%-8s%s,%s,%s", "sra",
@@ -424,7 +422,6 @@ std::string ElfParser::getInstructionStr(Elf32_Addr addr,
     }
 
     delete immgen;
-    // printf("%s\n", instructionStr);
     return instructionStr;
 }
 
