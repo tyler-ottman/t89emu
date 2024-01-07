@@ -154,6 +154,7 @@ public:
     ~Variable();
 
     uint32_t getLocation(void);
+    std::string& getName(void);
 
 private:
     void processLocation(void);
@@ -168,17 +169,22 @@ private:
 
 class Scope {
 public:
-    Scope(DebugInfoEntry *debugEntry);
+    Scope(DebugInfoEntry *debugEntry, Scope *parent);
     ~Scope();
 
     void addScope(Scope *childScope);
     void addVariable(Variable *childVar);
+    void printScopes(int depth);
 
-    void getLocalVariables(std::vector<Variable *>& res); 
+    const char *getName(void);
+
+    // void getLocalVariables(std::vector<Variable *>& res);
+    bool isPcInRange(uint32_t pc);
 
 private:
     std::string name;
 
+    Scope *parent;
     std::vector<Scope *> scopes;
     std::vector<Variable *> variables;
 
@@ -207,6 +213,7 @@ public:
     void setCode(size_t dieCode);
 
     bool isScope(void);
+    bool isType(void);
     bool isVariable(void);
 
 private:
@@ -229,17 +236,21 @@ public:
     ~CompileUnit();
 
     void generateScopes(void);
+    void printScopes(void);
 
     AbbrevEntry *getAbbrevEntry(size_t dieCode);
     size_t getAddrSize(void);
     size_t getLength(void);
+    Scope *getScope(uint32_t pc);
+
+    bool isPcInRange(uint32_t pc);
 
 private:
     // Recursively create Tree DIE structure in memory
     DebugInfoEntry *generateDebugInfo(DebugInfoEntry *node);
 
     // Recursively generate scopes, and identify variables within scopes
-    Scope *generateScopes(DebugInfoEntry *node);
+    Scope *generateScopes(DebugInfoEntry *node, Scope *parent);
 
     // Given an attribute's form, read bytes from byteStream accordingly
     DebugData *decodeInfo(AttributeEntry *entry);
@@ -281,6 +292,8 @@ class DwarfParser : public ElfParser {
 public:
     DwarfParser(const char *fileName);
     ~DwarfParser();
+
+    Scope *getScope(uint32_t pc);
 
 private:
     std::vector<CompileUnit *> compileUnits;

@@ -21,13 +21,6 @@
 #include "imgui_impl_opengl3.h"
 #include "Mcu.h"
 
-// Defined Buttons
-#define TAB 512
-#define W 568
-#define A 546
-#define S 564
-#define D 549
-
 #define INSTRUCTIONS_PER_FRAME 1000000
 
 class Gui {
@@ -64,7 +57,7 @@ private:
     float textureH;
     GLuint textureID;
     GLFWwindow *window;
-    std::vector<int> buttons;
+    std::vector<ImGuiKey> buttons;
     std::vector<std::pair<std::string, uint32_t>> registers;
     
     // For Rendering Disassembled Code

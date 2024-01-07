@@ -279,9 +279,7 @@ size_t CompileUnitHeader::getHeaderLen() {
 Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
     // Check if variable has name
     DebugData *attEntry = debugEntry->getAttribute(DW_AT_name);
-    if (attEntry) {
-        name = attEntry->getString();
-    }
+    name = attEntry ? attEntry->getString() : "";
 
     if(debugEntry->getAttribute(DW_AT_location)) {
         processLocation();
@@ -291,6 +289,8 @@ Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
 Variable::~Variable() {}
 
 uint32_t Variable::getLocation() { return location; }
+
+std::string& Variable::getName() { return name; }
 
 void Variable::processLocation() {
     DebugData *locInfo = debugEntry->getAttribute(DW_AT_location);
@@ -305,7 +305,7 @@ void Variable::processLocation() {
     }
 }
 
-Scope::Scope(DebugInfoEntry *debugEntry) {
+Scope::Scope(DebugInfoEntry *debugEntry, Scope *parent) : parent(parent) {
     DebugData *nameAtt = debugEntry->getAttribute(DW_AT_name);
     name = nameAtt ? nameAtt->getString() : "null";
 
@@ -313,7 +313,7 @@ Scope::Scope(DebugInfoEntry *debugEntry) {
     DebugData *highPcAtt = debugEntry->getAttribute(DW_AT_high_pc);
 
     lowPc = lowPcAtt ? lowPcAtt->getUInt() : 0;
-    highPc = highPcAtt ? highPcAtt->getUInt() : 0;
+    highPc = highPcAtt ? lowPc + highPcAtt->getUInt() : 0;
 }
 
 Scope::~Scope() {}
@@ -321,6 +321,20 @@ Scope::~Scope() {}
 void Scope::addScope(Scope *childScope) { scopes.push_back(childScope); }
 
 void Scope::addVariable(Variable *childVar) { variables.push_back(childVar); }
+
+void Scope::printScopes(int depth) {
+    for (int i = 0; i < depth; i++) { printf("   "); }
+    printf("S-%s, 0x%x - 0x%x\n", name.c_str(), lowPc, highPc);
+    for (Variable *v : variables) {
+        for (int i = 0; i < depth+1; i++) { printf("   "); }
+        printf("V-%s, 0x%x\n", v->getName().c_str(), v->getLocation());
+    }
+    for (Scope *child : scopes) { child->printScopes(depth + 1); }
+}
+
+const char *Scope::getName() { return name.c_str(); }
+
+bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }
 
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
     : compileUnit(compileUnit), parent(parent), code(0) {}
@@ -388,7 +402,7 @@ bool DebugInfoEntry::isScope() {
 
 // Some types that aren't C/C++ aren't listed here, and some types can only be
 // children to the ones below
-bool DebugInfoEntry::isVariable() {
+bool DebugInfoEntry::isType() {
     switch (abbrevEntry->getDieTag()) {
     case DW_TAG_array_type:
     case DW_TAG_atomic_type:
@@ -409,6 +423,10 @@ bool DebugInfoEntry::isVariable() {
     case DW_TAG_volatile_type: return true;
     default: return false;
     }
+}
+
+bool DebugInfoEntry::isVariable() {
+    return abbrevEntry->getDieTag() == DW_TAG_variable;
 }
 
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
@@ -437,7 +455,7 @@ CompileUnit::~CompileUnit() {
 }
 
 void CompileUnit::generateScopes() {    
-    rootScope = generateScopes(root);
+    rootScope = generateScopes(root, nullptr);
 }
 
 AbbrevEntry *CompileUnit::getAbbrevEntry(size_t dieCode) {
@@ -449,6 +467,17 @@ size_t CompileUnit::getAddrSize() {
 }
 
 size_t CompileUnit::getLength() { return compileUnitLen; }
+
+bool CompileUnit::isPcInRange(uint32_t pc) {
+    return rootScope->isPcInRange(pc);
+}
+
+void CompileUnit::printScopes() {
+    DebugData *nameAtt = root->getAttribute(DW_AT_name);
+    const char *cuName = nameAtt ? nameAtt->getString() : "";
+    printf("\nCU: %s\n", cuName);
+    rootScope->printScopes(0);
+}
 
 DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     size_t code = debugStream->decodeULeb128();
@@ -486,8 +515,8 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     return node;    
 }
 
-Scope *CompileUnit::generateScopes(DebugInfoEntry *node) {
-    Scope *scope = new Scope(node);
+Scope *CompileUnit::generateScopes(DebugInfoEntry *node, Scope *parent) {
+    Scope *scope = new Scope(node, parent);
 
     // Add discovered variables/scopes to current scope
     for (uint i = 0; i < node->getNumChildren(); i++) {
@@ -495,7 +524,7 @@ Scope *CompileUnit::generateScopes(DebugInfoEntry *node) {
         if (childEntry->isVariable()) {
             scope->addVariable(new Variable(childEntry));
         } else if (childEntry->isScope()) {
-            scope->addScope(generateScopes(childEntry));
+            scope->addScope(generateScopes(childEntry, scope));
         }
     }
 
@@ -649,11 +678,12 @@ DwarfParser::DwarfParser(const char *fileName)
         if ((uintptr_t)debugInfoCUHeader >= ((uintptr_t)debugInfoEnd)) {
             break;
         }
-        
+
         CompileUnit *compileUnit = new CompileUnit(debugInfoCUHeader,
             debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
         compileUnit->generateScopes();
+        compileUnit->printScopes();
 
         // Point to next CU Header
         debugInfoCUHeader += compileUnit->getLength();
@@ -665,4 +695,13 @@ DwarfParser::~DwarfParser() {
         delete compileUnit;
     }
     compileUnits.clear();
+}
+
+Scope *DwarfParser::getScope(uint32_t pc) {
+    for (CompileUnit *unit : compileUnits) {
+        if (unit->isPcInRange(pc)) {
+            // return unit->getScope(pc);
+        }
+    }
+    return nullptr;
 }

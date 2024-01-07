@@ -39,7 +39,7 @@ Gui::Gui(ElfParser *elfParser, int debug) : elfParser(elfParser) {
     clearColor = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
     glGenTextures(1, &textureID); // Initialize Texture ID for VRAM
     
-    buttons = {TAB, W, A, S, D};
+    buttons = {ImGuiKey_Tab, ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D};
 
     isStepEnabled = false;
     isRunEnabled = false;
