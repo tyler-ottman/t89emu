@@ -17,7 +17,3 @@ void ProgramCounter::setPc(uint32_t nextPc) {
 uint32_t ProgramCounter::getPc() {
     return pc;
 }
-
-uint32_t *ProgramCounter::getPcPtr() {
-    return &pc;
-}

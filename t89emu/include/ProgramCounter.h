@@ -10,7 +10,6 @@ public:
     
     void setPc(uint32_t nextPc);
     uint32_t getPc(void);
-    uint32_t *getPcPtr(void);
 
 private:
     uint32_t pc;

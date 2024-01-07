@@ -6,69 +6,46 @@ struct funcs {
     }
 };  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
-static void glfw_error_callback(int error, const char *description) {
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
-
-Gui::Gui(ElfParser *elfParser, int debug) : elfParser(elfParser) {
-    std::vector<std::string> registerNames = {
-        "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
-        "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
-        "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
-        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
-    };
-
-    for (const std::string &regName : registerNames) {
-        registers.push_back(std::make_pair(regName, 0));
-    }
-    
-    // Get GLSL version
-    char glslVersion[13];
-    
-    if (initApplication(glslVersion))
+Gui::Gui(ElfParser *elfParser, int debug)
+    : elfParser(elfParser), isStepEnabled(false), isRunEnabled(false) {
+    // Call vendor specific initializer code
+    if (initImGuiInstance()) {
         exit(EXIT_FAILURE);
-    
-    // glfwSwapInterval(1); // Enable vsync
-    IMGUI_CHECKVERSION();    // Setup Dear ImGui context
-    ImGui::CreateContext();
-    
-    ImGui::StyleColorsClassic(); // Setup Dear ImGui style
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glslVersion);
-    clearColor = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
-    glGenTextures(1, &textureID); // Initialize Texture ID for VRAM
-    
-    buttons = {ImGuiKey_Tab, ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D};
+    }
 
-    isStepEnabled = false;
-    isRunEnabled = false;
-    
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->AddFontDefault();
-    egaFont = io.Fonts->AddFontFromFileTTF("./egaFont.ttf", 10.8);
-
-#ifndef BUS_EXPERIMENTAL
-    csrMemProbe = Mcu::getInstance()->getBusModule()->getClintDevice();
-    ramProbe = Mcu::getInstance()->getBusModule()->getRamMemoryDevice();
-    romProbe = Mcu::getInstance()->getBusModule()->getRomMemoryDevice();
-    vramProbe = Mcu::getInstance()->getBusModule()->getVideoDevice();
-#else
-    csrMemProbe = Mcu::getInstance()->getClintDevice();
-    ramProbe = Mcu::getInstance()->getRamDevice();
-    romProbe = Mcu::getInstance()->getRomDevice();
-    vramProbe = Mcu::getInstance()->getVideoDevice();
-#endif // BUS_EXPERIMENTAL
-    rfProbe = Mcu::getInstance()->getRegisterFileModule();
-    pcProbe = Mcu::getInstance()->getProgramCounterModule();
-    csrProbe = Mcu::getInstance()->getCsrModule();
+    // GUI uses pointers to MCU modules for rendering
+    Mcu *mcu = Mcu::getInstance();
+    csrMemProbe = mcu->getClintDevice();
+    ramProbe = mcu->getRamDevice();
+    romProbe = mcu->getRomDevice();
+    vramProbe = mcu->getVideoDevice();
+    rfProbe = mcu->getRegisterFileModule();
+    pcProbe = mcu->getProgramCounterModule();
+    csrProbe = mcu->getCsrModule();
     
     textureW = vramProbe->getGWidth();
     textureH = vramProbe->getGHeight();
+
+    // Initialize Register Viewer
+    for (const std::string &regName : rfProbe->getNames()) {
+        registers.push_back(std::make_pair(regName, 0));
+    }
+
+    // Initialize VRAM Viewer
+    glGenTextures(1, &textureID);
+    vramFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./egaFont.ttf", 10.8);
+
+    // Initialize I/O Panel Viewer
+    buttons = {ImGuiKey_Tab, ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D};
 }
 
 Gui::~Gui() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }
 
 void Gui::runApplication() {
@@ -78,12 +55,10 @@ void Gui::runApplication() {
         glfwPollEvents();
 
         if (isRunEnabled) {
-            int numInstructions = 0;
-            while ((numInstructions < INSTRUCTIONS_PER_FRAME) &&
-                   (std::find(breakpoints.begin(), breakpoints.end(),
-                              *(pcProbe->getPcPtr())) == breakpoints.end())) {
+            uint n = INSTRUCTIONS_PER_FRAME;
+            while (n-- > 0 && (std::find(breakpoints.begin(), breakpoints.end(),
+                                     pcProbe->getPc()) == breakpoints.end())) {
                 Mcu::getInstance()->nextInstruction();
-                numInstructions++;
             }
         }
 
@@ -109,38 +84,41 @@ void Gui::runApplication() {
     }
 }
 
-int Gui::initApplication(char *glslVersion) {
+static void glfw_error_callback(int error, const char *description) {
+    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+}
+
+int Gui::initImGuiInstance() {
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) return EXIT_FAILURE;
+    if (!glfwInit()) { return EXIT_FAILURE; }
     
-    // Decide GL+GLSL versions
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100
-    strcpy(glslVersion, "#version 100");
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-#elif defined(__APPLE__)
-    // GL 3.2 + GLSL 150
-    strcpy(glslVersion, "#version 150");
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Required on Mac
-#else
-    // GL 3.0 + GLSL 130
-    strcpy(glslVersion, "#version 130");
+    // Decide GL+GLSL versions (GL 3.0 + GLSL 130)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
     // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
-#endif
 
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "t89emu", NULL, NULL);
-    if (window == NULL) exit(EXIT_FAILURE);
+    window = glfwCreateWindow(1920, 1080, "t89emu", NULL, NULL);
+    if (!window) { return EXIT_FAILURE; }
+
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->AddFontDefault();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    ImGui::StyleColorsClassic(); // Setup Dear ImGui style
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+
     return 0;
 }
 
@@ -315,7 +293,7 @@ void Gui::renderDisassembledCodeSection() {
 
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
-    uint32_t *pcPtr = pcProbe->getPcPtr();
+    uint32_t pc = pcProbe->getPc();
     std::vector<struct DisassembledEntry> &disassembledCode =
         elfParser->getDisassembledCode();
 
@@ -323,7 +301,7 @@ void Gui::renderDisassembledCodeSection() {
     if (isStepEnabled) {
         for (size_t idx = 0; idx < disassembledCode.size(); idx++) {
             struct DisassembledEntry entry = disassembledCode.at(idx);
-            if (entry.isInstruction && (entry.address == *pcPtr)) {
+            if (entry.isInstruction && (entry.address == pc)) {
                 scroll_pos = (idx - 7.0) * TEXT_BASE_HEIGHT;
                 break;
             }
@@ -364,7 +342,7 @@ void Gui::renderDisassembledCodeSection() {
         }
 
         // // Emulator at current instruction, draw arrow
-        if (entry.isInstruction && (*pcPtr == entry.address)) {
+        if (entry.isInstruction && (pc == entry.address)) {
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text,
                                   IM_COL32(0xff, 0x00, 0x00, 0xff));
@@ -383,8 +361,10 @@ void Gui::renderDisassembledCodeSection() {
 }
 
 void Gui::renderFrame() {
-    ImGui::Render();
     int displayW, displayH;
+    ImVec4 clearColor = ImVec4(0.00f, 0.00f, 0.00f, 0.00f); // Background color
+
+    ImGui::Render();
     glfwGetFramebufferSize(window, &displayW, &displayH);
     glViewport(0, 0, displayW, displayH);
     glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w,
@@ -428,7 +408,7 @@ void Gui::renderLcdDisplay() {
     // VRAM Module
     ImGui::Begin("VRAM Module");
     if (videoMode == VGA_TEXT_MODE) {
-        ImGui::PushFont(egaFont);
+        ImGui::PushFont(vramFont);
 
         char *vgaTextBuffer = (char *)(vramProbe->getBuffer() + 16);
         for (size_t i = 0; i < vramProbe->getTHeight(); i++) {

@@ -30,7 +30,7 @@ public:
     void runApplication(void);
 
 private:
-    int initApplication(char *glslVersion);
+    int initImGuiInstance(void);
     void addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
                           std::string memSecitonName);
 
@@ -67,8 +67,7 @@ private:
     bool isRunEnabled;
     std::vector<uint32_t> breakpoints;
     
-    ImVec4 clearColor;
-    ImFont *egaFont;
+    ImFont *vramFont;
 };
 
 #endif // GUI_H
