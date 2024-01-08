@@ -173,11 +173,14 @@ void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
 
             // Memory Section Name
             ImGui::TableNextColumn();
-            ImGui::Text("%s", memSectionName.c_str());  // change later?
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
+            ImGui::Text("%s", memSectionName.c_str());
 
             // 32-bit Memory Address
             ImGui::TableNextColumn();
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xbf73c2e8);
             ImGui::Text("%08x", 16 * addr + memStart);
+            ImGui::PopStyleColor();
             for (size_t i = 0; i < 16; i++) {
                 hexBytes[i] =
                     ((16 * addr + i) >= memSize) ? 0xff : memPtr[16 * addr + i];
@@ -204,6 +207,7 @@ void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
                         asciiBytes[7], asciiBytes[8], asciiBytes[9],
                         asciiBytes[10], asciiBytes[11], asciiBytes[12],
                         asciiBytes[13], asciiBytes[14], asciiBytes[15]);
+            ImGui::PopStyleColor();
         }
     }
 }
@@ -297,12 +301,10 @@ void Gui::renderDisassembledCodeSection() {
                     ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
             }
 
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                                  IM_COL32(0x00, 0xab, 0x41, 0xff));
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xbf73c2e8);
             ImGui::Text("%08x:", entry.address);
-        } else {  // Symbol Name (Yellow)
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                                  IM_COL32(0xff, 0xdf, 0x00, 0xff));
+        } else {  // Symbol Name (green)
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
             ImGui::Text("%s", entry.line.c_str());
         }
         ImGui::PopStyleColor();
@@ -312,8 +314,7 @@ void Gui::renderDisassembledCodeSection() {
         // Print Instruction
         if (entry.isInstruction) {
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                                  IM_COL32(0x00, 0x77, 0xb6, 255));
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("%s", entry.line.c_str());
             ImGui::PopStyleColor();
         }
@@ -521,12 +522,16 @@ void Gui::renderRegisterBank() {
             ImGui::TableNextRow();
 
             // Register Name
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("%s", registers[row].first.c_str());
+            ImGui::PopStyleColor();
 
             // Register Value
             ImGui::TableSetColumnIndex(1);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("0x%08X", rfProbe->read(row));
+            ImGui::PopStyleColor();
         }
 
         // Embedded CSRs
@@ -535,12 +540,16 @@ void Gui::renderRegisterBank() {
             ImGui::TableNextRow();
 
             // CSR Name
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("%s", csrName.at(row).c_str());
+            ImGui::PopStyleColor();
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("0x%08X", csrProbe->readCsr(csrAddress.at(row)));
+            ImGui::PopStyleColor();
         }
 
         // Memory Mapped CSRs
@@ -550,12 +559,16 @@ void Gui::renderRegisterBank() {
             ImGui::TableNextRow();
 
             // CSR Name
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("%s", csrMemName.at(row).c_str());
+            ImGui::PopStyleColor();
 
             // CSR Value
             ImGui::TableSetColumnIndex(1);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("0x%08X", *((uint32_t *)&csrMemBuffer[4 * row]));
+            ImGui::PopStyleColor();
         }
 
         ImGui::EndTable();
@@ -567,7 +580,7 @@ void Gui::renderDebugSource() {
     ImGuiTableFlags tableFlags;
 
     ImGui::Begin("Source Code Debugger"); // Begin Window    
-
+    
     // Source Code Window
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
     ImGui::BeginChild("sourceCodeWindow",
@@ -597,13 +610,13 @@ void Gui::renderDebugSource() {
             ImGui::TableSetColumnIndex(0);
             
             // Line Number
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xff41ab00);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xbf73c2e8);
             ImGui::Text("%4ld: ", row);
             ImGui::PopStyleColor();
 
             // Line Source
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xffb67700);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("%s\n", sourceFile->lines[row].c_str());
             ImGui::PopStyleColor();
         }
@@ -642,12 +655,12 @@ void Gui::displayVarTable(const std::string &name) {
         ImGui::TableNextRow();
 
         // Variable Information
-        ImGui::PushStyleColor(ImGuiCol_Text, 0xff844b78);
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
         ImGui::TableSetColumnIndex(0);
         ImGui::Text("var%d: ", row);
         ImGui::PopStyleColor();
 
-        ImGui::PushStyleColor(ImGuiCol_Text, 0xffd4d4d4);
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
         ImGui::SameLine();
         ImGui::Text("null");
         ImGui::PopStyleColor();
