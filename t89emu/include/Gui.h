@@ -46,6 +46,8 @@ private:
     void renderRegisterBank(void);
     void renderDebugSource(void);
 
+    void displayVarTable(const std::string &name);
+
     std::string getInstructionStr(struct DisassembledEntry & entry);
 
     // GLFW Window context

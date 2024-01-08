@@ -564,46 +564,96 @@ void Gui::renderRegisterBank() {
 }
 
 void Gui::renderDebugSource() {
-    ImGui::Begin("Source Code Debugger"); // Begin Window
-    
-    // Begin Tab Bar
-    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyScroll;
-    if (!ImGui::BeginTabBar("MyTabBar", tab_bar_flags)) { return; };
+    ImGuiTableFlags tableFlags;
 
-    for (size_t i = 0; i < sourceFiles.size(); i++) {
-        SourceFileInfo *fileInfo = sourceFiles[i];
+    ImGui::Begin("Source Code Debugger"); // Begin Window    
 
-        // Begin Tab Item
-        if (!ImGui::BeginTabItem(fileInfo->name.c_str())) { continue; }
+    // Source Code Window
+    ImVec2 windowSize = ImGui::GetContentRegionAvail();
+    ImGui::BeginChild("sourceCodeWindow",
+                      ImVec2(windowSize.x * 0.75f, windowSize.y),
+                      ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX, 0);
 
-        // Begin Table
-        static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
-        if (!ImGui::BeginTable("table1", 1, tableFlags)) { continue; }
+    // Source Code Window Tab Bar
+    ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_FittingPolicyScroll;
+    ImGui::BeginTabBar("sourceCodeTabBar", tabBarFlags);
 
-        // Print source file lines
-        for (size_t row = 0; row < fileInfo->lines.size(); row++) {
+    for (const SourceFileInfo *sourceFile : sourceFiles) {
+        if(!ImGui::BeginTabItem(sourceFile->name.c_str())) { continue; }
+
+        windowSize = ImGui::GetContentRegionAvail();
+        ImGui::BeginChild("sourceCodeLines", ImVec2(windowSize.x, windowSize.y),
+                          ImGuiChildFlags_None, 0);
+
+        // Source Code Lines
+        tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollX;
+        if (!ImGui::BeginTable("sourceCodeLines", 1, tableFlags)) { continue; }
+        for (size_t row = 0; row < sourceFile->lines.size(); row++) {
             ImGui::TableNextRow();
 
             ImU32 bgColor = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
             ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, bgColor);
 
-            // Fill cells
             ImGui::TableSetColumnIndex(0);
-            ImGui::Text("%4ld: %s\n", row, fileInfo->lines[row].c_str());
+            
+            // Line Number
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff41ab00);
+            ImGui::Text("%4ld: ", row);
+            ImGui::PopStyleColor();
+
+            // Line Source
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xffb67700);
+            ImGui::Text("%s\n", sourceFile->lines[row].c_str());
+            ImGui::PopStyleColor();
         }
 
-        // End Table
-        ImGui::EndTable();
-
-        // End Tab Item
+        ImGui::EndTable(); // sourceCodeLines
+        ImGui::EndChild();
         ImGui::EndTabItem();
     }
 
+    ImGui::EndTabBar(); // sourceCodeTabBar
+    ImGui::EndChild();  // sourceCodeWindow
 
-    ImGui::EndTabBar(); // End Tab Bar
-    ImGui::End(); // End Window
+    // Source Code Variables
+    ImGui::SameLine();
+    windowSize = ImGui::GetContentRegionAvail();
+    ImGui::BeginChild("sourceCodeVariables", ImVec2(windowSize.x, windowSize.y),
+                      ImGuiChildFlags_Border, 0);
 
-    
+    // Local/Global Variables (placeholder)
+    displayVarTable("Global Variables");
+    displayVarTable("Local Variables");
+
+    ImGui::EndChild();
+    ImGui::End(); // Source Code Debugger    
+}
+
+void Gui::displayVarTable(const std::string &name) {
+    ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter;
+
+    if (!ImGui::BeginTable(name.c_str(), 1, tableFlags)) { return; }
+    ImGui::TableSetupColumn(name.c_str());
+    ImGui::TableHeadersRow();
+
+    for (uint row = 0; row < 10; row++) {
+        ImGui::TableNextRow();
+
+        // Variable Information
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff844b78);
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("var%d: ", row);
+        ImGui::PopStyleColor();
+
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xffd4d4d4);
+        ImGui::SameLine();
+        ImGui::Text("null");
+        ImGui::PopStyleColor();
+    }
+    ImGui::TableNextRow();
+    ImGui::EndTable();
 }
 
 // export PATH=/opt/riscv32/bin:$PATH

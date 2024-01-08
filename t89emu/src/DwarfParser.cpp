@@ -292,6 +292,8 @@ uint32_t Variable::getLocation() { return location; }
 
 std::string& Variable::getName() { return name; }
 
+OperationEncoding Variable::getType() { return locType; }
+
 void Variable::processLocation() {
     DebugData *locInfo = debugEntry->getAttribute(DW_AT_location);
     if (locInfo->getForm() == DW_FORM_exprloc) {
@@ -691,7 +693,7 @@ DwarfParser::DwarfParser(const char *fileName)
             debugAbbrevStart, debugStrStart, debugLineStrStart);
         compileUnits.push_back(compileUnit);
         compileUnit->generateScopes();
-        // compileUnit->printScopes();
+        compileUnit->printScopes();
 
         // Point to next CU Header
         debugInfoCUHeader += compileUnit->getLength();

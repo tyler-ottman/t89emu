@@ -155,6 +155,7 @@ public:
 
     uint32_t getLocation(void);
     std::string& getName(void);
+    OperationEncoding getType(void);
 
 private:
     void processLocation(void);
