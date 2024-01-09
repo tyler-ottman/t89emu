@@ -92,6 +92,8 @@ bool DataStream::isStreamable() { return index < streamLen; }
 
 const uint8_t *DataStream::getData() { return data; }
 
+void DataStream::setOffset(size_t offset) { index = offset; }
+
 DebugData::DebugData(FormEncoding form) : form(form) {}
 
 DebugData::~DebugData() {}
@@ -346,6 +348,134 @@ const char *Scope::getName() { return name.c_str(); }
 
 bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }
 
+LineNumberInfo::LineNumberInfo(CompileUnit *compileUnit,
+        uint8_t *debugLineStart) : compileUnit(compileUnit) {
+    stream = new DataStream(debugLineStart, *((uint32_t *)debugLineStart));
+
+    parseProgramHeader();
+    generateFilePaths();
+
+    // Process line number information with state machine
+    clearRegisters();
+    generateLineNumberMatrix();
+}
+
+LineNumberInfo::~LineNumberInfo() {}
+
+// stream should point to directoryEntryFormatCount or fileNameEntryFormatCount
+void LineNumberInfo::generateFileFormatInfo(uint8_t &numEntries,
+    std::vector<std::pair<ContentEncoding, FormEncoding>> &formatEntries) {
+    numEntries = stream->decodeUInt8();
+    for (size_t i = 0; i < numEntries; i++) {
+        ContentEncoding dirContent = (ContentEncoding)stream->decodeULeb128();
+        FormEncoding dirForm = (FormEncoding)stream->decodeULeb128();
+        formatEntries.push_back({dirContent, dirForm});
+    }
+}
+
+// stream should point to directoriesCount or fileNamesCount
+void LineNumberInfo::generateFileInformation(uint &numEntries,
+    std::vector<std::map<ContentEncoding, DebugData *>> &fileEntries,
+    std::vector<std::pair<ContentEncoding, FormEncoding>> &fileFormat) {
+    numEntries = stream->decodeULeb128();
+    for (size_t i = 0; i < numEntries; i++) {
+        std::map<ContentEncoding, DebugData *> dirEntry;
+        for (std::pair<ContentEncoding, FormEncoding> &dirFormat : fileFormat) {
+            AttributeEntry dirAttr(AtReserved0, dirFormat.second, 0);
+            DebugData *dirData = compileUnit->decodeInfo(&dirAttr, stream);
+            dirEntry[dirFormat.first] = dirData;
+        }
+        fileEntries.push_back(dirEntry);
+    }
+}
+
+// Includes unitLength (4 bytes) field itself
+size_t LineNumberInfo::getLength() { return 4 + infoHeader.unitLength; }
+
+void LineNumberInfo::clearRegisters() {
+    address = 0;
+    opIndex = 0;
+    file = 1;
+    line = 1;
+    column = 0;
+    isStmt = infoHeader.defaultIsStmt;
+    basicBlock = false;
+    endSequence = false;
+    prologueEnd = false;
+    epilogueBegin = false;
+    isa = 0;
+    discriminator = 0;
+}
+
+void LineNumberInfo::generateFilePaths() {
+    std::string compileDirectory =
+        infoHeader.directories[0][DW_LNCT_path]->getString();
+    
+    // Generate full paths to directories
+    std::vector<std::string> dirPaths;
+    for (std::map<ContentEncoding, DebugData *> &directory :
+         infoHeader.directories) {
+        std::string dirPath = directory[DW_LNCT_path]->getString();
+        if (dirPath[0] != '/') { // Make full path
+            dirPath = compileDirectory + "/" + dirPath;
+        }
+        dirPaths.push_back(dirPath);
+    }
+
+    // Generate full paths to files
+    for (std::map<ContentEncoding, DebugData *> &file : infoHeader.fileNames) {
+        uint directoryIndex = file[DW_LNCT_directory_index]->getUInt();
+        std::string fileName = dirPaths[directoryIndex] + "/"
+            + file[DW_LNCT_path]->getString();
+        if (!isFileInFilePaths(fileName)) {
+            filePaths.push_back(fileName);
+        }
+    }
+}
+
+void LineNumberInfo::generateLineNumberMatrix() {
+
+}
+
+void LineNumberInfo::parseProgramHeader() {
+    infoHeader = {
+        .unitLength = stream->decodeUInt32(),
+        .version = stream->decodeUInt16(),
+        .addressSize = stream->decodeUInt8(),
+        .segmentSelectorSize = stream->decodeUInt8(),
+        .headerLength = stream->decodeUInt32(),
+        .minimumInstructionLength = stream->decodeUInt8(),
+        .maximumOperationsPerInstruction = stream->decodeUInt8(),
+        .defaultIsStmt = stream->decodeUInt8(),
+        .lineBase = (int8_t)stream->decodeUInt8(),
+        .lineRange = stream->decodeUInt8(),
+        .opcodeBase = stream->decodeUInt8()
+    };
+
+    for (int i = 0; i < infoHeader.opcodeBase - 1; i++) {
+        infoHeader.standardOpcodeLengths.push_back(stream->decodeUInt8());
+    }
+
+    // Directory Information
+    generateFileFormatInfo(infoHeader.directoryEntryFormatCount,
+                           infoHeader.directoryEntryFormat);
+    generateFileInformation(infoHeader.directoriesCount, infoHeader.directories,
+                            infoHeader.directoryEntryFormat);
+
+    // File Information
+    generateFileFormatInfo(infoHeader.fileNameEntryFormatCount,
+                           infoHeader.fileNameEntryFormat);
+    generateFileInformation(infoHeader.fileNamesCount, infoHeader.fileNames,
+                            infoHeader.fileNameEntryFormat);
+}
+
+bool LineNumberInfo::isFileInFilePaths(std::string &filePath) {
+    for (std::string &path : filePaths) {
+        if (path == filePath) { return true; }
+    }
+    return false;
+}
+
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
     : compileUnit(compileUnit), parent(parent), code(0) {}
 
@@ -440,8 +570,8 @@ bool DebugInfoEntry::isVariable() {
 }
 
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                         uint8_t *debugStrStart, uint8_t *debugLineStrStart)
-    : rootScope(nullptr) {
+                         uint8_t *debugStrStart, uint8_t *debugLineStrStart,
+                         uint8_t *debugLineStart) : rootScope(nullptr) {
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
     // size of length-field (4 bytes) + Rest of CU Header + DIEs
     compileUnitLen = 4 + compileUnitHeader->getUnitLength();
@@ -454,7 +584,7 @@ CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
     root = new DebugInfoEntry(this, nullptr);
     debugStr = new StringTable((char *)debugStrStart);
     debugLineStr = new StringTable((char *)debugLineStrStart);
-    debugStart = (uintptr_t)debugInfoCUHeader;
+    debugLine = new LineNumberInfo(this, debugLineStart);
 
     generateDebugInfo(root);
 }
@@ -476,7 +606,9 @@ size_t CompileUnit::getAddrSize() {
     return compileUnitHeader->getAddressSize();
 }
 
-size_t CompileUnit::getLength() { return compileUnitLen; }
+size_t CompileUnit::getDebugInfoLength() { return compileUnitLen; }
+
+size_t CompileUnit::getDebugLineLength() { return debugLine->getLength(); }
 
 const char *CompileUnit::getUnitName() {
     return root->getAttribute(DW_AT_name)->getString();
@@ -497,6 +629,116 @@ void CompileUnit::printScopes() {
     rootScope->printScopes(0);
 }
 
+DebugData *CompileUnit::decodeInfo(AttributeEntry *entry, DataStream *stream) {
+    FormEncoding form = entry->getForm();
+    DebugData *dieData = new DebugData(form);
+    size_t streamLen = 0;
+
+    switch (form) {    
+    case DW_FORM_addr: // Read addr_size bytes from stream
+        streamLen = compileUnitHeader->getAddressSize();
+        break;
+    
+    case DW_FORM_block: // Read ULEB128 length, then block
+    case DW_FORM_exprloc:
+        streamLen = stream->decodeULeb128();
+        break;
+    case DW_FORM_block1: // Read 1-byte length, then block
+        streamLen = stream->decodeUInt8();
+        break;
+    case DW_FORM_block2: // Read 2-byte length, then block
+        streamLen = stream->decodeUInt16();
+        break;
+    case DW_FORM_block4: // Read 4-byte length, then block
+        streamLen = stream->decodeUInt32();
+        break;
+
+    case DW_FORM_flag_present: break; // Read 0-byte integer
+
+    case DW_FORM_data1: // Read 1-byte integer
+    case DW_FORM_flag:
+    case DW_FORM_ref1:
+    case DW_FORM_strx1:
+    case DW_FORM_addrx1: streamLen = 1; break;
+
+    case DW_FORM_data2: // Read 2-byte integer
+    case DW_FORM_ref2:
+    case DW_FORM_strx2:
+    case DW_FORM_addrx2: streamLen = 2; break;
+    
+    case DW_FORM_strx3:
+    case DW_FORM_addrx3: streamLen = 3; break; // Read 3-byte integer
+
+    case DW_FORM_data4: // Read 4-byte integer
+    case DW_FORM_ref_addr:
+    case DW_FORM_ref4:
+    case DW_FORM_sec_offset:
+    case DW_FORM_strx4:
+    case DW_FORM_addrx4: streamLen = 4; break;
+    
+    case DW_FORM_data8: // Read 8-byte integer
+    case DW_FORM_ref8:
+    case DW_FORM_ref_sig8: streamLen = 8; break;
+    
+    case DW_FORM_data16: streamLen = 16; break; // Read 16-byte integer
+
+    case DW_FORM_sdata: { // Read LEB128
+        int64_t value = stream->decodeLeb128();
+        dieData->write((uint8_t *)&value, sizeof(int64_t));
+        break;
+    }
+
+    case DW_FORM_udata: // Read ULEB128
+    case DW_FORM_ref_udata: 
+    case DW_FORM_strx:
+    case DW_FORM_addrx:
+    case DW_FORM_loclistx:
+    case DW_FORM_rnglistx: {
+        uint64_t value = stream->decodeULeb128();
+        dieData->write((uint8_t *)&value, sizeof(uint64_t));
+        break;
+    }
+
+     // Read offset, copy string from either .debug_str or .debug_line_str
+    case DW_FORM_strp: {
+    case DW_FORM_line_strp:
+        int offset = stream->decodeUInt32();
+
+        StringTable *strTable = form == DW_FORM_strp ? debugStr : debugLineStr;
+        std::string str = strTable->getString(offset);
+        dieData->write((uint8_t *)str.c_str(), str.size());
+        break;
+    }
+
+    case DW_FORM_string: { // Read string directly from DIE
+        uint8_t c;
+        while ((c = stream->decodeUInt8()) != '\0') {
+            dieData->write(&c, sizeof(uint8_t));
+        }
+        break;
+    }
+
+    case DW_FORM_implicit_const: {// special value is attribute value
+        size_t value = entry->getSpecial();
+        dieData->write((uint8_t *)&value, sizeof(size_t));
+        break;
+    }
+
+    default: // indirect, ref_sup4, strp_sup, ref_sup8
+        std::cerr << "Unsupported form: " << form << std::endl;
+        exit(0);
+        break;
+    }
+
+    // If streamLen is used by a FORM, directly write bytes from stream
+    for (; streamLen > 0; streamLen--) {
+        uint8_t byte = stream->decodeUInt8();
+        dieData->write(&byte, sizeof(byte));
+    }
+
+    return dieData;
+}
+
 DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     size_t code = debugStream->decodeULeb128();
     if (code == 0) { // End of siblings, travel back up tree
@@ -511,7 +753,7 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
     ASSERT(dieAbbrevEntry, "dieAbbrevEntry not found\n");
     for (size_t i = 0; i < dieAbbrevEntry->getNumAttributes(); i++) {
         AttributeEntry *attEntry = dieAbbrevEntry->getAttributeEntry(i);
-        DebugData *data = decodeInfo(attEntry);
+        DebugData *data = decodeInfo(attEntry, debugStream);
         node->addAttribute(attEntry->getName(), data);
     }
 
@@ -549,116 +791,6 @@ Scope *CompileUnit::generateScopes(DebugInfoEntry *node, Scope *parent) {
     return scope;
 }
 
-DebugData *CompileUnit::decodeInfo(AttributeEntry *entry) {
-    FormEncoding form = entry->getForm();
-    DebugData *dieData = new DebugData(form);
-    size_t streamLen = 0;
-
-    switch (form) {    
-    case DW_FORM_addr: // Read addr_size bytes from stream
-        streamLen = compileUnitHeader->getAddressSize();
-        break;
-    
-    case DW_FORM_block: // Read ULEB128 length, then block
-    case DW_FORM_exprloc:
-        streamLen = debugStream->decodeULeb128();
-        break;
-    case DW_FORM_block1: // Read 1-byte length, then block
-        streamLen = debugStream->decodeUInt8();
-        break;
-    case DW_FORM_block2: // Read 2-byte length, then block
-        streamLen = debugStream->decodeUInt16();
-        break;
-    case DW_FORM_block4: // Read 4-byte length, then block
-        streamLen = debugStream->decodeUInt32();
-        break;
-
-    case DW_FORM_flag_present: break; // Read 0-byte integer
-
-    case DW_FORM_data1: // Read 1-byte integer
-    case DW_FORM_flag:
-    case DW_FORM_ref1:
-    case DW_FORM_strx1:
-    case DW_FORM_addrx1: streamLen = 1; break;
-
-    case DW_FORM_data2: // Read 2-byte integer
-    case DW_FORM_ref2:
-    case DW_FORM_strx2:
-    case DW_FORM_addrx2: streamLen = 2; break;
-    
-    case DW_FORM_strx3:
-    case DW_FORM_addrx3: streamLen = 3; break; // Read 3-byte integer
-
-    case DW_FORM_data4: // Read 4-byte integer
-    case DW_FORM_ref_addr:
-    case DW_FORM_ref4:
-    case DW_FORM_sec_offset:
-    case DW_FORM_strx4:
-    case DW_FORM_addrx4: streamLen = 4; break;
-    
-    case DW_FORM_data8: // Read 8-byte integer
-    case DW_FORM_ref8:
-    case DW_FORM_ref_sig8: streamLen = 8; break;
-    
-    case DW_FORM_data16: streamLen = 16; break; // Read 16-byte integer
-
-    case DW_FORM_sdata: { // Read LEB128
-        int64_t value = debugStream->decodeLeb128();
-        dieData->write((uint8_t *)&value, sizeof(int64_t));
-        break;
-    }
-
-    case DW_FORM_udata: // Read ULEB128
-    case DW_FORM_ref_udata: 
-    case DW_FORM_strx:
-    case DW_FORM_addrx:
-    case DW_FORM_loclistx:
-    case DW_FORM_rnglistx: {
-        uint64_t value = debugStream->decodeULeb128();
-        dieData->write((uint8_t *)&value, sizeof(uint64_t));
-        break;
-    }
-
-     // Read offset, copy string from either .debug_str or .debug_line_str
-    case DW_FORM_strp: {
-    case DW_FORM_line_strp:
-        int offset = debugStream->decodeUInt32();
-
-        StringTable *strTable = form == DW_FORM_strp ? debugStr : debugLineStr;
-        std::string str = strTable->getString(offset);
-        dieData->write((uint8_t *)str.c_str(), str.size());
-        break;
-    }
-
-    case DW_FORM_string: { // Read string directly from DIE
-        uint8_t c;
-        while ((c = debugStream->decodeUInt8()) != '\0') {
-            dieData->write(&c, sizeof(uint8_t));
-        }
-        break;
-    }
-
-    case DW_FORM_implicit_const: {// special value is attribute value
-        size_t value = entry->getSpecial();
-        dieData->write((uint8_t *)&value, sizeof(size_t));
-        break;
-    }
-
-    default: // indirect, ref_sup4, strp_sup, ref_sup8
-        std::cerr << "Unsupported form: " << form << std::endl;
-        exit(0);
-        break;
-    }
-
-    // If streamLen is used by a FORM, directly write bytes from debugStream
-    for (; streamLen > 0; streamLen--) {
-        uint8_t byte = debugStream->decodeUInt8();
-        dieData->write(&byte, sizeof(byte));
-    }
-
-    return dieData;
-}
-
 StringTable::StringTable(char *tableStart) : tableStart(tableStart) {}
 
 StringTable::~StringTable() {}
@@ -681,30 +813,35 @@ DwarfParser::DwarfParser(const char *fileName)
     const ElfSectionHeader *debugStrHeader = getSectionHeader(".debug_str");
     const ElfSectionHeader *debugLineStrHeader =
         getSectionHeader(".debug_line_str");
+    const ElfSectionHeader *debugLineHeader = getSectionHeader(".debug_line");
 
     uint8_t *fileStart = elfFileInfo->elfData;
 
-    uint8_t *debugInfoCUHeader = fileStart + debugInfoHeader->offset;
-    uint8_t *debugInfoEnd = debugInfoCUHeader + debugInfoHeader->size;
+    uint8_t *debugInfoStart = fileStart + debugInfoHeader->offset;
+    uint8_t *debugInfoEnd = debugInfoStart + debugInfoHeader->size;
     uint8_t *debugAbbrevStart = fileStart + debugAbbrevHeader->offset;
     uint8_t *debugStrStart = fileStart + debugStrHeader->offset;
     uint8_t *debugLineStrStart = fileStart + debugLineStrHeader->offset;
+    uint8_t *debugLineStart = fileStart + debugLineHeader->offset;
 
     // Initialize Compile Units
     for (;;) {
         // End of .debug_info section, CU parsing complete
-        if ((uintptr_t)debugInfoCUHeader >= ((uintptr_t)debugInfoEnd)) {
+        if ((uintptr_t)debugInfoStart >= ((uintptr_t)debugInfoEnd)) {
             break;
         }
 
-        CompileUnit *compileUnit = new CompileUnit(debugInfoCUHeader,
-            debugAbbrevStart, debugStrStart, debugLineStrStart);
+        CompileUnit *compileUnit = new CompileUnit(debugInfoStart,
+            debugAbbrevStart, debugStrStart, debugLineStrStart, debugLineStart);
         compileUnits.push_back(compileUnit);
         compileUnit->generateScopes();
-        compileUnit->printScopes();
+        // compileUnit->printScopes();
 
-        // Point to next CU Header
-        debugInfoCUHeader += compileUnit->getLength();
+        // Point to next .debug_info CU Header
+        debugInfoStart += compileUnit->getDebugInfoLength();
+
+        // Point to next .debug_line CU header
+        debugLineStart += compileUnit->getDebugLineLength();
     }
 }
 

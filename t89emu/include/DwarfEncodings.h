@@ -494,6 +494,20 @@ enum OperationEncoding {
     OPERATION_ENCODING(DEFINE)
 };
 
+// Line Number Header Entry Format Encodings
+#define CONTENT_ENCODING(EXPR)                  \
+    EXPR(DW_LNCT_path, 0x01)                    \
+    EXPR(DW_LNCT_directory_index, 0x02)         \
+    EXPR(DW_LNCT_timestamp, 0x03)               \
+    EXPR(DW_LNCT_size, 0x04)                    \
+    EXPR(DW_LNCT_MD5, 0x05)                     \
+    EXPR(DW_LNCT_lo_user, 0x2000)               \
+    EXPR(DW_LNCT_hi_user, 0x3fff)
+
+enum ContentEncoding {
+    CONTENT_ENCODING(DEFINE)
+};
+
 #define PRINT_ENUM(NAME, ENUM, ENUM_LIST)       \
     static inline const char *NAME(ENUM type) { \
         switch (type) {                         \

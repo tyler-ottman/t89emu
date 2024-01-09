@@ -52,6 +52,8 @@ public:
     bool isStreamable(void);
     const uint8_t *getData(void);
 
+    void setOffset(size_t offset); // Offset from center
+
 private:
     const uint8_t *data;
     size_t index;
@@ -194,6 +196,75 @@ private:
     uint32_t highPc;
 };
 
+class LineNumberInfo {
+public:
+    LineNumberInfo(CompileUnit *cu, uint8_t *debugLineStart);
+    ~LineNumberInfo();
+
+    void generateFileFormatInfo(uint8_t &numEntries,
+        std::vector<std::pair<ContentEncoding, FormEncoding>> &formatEntries);
+    void generateFileInformation(uint &numEntries,
+        std::vector<std::map<ContentEncoding, DebugData *>> &fileEntries,
+        std::vector<std::pair<ContentEncoding, FormEncoding>> &fileFormat);
+
+    // get total length of the line number information for this compile unit
+    size_t getLength(void);
+
+private:
+    void clearRegisters(void); // End of every sequence
+    void generateFilePaths(void);
+    void generateLineNumberMatrix(void);
+    void parseProgramHeader(void);
+
+    bool isFileInFilePaths(std::string &filePath);
+
+    struct ProgramHeader {
+        uint32_t unitLength;
+        uint16_t version;
+        uint8_t addressSize;
+        uint8_t segmentSelectorSize;
+        uint32_t headerLength;
+        uint8_t minimumInstructionLength;
+        uint8_t maximumOperationsPerInstruction;
+        uint8_t defaultIsStmt;
+        int8_t lineBase;
+        uint8_t lineRange;
+        uint8_t opcodeBase;
+        std::vector<uint8_t> standardOpcodeLengths;
+        uint8_t directoryEntryFormatCount;
+        std::vector<std::pair<ContentEncoding, FormEncoding>>
+            directoryEntryFormat;
+        uint directoriesCount;
+        std::vector<std::map<ContentEncoding, DebugData *>> directories;
+        uint8_t fileNameEntryFormatCount;
+        std::vector<std::pair<ContentEncoding, FormEncoding>>
+            fileNameEntryFormat;
+        uint fileNamesCount;
+        std::vector<std::map<ContentEncoding, DebugData *>> fileNames;
+    };
+
+    ProgramHeader infoHeader;
+    std::vector<std::string> filePaths;
+
+    // .debug_line stream
+    DataStream *stream;
+
+    CompileUnit *compileUnit;
+
+    uint32_t address;
+    uint opIndex;
+    uint file;
+    uint line;
+    uint column;
+    bool isStmt;
+    bool basicBlock;
+    bool endSequence;
+    bool prologueEnd;
+    bool epilogueBegin;
+    uint isa;
+    uint discriminator;
+};
+
 class DebugInfoEntry {
 public:
     DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
@@ -234,15 +305,20 @@ private:
 class CompileUnit {
 public:
     CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                uint8_t *debugStrStart, uint8_t *debugLineStrStart);
+                uint8_t *debugStrStart, uint8_t *debugLineStrStart,
+                uint8_t *debugLineStart);
     ~CompileUnit();
 
     void generateScopes(void);
     void printScopes(void);
 
+    // Given an attribute's form, read bytes from byteStream accordingly
+    DebugData *decodeInfo(AttributeEntry *entry, DataStream *stream);
+
     AbbrevEntry *getAbbrevEntry(size_t dieCode);
     size_t getAddrSize(void);
-    size_t getLength(void);
+    size_t getDebugInfoLength(void); // Returns size of .debug_info section for corresponding CU
+    size_t getDebugLineLength(void); // Returns size of .debug_line section for corresponding CU
     Scope *getScope(uint32_t pc);
     const char *getUnitName(void);
     const char *getUnitDir(void);
@@ -255,9 +331,6 @@ private:
 
     // Recursively generate scopes, and identify variables within scopes
     Scope *generateScopes(DebugInfoEntry *node, Scope *parent);
-
-    // Given an attribute's form, read bytes from byteStream accordingly
-    DebugData *decodeInfo(AttributeEntry *entry);
 
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
@@ -277,8 +350,7 @@ private:
     // Starts at first byte of first DIE entry within CU
     DataStream *debugStream;
 
-    // Starting address of CU within .debug_info
-    uintptr_t debugStart;
+    LineNumberInfo *debugLine;
 };
 
 class StringTable {
