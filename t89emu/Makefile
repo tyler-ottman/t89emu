@@ -26,7 +26,7 @@ TARGET_OBJS = $(OBJ_DIR)/main.o
 TARGET_OBJS += $(OBJ_DIR)/AluControlUnit.o $(OBJ_DIR)/NextPc.o $(OBJ_DIR)/RegisterFile.o $(OBJ_DIR)/Alu.o $(OBJ_DIR)/ImmediateGenerator.o $(OBJ_DIR)/ProgramCounter.o $(OBJ_DIR)/Csr.o $(OBJ_DIR)/MemControlUnit.o $(OBJ_DIR)/MemoryDevice.o $(OBJ_DIR)/ClintMemoryDevice.o $(OBJ_DIR)/RamMemoryDevice.o $(OBJ_DIR)/RomMemoryDevice.o $(OBJ_DIR)/VideoMemoryDevice.o $(OBJ_DIR)/Bus.o $(OBJ_DIR)/Trap.o
 TARGET_OBJS += $(OBJ_DIR)/imgui.o $(OBJ_DIR)/imgui_demo.o $(OBJ_DIR)/imgui_draw.o $(OBJ_DIR)/imgui_tables.o $(OBJ_DIR)/imgui_widgets.o
 TARGET_OBJS += $(OBJ_DIR)/imgui_impl_glfw.o $(OBJ_DIR)/imgui_impl_opengl3.o
-TARGET_OBJS += $(OBJ_DIR)/Mcu.o $(OBJ_DIR)/Gui.o $(OBJ_DIR)/ElfParser.o $(OBJ_DIR)/DwarfParser.o
+TARGET_OBJS += $(OBJ_DIR)/Mcu.o $(OBJ_DIR)/Gui.o $(OBJ_DIR)/McuDebug.o $(OBJ_DIR)/ElfParser.o $(OBJ_DIR)/DwarfParser.o
 
 TARGET_NAME = t89emu
 

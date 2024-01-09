@@ -334,6 +334,14 @@ void Scope::printScopes(int depth) {
     for (Scope *child : scopes) { child->printScopes(depth + 1); }
 }
 
+void Scope::getLocalVariables(std::vector<Variable *> &ret) {
+
+}
+
+void Scope::getGlobalVariables(std::vector<Variable *> &ret) {
+
+}
+
 const char *Scope::getName() { return name.c_str(); }
 
 bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }

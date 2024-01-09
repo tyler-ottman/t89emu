@@ -4,6 +4,7 @@
 #include "ElfParser.h"
 #include "Gui.h"
 #include "Mcu.h"
+#include "McuDebug.h"
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -11,13 +12,8 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    ElfParser *parser = new ElfParser(argv[1]);
-    Mcu *t89 = Mcu::getInstance(parser->getRomStart(), parser->getRamStart(),
-                                parser->getEntryPc());
-    parser->flashRom(t89->getRomDevice());
+    McuDebug *debug = McuDebug::getInstance(argv[1]);
 
-    DwarfParser *debugParser = new DwarfParser(argv[1]);
-
-    Gui *emulator = new Gui(parser, debugParser, 0);
+    Gui *emulator = new Gui(debug);
     emulator->runApplication();
 }

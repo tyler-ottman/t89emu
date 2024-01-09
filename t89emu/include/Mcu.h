@@ -19,8 +19,8 @@
 
 class Mcu {
 public:
-    static Mcu *getInstance(uint32_t romBase = 0, uint32_t ramBase = 0,
-                            uint32_t entryPc = 0);
+    Mcu(uint32_t romBase, uint32_t ramBase, uint32_t entryPc);
+    ~Mcu();
 
     void nextInstruction(void);
 
@@ -44,9 +44,6 @@ public:
 #endif // BUS_EXPERIMENTAL
 
 private:
-    Mcu(uint32_t romBase, uint32_t ramBase, uint32_t entryPc);
-    ~Mcu();
-
     // Execute a normal RV32I instruction
     // If the instruction is executed successfully, function returns true
     // Otherwise, function returns false and stores the type of exception
@@ -82,7 +79,6 @@ private:
     ClintMemoryDevice *clint;
 #endif // BUS_EXPERIMENTAL
 
-    static Mcu *instance;
 };
 
 #endif // MCU_H

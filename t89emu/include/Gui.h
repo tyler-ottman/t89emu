@@ -7,11 +7,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <iostream>
 #include <map>
-#include <sstream>
 #include <stdint.h>
 #include <unordered_map>
 #include <vector>
@@ -21,13 +19,13 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "Mcu.h"
+#include "McuDebug.h"
 
 #define INSTRUCTIONS_PER_FRAME 1000000
 
 class Gui {
 public:
-    Gui(ElfParser *elfParser, DwarfParser *dwarfParser, int debug);
+    Gui(McuDebug *mcu);
     ~Gui();
     void runApplication(void);
 
@@ -46,9 +44,12 @@ private:
     void renderRegisterBank(void);
     void renderDebugSource(void);
 
-    void displayVarTable(const std::string &name);
+    void displayVarTable(const std::string &name,
+                         std::vector<Variable *> &vars);
 
-    std::string getInstructionStr(struct DisassembledEntry & entry);
+    std::string getInstructionStr(struct DisassembledEntry &entry);
+
+    McuDebug *mcu;
 
     // GLFW Window context
     GLFWwindow *window;
@@ -73,19 +74,6 @@ private:
     
     // General Purpose Registers
     std::vector<std::pair<std::string, uint32_t>> registers;
-    
-    // Disassembled Information
-    ElfParser *elfParser;
-
-    // Source-Level Information
-    struct SourceFileInfo {
-        std::string path;
-        std::string name;
-        std::vector<std::string> lines;
-    };
-
-    DwarfParser *dwarfParser;
-    std::vector<SourceFileInfo *> sourceFiles;
 
     bool isStepEnabled;
     bool isRunEnabled;

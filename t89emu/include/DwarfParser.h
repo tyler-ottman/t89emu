@@ -179,7 +179,8 @@ public:
 
     const char *getName(void);
 
-    // void getLocalVariables(std::vector<Variable *>& res);
+    void getLocalVariables(std::vector<Variable *> &res);
+    void getGlobalVariables(std::vector<Variable *> &res);
     bool isPcInRange(uint32_t pc);
 
 private:

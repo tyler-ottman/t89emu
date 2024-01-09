@@ -6,18 +6,13 @@ struct funcs {
     }
 };  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
-Gui::Gui(ElfParser *elfParser, DwarfParser *dwarfParser, int debug)
-    : elfParser(elfParser),
-      dwarfParser(dwarfParser),
-      isStepEnabled(false),
-      isRunEnabled(false) {
+Gui::Gui(McuDebug *mcu) : mcu(mcu), isStepEnabled(false), isRunEnabled(false) {
     // Call vendor specific initializer code
     if (initImGuiInstance()) {
         exit(EXIT_FAILURE);
     }
 
     // GUI uses pointers to MCU modules for rendering
-    Mcu *mcu = Mcu::getInstance();
     csrMemProbe = mcu->getClintDevice();
     ramProbe = mcu->getRamDevice();
     romProbe = mcu->getRomDevice();
@@ -41,37 +36,6 @@ Gui::Gui(ElfParser *elfParser, DwarfParser *dwarfParser, int debug)
 
     // Initialize I/O Panel Viewer
     buttons = {ImGuiKey_Tab, ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D};
-
-    // Initialize Source Code Viewer
-    for (size_t i = 0; i < dwarfParser->getNumCompileUnits(); i++) {
-        CompileUnit *cu = dwarfParser->getCompileUnit(i);
-        SourceFileInfo *sourceInfo = new SourceFileInfo;
-        
-        // Full path to source file
-        std::stringstream stream;
-        stream << cu->getUnitDir() << "/" << cu->getUnitName();
-        sourceInfo->path = stream.str();
-
-        // Source file name
-        size_t found = sourceInfo->path.find_last_of("/");
-        sourceInfo->name = sourceInfo->path.substr(++found);
-
-        // Source file bytes
-        std::ifstream fs;
-        fs.open(sourceInfo->path, std::ifstream::in);
-        if (!fs.is_open()) {
-            printf("Could not open file: %s\n", sourceInfo->name.c_str());
-            exit(EXIT_FAILURE);
-        }
-
-        std::string line;
-        while (std::getline(fs, line)) {
-            sourceInfo->lines.push_back(line);
-        }
-
-        fs.close();
-        sourceFiles.push_back(sourceInfo);
-    }
 }
 
 Gui::~Gui() {
@@ -93,12 +57,12 @@ void Gui::runApplication() {
             uint n = INSTRUCTIONS_PER_FRAME;
             while (n-- > 0 && (std::find(breakpoints.begin(), breakpoints.end(),
                                      pcProbe->getPc()) == breakpoints.end())) {
-                Mcu::getInstance()->nextInstruction();
+                mcu->nextInstruction();
             }
         }
 
         if (isStepEnabled) {
-            Mcu::getInstance()->nextInstruction();
+            mcu->nextInstruction();
         }
 
         // Start the Dear ImGui frame
@@ -113,8 +77,10 @@ void Gui::runApplication() {
         renderIoPanel();
         renderLcdDisplay();
         renderDisassembledCodeSection();
-        renderControlPanel();
         renderDebugSource();
+
+        isStepEnabled = false;
+        renderControlPanel(); // Updates control state for next loop
 
         // Draw frame to screen
         renderFrame();
@@ -213,17 +179,12 @@ void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
 }
 
 void Gui::renderControlPanel() {
-    isStepEnabled = false;
     ImGui::Begin("Control Panel");
-    if (isStepEnabled == true) {
-        // Step only enabled for 1 cycle
-        isStepEnabled = false;
-        // std::cout << "Vram: " << vram[0] << "\n";
-    }
+
     ImGui::Checkbox("Step", &isStepEnabled);
     
     ImGui::Checkbox("Run", &isRunEnabled);
-    // std::cout << is_run_enabled << std::endl;
+
     ImGui::End();
 }
 
@@ -266,18 +227,7 @@ void Gui::renderDisassembledCodeSection() {
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
     uint32_t pc = pcProbe->getPc();
-    std::vector<DisassembledEntry> &disassembly = elfParser->getDisassembledCode();
-
-    float scroll_pos = 0.0;
-    if (isStepEnabled) {
-        for (size_t idx = 0; idx < disassembly.size(); idx++) {
-            struct DisassembledEntry &entry = disassembly[idx];
-            if (entry.isInstruction && (entry.address == pc)) {
-                scroll_pos = idx * TEXT_BASE_HEIGHT;
-                break;
-            }
-        }
-    }
+    std::vector<DisassembledEntry> &disassembly = mcu->getDisassembledCode();
 
     // Begin Table
     static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
@@ -320,9 +270,17 @@ void Gui::renderDisassembledCodeSection() {
         }
 
         // If stepping through code, auto scroll to current instruction
+        float scrollPos = 0.0;
         if (isStepEnabled) {
-            // ImGui::SetScrollY(scroll_pos);
-            ImGui::SetScrollFromPosY(scroll_pos - ImGui::GetScrollY());
+            for (size_t idx = 0; idx < disassembly.size(); idx++) {
+                struct DisassembledEntry &entry = disassembly[idx];
+                if (entry.isInstruction && (entry.address == pc)) {
+                    scrollPos = idx * TEXT_BASE_HEIGHT;
+                    break;
+                }
+            }
+
+            ImGui::SetScrollFromPosY(scrollPos - ImGui::GetScrollY());
         }
     }
 
@@ -591,8 +549,9 @@ void Gui::renderDebugSource() {
     ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_FittingPolicyScroll;
     ImGui::BeginTabBar("sourceCodeTabBar", tabBarFlags);
 
-    for (const SourceFileInfo *sourceFile : sourceFiles) {
-        if(!ImGui::BeginTabItem(sourceFile->name.c_str())) { continue; }
+    for (const SourceFileInfo *sourceFile : mcu->getSourceFileInfo()) {
+        ImGuiTabItemFlags tabFlags = 0;
+        if(!ImGui::BeginTabItem(sourceFile->name.c_str(), nullptr, tabFlags)) { continue; }
 
         windowSize = ImGui::GetContentRegionAvail();
         ImGui::BeginChild("sourceCodeLines", ImVec2(windowSize.x, windowSize.y),
@@ -619,6 +578,7 @@ void Gui::renderDebugSource() {
             ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
             ImGui::Text("%s\n", sourceFile->lines[row].c_str());
             ImGui::PopStyleColor();
+
         }
 
         ImGui::EndTable(); // sourceCodeLines
@@ -636,14 +596,18 @@ void Gui::renderDebugSource() {
                       ImGuiChildFlags_Border, 0);
 
     // Local/Global Variables (placeholder)
-    displayVarTable("Global Variables");
-    displayVarTable("Local Variables");
+    std::vector<Variable *> globalVariables;
+    std::vector<Variable *> localVariables;
+
+    displayVarTable("Global Variables", globalVariables);
+    displayVarTable("Local Variables", localVariables);
 
     ImGui::EndChild();
-    ImGui::End(); // Source Code Debugger    
+    ImGui::End(); // Source Code Debugger
 }
 
-void Gui::displayVarTable(const std::string &name) {
+void Gui::displayVarTable(const std::string &name,
+                          std::vector<Variable *> &vars) {
     ImGuiTableFlags tableFlags =
         ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter;
 
