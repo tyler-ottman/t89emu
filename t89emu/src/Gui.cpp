@@ -6,21 +6,22 @@ struct funcs {
     }
 };  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
-Gui::Gui(McuDebug *mcu) : mcu(mcu), isStepEnabled(false), isRunEnabled(false) {
+Gui::Gui(McuDebug *debug) : debug(debug), doStepI(false), doStep(false),
+        forceSourceCodeScroll(false), goldSourceLine(0), isRunEnabled(false) {
     // Call vendor specific initializer code
     if (initImGuiInstance()) {
         exit(EXIT_FAILURE);
     }
 
     // GUI uses pointers to MCU modules for rendering
-    csrMemProbe = mcu->getClintDevice();
-    ramProbe = mcu->getRamDevice();
-    romProbe = mcu->getRomDevice();
-    vramProbe = mcu->getVideoDevice();
-    rfProbe = mcu->getRegisterFileModule();
-    pcProbe = mcu->getProgramCounterModule();
-    csrProbe = mcu->getCsrModule();
-    immgenProbe = mcu->getImmediateGeneratorModule();
+    csrMemProbe = debug->getClintDevice();
+    ramProbe = debug->getRamDevice();
+    romProbe = debug->getRomDevice();
+    vramProbe = debug->getVideoDevice();
+    rfProbe = debug->getRegisterFileModule();
+    pcProbe = debug->getProgramCounterModule();
+    csrProbe = debug->getCsrModule();
+    immgenProbe = debug->getImmediateGeneratorModule();
     
     textureW = vramProbe->getGWidth();
     textureH = vramProbe->getGHeight();
@@ -57,12 +58,12 @@ void Gui::runApplication() {
             uint n = INSTRUCTIONS_PER_FRAME;
             while (n-- > 0 && (std::find(breakpoints.begin(), breakpoints.end(),
                                      pcProbe->getPc()) == breakpoints.end())) {
-                mcu->nextInstruction();
+                debug->stepInstruction();
             }
-        }
-
-        if (isStepEnabled) {
-            mcu->nextInstruction();
+        } else if (doStepI) {
+            debug->stepInstruction();
+        } else if (doStep) {
+            debug->stepLine();
         }
 
         // Start the Dear ImGui frame
@@ -79,7 +80,6 @@ void Gui::runApplication() {
         renderDisassembledCodeSection();
         renderDebugSource();
 
-        isStepEnabled = false;
         renderControlPanel(); // Updates control state for next loop
 
         // Draw frame to screen
@@ -181,8 +181,11 @@ void Gui::addMemorySection(uint32_t memSize, uint32_t memStart, uint8_t *memPtr,
 void Gui::renderControlPanel() {
     ImGui::Begin("Control Panel");
 
-    ImGui::Checkbox("Step", &isStepEnabled);
+    doStepI = ImGui::Button("stepi");
+    ImGui::SameLine();
     
+    doStep = ImGui::Button("step");
+
     ImGui::Checkbox("Run", &isRunEnabled);
 
     ImGui::End();
@@ -227,7 +230,7 @@ void Gui::renderDisassembledCodeSection() {
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
     uint32_t pc = pcProbe->getPc();
-    std::vector<DisassembledEntry> &disassembly = mcu->getDisassembledCode();
+    std::vector<DisassembledEntry> &disassembly = debug->getDisassembledCode();
 
     // Begin Table
     static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
@@ -271,7 +274,7 @@ void Gui::renderDisassembledCodeSection() {
 
         // If stepping through code, auto scroll to current instruction
         float scrollPos = 0.0;
-        if (isStepEnabled) {
+        if (doScroll()) {
             for (size_t idx = 0; idx < disassembly.size(); idx++) {
                 struct DisassembledEntry &entry = disassembly[idx];
                 if (entry.isInstruction && (entry.address == pc)) {
@@ -474,6 +477,19 @@ void Gui::renderRegisterBank() {
         ImGui::TableSetupColumn("Value");
         ImGui::TableHeadersRow();
 
+        // Program Counter
+        ImGui::TableNextRow();
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("PC");
+        ImGui::PopStyleColor();
+
+        // Register Value
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
+        ImGui::Text("0x%08X", pcProbe->getPc());
+        ImGui::PopStyleColor();
+
         // General Purpose Registers
         for (size_t row = 0; row < registers.size(); row++) {
             // Register Entry
@@ -536,7 +552,6 @@ void Gui::renderRegisterBank() {
 
 void Gui::renderDebugSource() {
     ImGuiTableFlags tableFlags;
-
     ImGui::Begin("Source Code Debugger"); // Begin Window    
     
     // Source Code Window
@@ -546,12 +561,24 @@ void Gui::renderDebugSource() {
                       ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX, 0);
 
     // Source Code Window Tab Bar
-    ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_FittingPolicyScroll;
+    ImGuiTabBarFlags tabBarFlags =
+        ImGuiTabBarFlags_FittingPolicyScroll | ImGuiTabBarFlags_Reorderable;
     ImGui::BeginTabBar("sourceCodeTabBar", tabBarFlags);
 
-    for (const SourceFileInfo *sourceFile : mcu->getSourceFileInfo()) {
+    uint sourceLineAtPc = debug->getLineNumberAtPc();
+    if (sourceLineAtPc != 0) {
+        goldSourceLine = sourceLineAtPc;
+    }
+    std::string &sourceNameAtPc = debug->getSourceNameAtPc();
+
+    for (SourceInfo *source : debug->getSourceInfo()) {
         ImGuiTabItemFlags tabFlags = 0;
-        if(!ImGui::BeginTabItem(sourceFile->name.c_str(), nullptr, tabFlags)) { continue; }
+        bool isSourceNameMatch = source->getName() == sourceNameAtPc;
+        if (doScroll() && isSourceNameMatch) {
+            tabFlags |= ImGuiTabItemFlags_SetSelected;
+        }
+        if (!ImGui::BeginTabItem(source->getName().c_str(), nullptr,
+                                 tabFlags)) { continue; }
 
         windowSize = ImGui::GetContentRegionAvail();
         ImGui::BeginChild("sourceCodeLines", ImVec2(windowSize.x, windowSize.y),
@@ -560,25 +587,43 @@ void Gui::renderDebugSource() {
         // Source Code Lines
         tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollX;
         if (!ImGui::BeginTable("sourceCodeLines", 1, tableFlags)) { continue; }
-        for (size_t row = 0; row < sourceFile->lines.size(); row++) {
+        const std::vector<std::string> &lines = source->getLines();
+        for (size_t row = 0; row < lines.size(); row++) {
             ImGui::TableNextRow();
 
-            ImU32 bgColor = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
-            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, bgColor);
+            ImU32 color = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
+            if (row + 1 == goldSourceLine) {
+                color = ImGui::GetColorU32(ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
+            }
+
+            // If stepping through code, scroll to next line
+            if (forceSourceCodeScroll) {
+                float scrollPos = (goldSourceLine - 1.0) *
+                                  ImGui::GetTextLineHeightWithSpacing();
+                ImGui::SetScrollFromPosY(scrollPos - ImGui::GetScrollY());
+                forceSourceCodeScroll = false;
+            }
+            
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, color);
 
             ImGui::TableSetColumnIndex(0);
             
             // Line Number
             ImGui::PushStyleColor(ImGuiCol_Text, 0xbf73c2e8);
-            ImGui::Text("%4ld: ", row);
+            ImGui::Text("%4ld: ", row + 1);
             ImGui::PopStyleColor();
 
             // Line Source
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
-            ImGui::Text("%s\n", sourceFile->lines[row].c_str());
+            ImGui::Text("%s\n", lines[row].c_str());
             ImGui::PopStyleColor();
+        }
 
+        // ImGui doesn't programamatically select tab AND scroll in a single
+        // frame, so scrolling is delayed 1 frame after selecting tab
+        if (doScroll()) {
+            forceSourceCodeScroll = true;
         }
 
         ImGui::EndTable(); // sourceCodeLines
@@ -604,6 +649,10 @@ void Gui::renderDebugSource() {
 
     ImGui::EndChild();
     ImGui::End(); // Source Code Debugger
+}
+
+bool Gui::doScroll() {
+    return doStep || doStepI;
 }
 
 void Gui::displayVarTable(const std::string &name,

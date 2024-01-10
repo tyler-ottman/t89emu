@@ -41,4 +41,3 @@ void enable_graphics_mode(void) {
     // Set firty byte of video memory to graphics buffer
     *VIDEO_MEMORY = 2;
 }
-

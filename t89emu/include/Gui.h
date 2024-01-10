@@ -25,7 +25,7 @@
 
 class Gui {
 public:
-    Gui(McuDebug *mcu);
+    Gui(McuDebug *debug);
     ~Gui();
     void runApplication(void);
 
@@ -44,12 +44,13 @@ private:
     void renderRegisterBank(void);
     void renderDebugSource(void);
 
+    bool doScroll(void);
     void displayVarTable(const std::string &name,
                          std::vector<Variable *> &vars);
 
     std::string getInstructionStr(struct DisassembledEntry &entry);
 
-    McuDebug *mcu;
+    McuDebug *debug;
 
     // GLFW Window context
     GLFWwindow *window;
@@ -75,7 +76,13 @@ private:
     // General Purpose Registers
     std::vector<std::pair<std::string, uint32_t>> registers;
 
-    bool isStepEnabled;
+    bool doStepI;
+    
+    // Source Code Viewer state
+    bool doStep;
+    bool forceSourceCodeScroll;
+    uint goldSourceLine;
+
     bool isRunEnabled;
     std::vector<uint32_t> breakpoints;
     

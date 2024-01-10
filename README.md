@@ -42,7 +42,7 @@ $ ./run.sh
 ```
 
 A window with the application should appear allowing you to run the firmware on the emulator. Running the sample 'Hello world' application, the window should look like:
-![Alt text](./img/helloWorld.png "Hello World Example")
+![Alt text](./img/sample2.png "Hello World Example Pt. 2")
 
 ## Hardware Documentation
 
@@ -144,3 +144,6 @@ Field   | A | B | G | R
 
 ## Developer Remarks
 I am the only developer maintaining this project. I made the project to better understand my knowledge of computer science-related fields.
+
+## Other Images
+![Alt text](./img/sample1.png "Hello World Example Pt. 1")

@@ -1,6 +1,7 @@
 #ifndef DWARFPARSER_H
 #define DWARFPARSER_H
 
+#include <fstream>
 #include <map>
 #include <memory>
 #include <stack>
@@ -196,6 +197,21 @@ private:
     uint32_t highPc;
 };
 
+class SourceInfo {
+public:
+    SourceInfo(std::string &path);
+    ~SourceInfo();
+
+    std::string &getPath(void);
+    std::string &getName(void);
+    std::vector<std::string> &getLines(void);
+
+private:
+    std::string path;
+    std::string name;
+    std::vector<std::string> lines;
+};
+
 class LineNumberInfo {
 public:
     LineNumberInfo(CompileUnit *cu, uint8_t *debugLineStart);
@@ -209,18 +225,14 @@ public:
 
     // get total length of the line number information for this compile unit
     size_t getLength(void);
+    std::vector<SourceInfo *> &getSourceInfo(void);
+    uint getLineNumberAtPc(uint32_t pc);
+    std::string &getSourceNameAtPc(uint32_t pc);
+
+    static bool containsPath(std::vector<SourceInfo *> &sources,
+                             std::string &path);
 
 private:
-    void clearRegisters(void); // End of every sequence
-    void generateFilePaths(void);
-    void generateLineNumberMatrix(void);
-    void parseProgramHeader(void);
-
-    uint getNewAddress(uint operationAdvance);
-    uint getNewOpIndex(uint opeartionAdvance);
-
-    bool isFileInFilePaths(std::string &filePath);
-
     struct ProgramHeader {
         uint32_t unitLength;
         uint16_t version;
@@ -261,12 +273,19 @@ private:
         bool epilogueBegin;
     };
 
-    ProgramHeader infoHeader;
-    std::vector<std::string> filePaths;
-    std::vector<LineEntry *> lineMatrix;
+    void clearRegisters(void); // End of every sequence
+    void generateFilePaths(void);
+    void generateLineNumberMatrix(void);
+    void parseProgramHeader(void);
 
-    // .debug_line stream
-    DataStream *stream;
+    uint getNewAddress(uint operationAdvance);
+    uint getNewOpIndex(uint opeartionAdvance);
+    LineEntry *getLineEntryAtPc(uint32_t pc);
+
+    ProgramHeader infoHeader;
+    std::vector<LineEntry *> lineMatrix;
+    std::vector<SourceInfo *> sourceInfo;
+    DataStream *stream; // .debug_line stream
     CompileUnit *compileUnit;
 
     uint32_t address;
@@ -340,6 +359,9 @@ public:
     Scope *getScope(uint32_t pc);
     const char *getUnitName(void);
     const char *getUnitDir(void);
+    std::vector<SourceInfo *> &getSourceInfo(void);
+    uint getLineNumberAtPc(uint32_t pc);
+    std::string &getSourceNameAtPc(uint32_t pc);
 
     bool isPcInRange(uint32_t pc);
 
@@ -388,11 +410,18 @@ public:
     ~DwarfParser();
 
     Scope *getScope(uint32_t pc);
-    CompileUnit *getCompileUnit(size_t fileIdx);
+    CompileUnit *getCompileUnitAtPc(uint32_t pc);
     size_t getNumCompileUnits(void);
+    std::vector<SourceInfo *> &getSourceInfo(void);
+    uint getLineNumberAtPc(uint32_t pc);
+    std::string &getSourceNameAtPc(uint32_t pc);
 
 private:
+
     std::vector<CompileUnit *> compileUnits;
+
+    // Source File Information
+    std::vector<SourceInfo *> sourceInfo;
 };
 
 #endif // DWARFPARSER_H

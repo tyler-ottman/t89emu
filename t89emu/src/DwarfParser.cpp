@@ -348,6 +348,32 @@ const char *Scope::getName() { return name.c_str(); }
 
 bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }
 
+SourceInfo::SourceInfo(std::string &path) : path(path) {
+    size_t found = path.find_last_of("/");  // Source Name
+    name = path.substr(++found);
+
+    // Store bytes of source file
+    std::ifstream fs;
+    fs.open(path, std::ifstream::in);
+    if (!fs.is_open()) {
+        printf("Could not open file: %s\n", name.c_str());
+        exit(EXIT_FAILURE);
+    }
+
+    std::string line;
+    while (std::getline(fs, line)) {
+        lines.push_back(line);
+    }
+
+    fs.close();
+}
+
+std::string &SourceInfo::getPath() { return path; }
+
+std::string &SourceInfo::getName() { return name; }
+
+std::vector<std::string> &SourceInfo::getLines() { return lines; }
+
 LineNumberInfo::LineNumberInfo(CompileUnit *compileUnit,
         uint8_t *debugLineStart) : compileUnit(compileUnit) {
     stream = new DataStream(debugLineStart, 4 + *((uint32_t *)debugLineStart));
@@ -392,6 +418,31 @@ void LineNumberInfo::generateFileInformation(uint &numEntries,
 // Includes unitLength (4 bytes) field itself
 size_t LineNumberInfo::getLength() { return 4 + infoHeader.unitLength; }
 
+std::vector<SourceInfo *> &LineNumberInfo::getSourceInfo() {
+    return sourceInfo;
+}
+
+uint LineNumberInfo::getLineNumberAtPc(uint32_t pc) {
+    LineEntry *lineEntry = getLineEntryAtPc(pc);
+    return lineEntry ? lineEntry->line : 0;
+}
+
+std::string temp = "";
+std::string &LineNumberInfo::getSourceNameAtPc(uint32_t pc) {
+    LineEntry *lineEntry = getLineEntryAtPc(pc);
+    return lineEntry ? sourceInfo[lineEntry->file]->getName() : temp;
+}
+
+bool LineNumberInfo::containsPath(std::vector<SourceInfo *> &sources,
+                         std::string &path) {
+    for (SourceInfo *source : sources) {
+        if (path == source->getPath()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void LineNumberInfo::clearRegisters() {
     basicBlock = endSequence = prologueEnd = epilogueBegin = false;
     address = opIndex = column = isa = discriminator = 0;
@@ -415,13 +466,12 @@ void LineNumberInfo::generateFilePaths() {
     }
 
     // Generate full paths to files
+    std::vector<std::string> filePaths;
     for (std::map<ContentEncoding, DebugData *> &file : infoHeader.fileNames) {
         uint directoryIndex = file[DW_LNCT_directory_index]->getUInt();
-        std::string fileName = dirPaths[directoryIndex] + "/"
+        std::string filePath = dirPaths[directoryIndex] + "/"
             + file[DW_LNCT_path]->getString();
-        if (!isFileInFilePaths(fileName)) {
-            filePaths.push_back(fileName);
-        }
+        sourceInfo.push_back(new SourceInfo(filePath));
     }
 }
 
@@ -558,11 +608,13 @@ uint LineNumberInfo::getNewOpIndex(uint operationAdvance) {
            infoHeader.maximumOperationsPerInstruction;
 }
 
-bool LineNumberInfo::isFileInFilePaths(std::string &filePath) {
-    for (std::string &path : filePaths) {
-        if (path == filePath) { return true; }
+LineNumberInfo::LineEntry *LineNumberInfo::getLineEntryAtPc(uint32_t pc) {
+    for (LineEntry *lineEntry : lineMatrix) {
+        if (lineEntry->address == pc) {
+            return lineEntry;
+        }
     }
-    return false;
+    return nullptr;
 }
 
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
@@ -705,6 +757,18 @@ const char *CompileUnit::getUnitName() {
 
 const char *CompileUnit::getUnitDir() {
     return root->getAttribute(DW_AT_comp_dir)->getString();
+}
+
+std::vector<SourceInfo *> &CompileUnit::getSourceInfo() {
+    return debugLine->getSourceInfo();
+}
+
+uint CompileUnit::getLineNumberAtPc(uint32_t pc) {
+    return debugLine->getLineNumberAtPc(pc);
+}
+
+std::string &CompileUnit::getSourceNameAtPc(uint32_t pc) {
+    return debugLine->getSourceNameAtPc(pc);
 }
 
 bool CompileUnit::isPcInRange(uint32_t pc) {
@@ -950,10 +1014,43 @@ Scope *DwarfParser::getScope(uint32_t pc) {
     return nullptr;
 }
 
-CompileUnit *DwarfParser::getCompileUnit(size_t fileIdx) {
-    return compileUnits[fileIdx];
+CompileUnit *DwarfParser::getCompileUnitAtPc(uint32_t pc) {
+    // for (CompileUnit *compileUnit : compileUnits) {
+    //     if (compileUnit->isPcInRange(pc)) {
+    //         return compileUnit;
+    //     }
+    // }
+    for (size_t i = compileUnits.size() - 1; i >= 0; i--) {
+        if (compileUnits[i]->isPcInRange(pc)) {
+            return compileUnits[i];
+        }
+    }
+    return nullptr;
 }
 
 size_t DwarfParser::getNumCompileUnits() {
     return compileUnits.size();
+}
+
+// Get source information from all compile units
+std::vector<SourceInfo *> &DwarfParser::getSourceInfo() {
+    if (sourceInfo.empty()) {
+        for (CompileUnit *cu : compileUnits) {
+            for (SourceInfo *source : cu->getSourceInfo()) {
+                if (!LineNumberInfo::containsPath(sourceInfo,
+                                                  source->getPath())) {
+                    sourceInfo.push_back(source);
+                }
+            }
+        }
+    }
+    return sourceInfo;
+}
+
+uint DwarfParser::getLineNumberAtPc(uint32_t pc) {
+    return getCompileUnitAtPc(pc)->getLineNumberAtPc(pc);
+}
+
+std::string &DwarfParser::getSourceNameAtPc(uint32_t pc) {
+    return getCompileUnitAtPc(pc)->getSourceNameAtPc(pc);
 }

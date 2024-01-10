@@ -12,7 +12,21 @@ McuDebug *McuDebug::getInstance(const char *elfPath) {
     return instance;
 }
 
-void McuDebug::nextInstruction() { mcu->nextInstruction(); }
+void McuDebug::stepInstruction() { mcu->nextInstruction(); }
+
+void McuDebug::stepLine() {
+    uint startPc = mcu->getProgramCounterModule()->getPc();
+    uint startLine = dwarfParser->getLineNumberAtPc(startPc);
+    uint curPc, curLine;
+
+    // Keep executing instructions until current line changes
+    // Or if pc repeats when stepping through a for loop
+    do {
+        mcu->nextInstruction();
+        curPc = mcu->getProgramCounterModule()->getPc();
+        curLine = dwarfParser->getLineNumberAtPc(curPc);
+    } while ((curLine == 0 || curLine == startLine) && startPc != curPc);
+}
 
 ClintMemoryDevice *McuDebug::getClintDevice() { return mcu->getClintDevice(); }
 
@@ -40,12 +54,22 @@ std::vector<DisassembledEntry> &McuDebug::getDisassembledCode() {
     return elfParser->getDisassembledCode();
 }
 
-std::vector<SourceFileInfo *> &McuDebug::getSourceFileInfo() {
-    return fileInfo;
+std::vector<SourceInfo *> &McuDebug::getSourceInfo() {
+    return dwarfParser->getSourceInfo();
 }
 
 void McuDebug::getLocalVariables(std::vector<Variable *> &variables) {}
 void McuDebug::getGlobalVariables(std::vector<Variable *> &variables) {}
+
+uint McuDebug::getLineNumberAtPc() {
+    return dwarfParser->getLineNumberAtPc(
+        mcu->getProgramCounterModule()->getPc());
+}
+
+std::string &McuDebug::getSourceNameAtPc() {
+    return dwarfParser->getSourceNameAtPc(
+        mcu->getProgramCounterModule()->getPc());
+}
 
 McuDebug::McuDebug(const char *elfPath) {
     elfParser = new ElfParser(elfPath);
@@ -55,41 +79,6 @@ McuDebug::McuDebug(const char *elfPath) {
                   elfParser->getEntryPc());
 
     elfParser->flashRom(mcu->getRomDevice());
-
-    initSourceInfo();
 }
 
 McuDebug::~McuDebug() {}
-
-void McuDebug::initSourceInfo() {
-    // Initialize Source Code Viewer
-    for (size_t i = 0; i < dwarfParser->getNumCompileUnits(); i++) {
-        CompileUnit *cu = dwarfParser->getCompileUnit(i);
-        SourceFileInfo *sourceInfo = new SourceFileInfo;
-        
-        // Full path to source file
-        std::stringstream stream;
-        stream << cu->getUnitDir() << "/" << cu->getUnitName();
-        sourceInfo->path = stream.str();
-
-        // Source file name
-        size_t found = sourceInfo->path.find_last_of("/");
-        sourceInfo->name = sourceInfo->path.substr(++found);
-
-        // Source file bytes
-        std::ifstream fs;
-        fs.open(sourceInfo->path, std::ifstream::in);
-        if (!fs.is_open()) {
-            printf("Could not open file: %s\n", sourceInfo->name.c_str());
-            exit(EXIT_FAILURE);
-        }
-
-        std::string line;
-        while (std::getline(fs, line)) {
-            sourceInfo->lines.push_back(line);
-        }
-
-        fs.close();
-        fileInfo.push_back(sourceInfo);
-    }
-}
