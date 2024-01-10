@@ -216,6 +216,9 @@ private:
     void generateLineNumberMatrix(void);
     void parseProgramHeader(void);
 
+    uint getNewAddress(uint operationAdvance);
+    uint getNewOpIndex(uint opeartionAdvance);
+
     bool isFileInFilePaths(std::string &filePath);
 
     struct ProgramHeader {
@@ -243,12 +246,27 @@ private:
         std::vector<std::map<ContentEncoding, DebugData *>> fileNames;
     };
 
+    struct LineEntry {
+        LineEntry(uint32_t address, uint line, uint column, uint file,
+                  bool isStmt, bool prologueEnd, bool epilogueBegin)
+            : address(address), line(line), column(column), file(file),
+              isStmt(isStmt), prolgueEnd(prologueEnd),
+              epilogueBegin(epilogueBegin) {}
+        uint32_t address;
+        uint line;
+        uint column;
+        uint file;
+        bool isStmt; // flags for setting breakpoints
+        bool prolgueEnd;
+        bool epilogueBegin;
+    };
+
     ProgramHeader infoHeader;
     std::vector<std::string> filePaths;
+    std::vector<LineEntry *> lineMatrix;
 
     // .debug_line stream
     DataStream *stream;
-
     CompileUnit *compileUnit;
 
     uint32_t address;

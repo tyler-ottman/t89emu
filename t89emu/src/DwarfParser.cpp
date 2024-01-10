@@ -350,7 +350,7 @@ bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }
 
 LineNumberInfo::LineNumberInfo(CompileUnit *compileUnit,
         uint8_t *debugLineStart) : compileUnit(compileUnit) {
-    stream = new DataStream(debugLineStart, *((uint32_t *)debugLineStart));
+    stream = new DataStream(debugLineStart, 4 + *((uint32_t *)debugLineStart));
 
     parseProgramHeader();
     generateFilePaths();
@@ -393,18 +393,10 @@ void LineNumberInfo::generateFileInformation(uint &numEntries,
 size_t LineNumberInfo::getLength() { return 4 + infoHeader.unitLength; }
 
 void LineNumberInfo::clearRegisters() {
-    address = 0;
-    opIndex = 0;
-    file = 1;
-    line = 1;
-    column = 0;
+    basicBlock = endSequence = prologueEnd = epilogueBegin = false;
+    address = opIndex = column = isa = discriminator = 0;
     isStmt = infoHeader.defaultIsStmt;
-    basicBlock = false;
-    endSequence = false;
-    prologueEnd = false;
-    epilogueBegin = false;
-    isa = 0;
-    discriminator = 0;
+    file = line = 1;
 }
 
 void LineNumberInfo::generateFilePaths() {
@@ -434,7 +426,93 @@ void LineNumberInfo::generateFilePaths() {
 }
 
 void LineNumberInfo::generateLineNumberMatrix() {
+    // stream->setOffset(12 + infoHeader.headerLength);
 
+    while (stream->isStreamable()) {
+        uint8_t opcode = stream->decodeUInt8();
+        uint adjustedOpcode;
+        uint operationAdvance;
+
+        if (opcode >= infoHeader.opcodeBase) { // Special
+            adjustedOpcode = opcode - infoHeader.opcodeBase;
+            operationAdvance = adjustedOpcode / infoHeader.lineRange;
+
+            address = getNewAddress(operationAdvance);
+            opIndex = getNewOpIndex(operationAdvance);
+            line += infoHeader.lineBase + (adjustedOpcode % infoHeader.lineRange);
+            lineMatrix.push_back(new LineEntry(address, line, column, file,
+                                               isStmt, prologueEnd,
+                                               epilogueBegin));
+            basicBlock = prologueEnd = epilogueBegin = false;
+            discriminator = 0;
+        } else if (opcode && opcode < infoHeader.opcodeBase) { // Standard
+            switch (opcode) {
+            case DW_LNS_copy:
+                lineMatrix.push_back(new LineEntry(address, line, column, file,
+                                                   isStmt, prologueEnd,
+                                                   epilogueBegin));
+                discriminator = 0;
+                basicBlock = prologueEnd = epilogueBegin = false;
+                break;
+
+            case DW_LNS_advance_pc:
+                operationAdvance = stream->decodeULeb128();
+                address = getNewAddress(operationAdvance);
+                opIndex = getNewOpIndex(operationAdvance);
+                break;
+
+            case DW_LNS_advance_line: line += stream->decodeLeb128(); break;
+
+            case DW_LNS_set_file: file = stream->decodeULeb128(); break;
+
+            case DW_LNS_set_column: column = stream->decodeULeb128(); break;
+
+            case DW_LNS_negate_stmt: isStmt = !isStmt;  break;
+
+            case DW_LNS_set_basic_block: basicBlock = true; break;
+
+            case DW_LNS_const_add_pc:
+                adjustedOpcode = 255 - infoHeader.opcodeBase;
+                operationAdvance = adjustedOpcode / infoHeader.lineRange;
+                address = getNewAddress(operationAdvance);
+                opIndex = getNewOpIndex(operationAdvance);
+                break;
+
+            case DW_LNS_fixed_advance_pc:
+                address += stream->decodeUInt16();
+                opIndex = 0;
+                break;
+
+            case DW_LNS_set_prologue_end: prologueEnd = true; break;
+
+            case DW_LNS_set_epilogue_end: epilogueBegin = true; break;
+
+            case DW_LNS_set_isa: isa = stream->decodeULeb128(); break;
+            }
+        } else { // Extended
+            stream->decodeULeb128(); // instruction length
+            opcode = stream->decodeUInt8();
+
+            switch (opcode) {
+            case DW_LNE_end_sequence:
+                endSequence = true;
+                lineMatrix.push_back(new LineEntry(address, line, column, file,
+                                                   isStmt, prologueEnd,
+                                                   epilogueBegin));
+                clearRegisters();
+                break;
+
+            case DW_LNE_set_address:
+                address = stream->decodeUInt32();
+                opIndex = 0;
+                break;
+
+            case DW_LNE_set_discriminator:
+                discriminator = stream->decodeULeb128();
+                break;
+            }
+        }
+    }
 }
 
 void LineNumberInfo::parseProgramHeader() {
@@ -467,6 +545,17 @@ void LineNumberInfo::parseProgramHeader() {
                            infoHeader.fileNameEntryFormat);
     generateFileInformation(infoHeader.fileNamesCount, infoHeader.fileNames,
                             infoHeader.fileNameEntryFormat);
+}
+
+uint LineNumberInfo::getNewAddress(uint operationAdvance) {
+    return address + infoHeader.minimumInstructionLength *
+                         ((opIndex + operationAdvance) /
+                          infoHeader.maximumOperationsPerInstruction);
+}
+
+uint LineNumberInfo::getNewOpIndex(uint operationAdvance) {
+    return (opIndex + operationAdvance) %
+           infoHeader.maximumOperationsPerInstruction;
 }
 
 bool LineNumberInfo::isFileInFilePaths(std::string &filePath) {

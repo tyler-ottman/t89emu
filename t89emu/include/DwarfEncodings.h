@@ -508,6 +508,38 @@ enum ContentEncoding {
     CONTENT_ENCODING(DEFINE)
 };
 
+// Line Number Standard Opcode Encodings
+#define STANDARD_OPCODE_ENCODING(EXPR)          \
+    EXPR(DW_LNS_copy, 0x01)                     \
+    EXPR(DW_LNS_advance_pc, 0x02)               \
+    EXPR(DW_LNS_advance_line, 0x03)             \
+    EXPR(DW_LNS_set_file, 0x04)                 \
+    EXPR(DW_LNS_set_column, 0x05)               \
+    EXPR(DW_LNS_negate_stmt, 0x06)              \
+    EXPR(DW_LNS_set_basic_block, 0x07)          \
+    EXPR(DW_LNS_const_add_pc, 0x08)             \
+    EXPR(DW_LNS_fixed_advance_pc, 0x09)         \
+    EXPR(DW_LNS_set_prologue_end, 0x0a)         \
+    EXPR(DW_LNS_set_epilogue_end, 0x0b)         \
+    EXPR(DW_LNS_set_isa, 0x0c)
+
+enum StandardOpcodeEncoding {
+    STANDARD_OPCODE_ENCODING(DEFINE)
+};
+
+// Line Number Extended Opcode Encodings
+#define EXTENDED_OPCODE_ENCODING(EXPR)          \
+    EXPR(DW_LNE_end_sequence, 0x01)             \
+    EXPR(DW_LNE_set_address, 0x02)              \
+    EXPR(ExtOpReserved0, 0x03)                  \
+    EXPR(DW_LNE_set_discriminator, 0x04)        \
+    EXPR(DW_LNE_lo_user, 0x05)                  \
+    EXPR(DW_LNE_hi_user, 0x06)
+
+enum ExtendedOpcodeEncoding {
+    EXTENDED_OPCODE_ENCODING(DEFINE)
+};
+
 #define PRINT_ENUM(NAME, ENUM, ENUM_LIST)       \
     static inline const char *NAME(ENUM type) { \
         switch (type) {                         \
