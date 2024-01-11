@@ -5,7 +5,6 @@
 #include <GLES2/gl2.h>
 #endif
 
-#include <algorithm>
 #include <cmath>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <iostream>
@@ -81,10 +80,10 @@ private:
     // Source Code Viewer state
     bool doStep;
     bool forceSourceCodeScroll;
-    uint goldSourceLine;
+    // uint goldSourceLine;
 
     bool isRunEnabled;
-    std::vector<uint32_t> breakpoints;
+    // std::vector<uint32_t> breakpoints;
     
     ImFont *vramFont;
 };

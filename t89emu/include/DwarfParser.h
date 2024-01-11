@@ -159,6 +159,7 @@ public:
     uint32_t getLocation(void);
     std::string& getName(void);
     OperationEncoding getType(void);
+    DebugData *getAttribute(AttributeEncoding attribute);
 
 private:
     void processLocation(void);
@@ -181,12 +182,14 @@ public:
     void printScopes(int depth);
 
     const char *getName(void);
-
-    void getLocalVariables(std::vector<Variable *> &res);
-    void getGlobalVariables(std::vector<Variable *> &res);
+    void getLocalVariables(std::vector<Variable *> &res, uint32_t pc, uint line);
+    void getGlobalVariables(std::vector<Variable *> &res, uint32_t pc, uint line);
+    bool isLocalScope(uint32_t pc);
     bool isPcInRange(uint32_t pc);
 
 private:
+    void getVariablesAboveLine(std::vector<Variable *> &ret, uint line);
+
     std::string name;
 
     Scope *parent;
@@ -362,6 +365,10 @@ public:
     std::vector<SourceInfo *> &getSourceInfo(void);
     uint getLineNumberAtPc(uint32_t pc);
     std::string &getSourceNameAtPc(uint32_t pc);
+    void getLocalVariables(std::vector<Variable *> &variables, uint32_t pc,
+                           uint line);
+    void getGlobalVariables(std::vector<Variable *> &variables, uint32_t pc,
+                            uint line);
 
     bool isPcInRange(uint32_t pc);
 
@@ -415,9 +422,12 @@ public:
     std::vector<SourceInfo *> &getSourceInfo(void);
     uint getLineNumberAtPc(uint32_t pc);
     std::string &getSourceNameAtPc(uint32_t pc);
+    void getLocalVariables(std::vector<Variable *> &variables, uint32_t pc,
+                           uint line);
+    void getGlobalVariables(std::vector<Variable *> &variables, uint32_t pc,
+                            uint line);
 
-private:
-
+   private:
     std::vector<CompileUnit *> compileUnits;
 
     // Source File Information

@@ -1,6 +1,7 @@
 #ifndef MCUDEBUG_H
 #define MCUDEBUG_H
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -12,8 +13,13 @@ class McuDebug {
 public:
     static McuDebug *getInstance(const char *elfPath);
 
+    void executeInstructions(uint cycles);
     void stepInstruction(void);
     void stepLine(void);
+    void addBreakpoint(uint32_t address);
+    void removeBreakpoint(uint32_t address);
+
+    bool isBreakpoint(uint32_t address);
 
     ClintMemoryDevice *getClintDevice(void);
     RamMemoryDevice *getRamDevice(void);
@@ -35,10 +41,13 @@ private:
     McuDebug(const char *elfPath);
     ~McuDebug();
 
-    Mcu *mcu;
+    Mcu *mcu; // Emulated MCU
 
+    // Debugging information
     DwarfParser *dwarfParser;
     ElfParser *elfParser;
+    uint latestSourceLine;
+    std::vector<uint32_t> breakpoints;
 
     static McuDebug *instance;
 };

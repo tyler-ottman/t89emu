@@ -296,6 +296,10 @@ std::string& Variable::getName() { return name; }
 
 OperationEncoding Variable::getType() { return locType; }
 
+DebugData *Variable::getAttribute(AttributeEncoding attribute) {
+    return debugEntry->getAttribute(attribute);
+}
+
 void Variable::processLocation() {
     DebugData *locInfo = debugEntry->getAttribute(DW_AT_location);
     if (locInfo->getForm() == DW_FORM_exprloc) {
@@ -336,17 +340,54 @@ void Scope::printScopes(int depth) {
     for (Scope *child : scopes) { child->printScopes(depth + 1); }
 }
 
-void Scope::getLocalVariables(std::vector<Variable *> &ret) {
+void Scope::getLocalVariables(std::vector<Variable *> &ret, uint32_t pc,
+                              uint line) {
+    for (Scope *childScope : scopes) {
+        if (childScope->isPcInRange(pc)) {
+            childScope->getLocalVariables(ret, pc, line);
+            return;
+        }
+    }
 
+    getVariablesAboveLine(ret, line);
 }
 
-void Scope::getGlobalVariables(std::vector<Variable *> &ret) {
+void Scope::getGlobalVariables(std::vector<Variable *> &ret, uint32_t pc,
+                               uint line) {
+    // Reached local scope, stop adding to globals
+    if (isLocalScope(pc)) { return; }
 
+    getVariablesAboveLine(ret, line);
+
+    for (Scope *childScope : scopes) {
+        if (childScope->isPcInRange(pc)) {
+            childScope->getGlobalVariables(ret, pc, line);
+            return;
+        }
+    }
 }
 
 const char *Scope::getName() { return name.c_str(); }
 
+bool Scope::isLocalScope(uint32_t pc) {
+    for (Scope *childScope : scopes) {
+        if (childScope->isPcInRange(pc)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Scope::isPcInRange(uint32_t pc) { return pc >= lowPc && pc < highPc; }
+
+void Scope::getVariablesAboveLine(std::vector<Variable *> &ret, uint line) {
+    for (Variable *variable : variables) {
+        DebugData *varEntry = variable->getAttribute(DW_AT_decl_line);
+        if (varEntry && varEntry->getUInt() <= line) {
+            ret.push_back(variable);
+        }
+    }
+}
 
 SourceInfo::SourceInfo(std::string &path) : path(path) {
     size_t found = path.find_last_of("/");  // Source Name
@@ -707,7 +748,11 @@ bool DebugInfoEntry::isType() {
 }
 
 bool DebugInfoEntry::isVariable() {
-    return abbrevEntry->getDieTag() == DW_TAG_variable;
+    switch (abbrevEntry->getDieTag()) {
+    case DW_TAG_variable:
+    case DW_TAG_formal_parameter: return true;
+    default: return false;
+    }
 }
 
 CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
@@ -737,6 +782,13 @@ CompileUnit::~CompileUnit() {
 
 void CompileUnit::generateScopes() {    
     rootScope = generateScopes(root, nullptr);
+}
+
+void CompileUnit::printScopes() {
+    DebugData *nameAtt = root->getAttribute(DW_AT_name);
+    const char *cuName = nameAtt ? nameAtt->getString() : "";
+    printf("\nCU: %s\n", cuName);
+    rootScope->printScopes(0);
 }
 
 AbbrevEntry *CompileUnit::getAbbrevEntry(size_t dieCode) {
@@ -771,15 +823,18 @@ std::string &CompileUnit::getSourceNameAtPc(uint32_t pc) {
     return debugLine->getSourceNameAtPc(pc);
 }
 
-bool CompileUnit::isPcInRange(uint32_t pc) {
-    return rootScope->isPcInRange(pc);
+void CompileUnit::getLocalVariables(std::vector<Variable *> &variables,
+                                    uint32_t pc, uint line) {
+    rootScope->getLocalVariables(variables, pc, line);
 }
 
-void CompileUnit::printScopes() {
-    DebugData *nameAtt = root->getAttribute(DW_AT_name);
-    const char *cuName = nameAtt ? nameAtt->getString() : "";
-    printf("\nCU: %s\n", cuName);
-    rootScope->printScopes(0);
+void CompileUnit::getGlobalVariables(std::vector<Variable *> &variables,
+                                     uint32_t pc, uint line) {
+    rootScope->getGlobalVariables(variables, pc, line);
+}
+
+bool CompileUnit::isPcInRange(uint32_t pc) {
+    return rootScope->isPcInRange(pc);
 }
 
 DebugData *CompileUnit::decodeInfo(AttributeEntry *entry, DataStream *stream) {
@@ -950,11 +1005,9 @@ StringTable::~StringTable() {}
 
 std::string StringTable::getString(size_t offset) {
     std::string res;
-
     for (int i = offset; tableStart[i] != '\0'; i++) {
         res += tableStart[i];
     }
-
     return res;
 }
 
@@ -1053,4 +1106,14 @@ uint DwarfParser::getLineNumberAtPc(uint32_t pc) {
 
 std::string &DwarfParser::getSourceNameAtPc(uint32_t pc) {
     return getCompileUnitAtPc(pc)->getSourceNameAtPc(pc);
+}
+
+void DwarfParser::getLocalVariables(std::vector<Variable *> &variables,
+                                    uint32_t pc, uint line) {
+    getCompileUnitAtPc(pc)->getLocalVariables(variables, pc, line);
+}
+
+void DwarfParser::getGlobalVariables(std::vector<Variable *> &variables,
+                                     uint32_t pc, uint line) {
+    getCompileUnitAtPc(pc)->getGlobalVariables(variables, pc, line);
 }

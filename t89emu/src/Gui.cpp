@@ -7,7 +7,7 @@ struct funcs {
 };  // Hide Native<>ImGuiKey duplicates when both exists in the array
 
 Gui::Gui(McuDebug *debug) : debug(debug), doStepI(false), doStep(false),
-        forceSourceCodeScroll(false), goldSourceLine(0), isRunEnabled(false) {
+        forceSourceCodeScroll(false), isRunEnabled(false) {
     // Call vendor specific initializer code
     if (initImGuiInstance()) {
         exit(EXIT_FAILURE);
@@ -55,11 +55,7 @@ void Gui::runApplication() {
         glfwPollEvents();
 
         if (isRunEnabled) {
-            uint n = INSTRUCTIONS_PER_FRAME;
-            while (n-- > 0 && (std::find(breakpoints.begin(), breakpoints.end(),
-                                     pcProbe->getPc()) == breakpoints.end())) {
-                debug->stepInstruction();
-            }
+            debug->executeInstructions(INSTRUCTIONS_PER_FRAME);
         } else if (doStepI) {
             debug->stepInstruction();
         } else if (doStep) {
@@ -192,7 +188,6 @@ void Gui::renderControlPanel() {
 }
 
 void Gui::renderDisassembledCodeSection() {
-    const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
     ImGui::Begin("Disassembly");
     static char hexBuf[9] = {0x00};
     if (ImGui::BeginTable("jumps", 1, ImGuiTableFlags_BordersInnerV)) {
@@ -207,20 +202,11 @@ void Gui::renderDisassembledCodeSection() {
         uint32_t breakpointAddress = (uint32_t)strtol(hexBuf, NULL, 16);
         ImGui::SameLine();
         if (ImGui::Button("set")) {
-            if (std::find(breakpoints.begin(), breakpoints.end(),
-                          breakpointAddress) == breakpoints.end()) {
-                // Breakpoint at address not found, add it
-                breakpoints.push_back(breakpointAddress);
-            }
+            debug->addBreakpoint(breakpointAddress);
         }
         ImGui::SameLine();
         if (ImGui::Button("remove")) {
-            for (auto i = breakpoints.begin(); i != breakpoints.end(); i++) {
-                if (*i == breakpointAddress) {
-                    breakpoints.erase(i);
-                    break;
-                }
-            }
+            debug->removeBreakpoint(breakpointAddress);
         }
         ImGui::EndTable();
     }
@@ -230,7 +216,6 @@ void Gui::renderDisassembledCodeSection() {
     // When stepping through code, disassembler should auto scroll to current
     // executed instruction
     uint32_t pc = pcProbe->getPc();
-    std::vector<DisassembledEntry> &disassembly = debug->getDisassembledCode();
 
     // Begin Table
     static ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg;
@@ -238,20 +223,18 @@ void Gui::renderDisassembledCodeSection() {
         return;
     }
 
-    for (auto &entry : disassembly) {
+    std::vector<DisassembledEntry> &disassembly = debug->getDisassembledCode();
+    for (size_t i = 0; i < disassembly.size(); i++) {
+        DisassembledEntry &entry = disassembly[i];
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
-        ImU32 bgColor = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
+        ImU32 color = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
 
         if (entry.isInstruction) {
-            if (std::find(breakpoints.begin(), breakpoints.end(),
-                          entry.address) != breakpoints.end()) {
-                // Breakpoint (red)             
-                bgColor = ImGui::GetColorU32(ImVec4(1.0f, 0.5f, 0.5f, 0.25f));
-            } else if (entry.address == pcProbe->getPc()) {
-                // Current line (yellow)
-                bgColor = ImGui::GetColorU32(
-                    ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
+            if (debug->isBreakpoint(entry.address)) { // Breakpont on this line
+                color = ImGui::GetColorU32(ImVec4(1.0f, 0.5f, 0.5f, 0.25f));
+            } else if (entry.address == pcProbe->getPc()) { // PC on this line
+                color = ImGui::GetColorU32(ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
             }
 
             ImGui::PushStyleColor(ImGuiCol_Text, 0xbf73c2e8);
@@ -262,7 +245,7 @@ void Gui::renderDisassembledCodeSection() {
         }
         ImGui::PopStyleColor();
 
-        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, bgColor);
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, color);
 
         // Print Instruction
         if (entry.isInstruction) {
@@ -273,17 +256,9 @@ void Gui::renderDisassembledCodeSection() {
         }
 
         // If stepping through code, auto scroll to current instruction
-        float scrollPos = 0.0;
-        if (doScroll()) {
-            for (size_t idx = 0; idx < disassembly.size(); idx++) {
-                struct DisassembledEntry &entry = disassembly[idx];
-                if (entry.isInstruction && (entry.address == pc)) {
-                    scrollPos = idx * TEXT_BASE_HEIGHT;
-                    break;
-                }
-            }
-
-            ImGui::SetScrollFromPosY(scrollPos - ImGui::GetScrollY());
+        if (doScroll() && pc == entry.address) {
+            ImGui::SetScrollFromPosY(i * ImGui::GetTextLineHeightWithSpacing() -
+                                     ImGui::GetScrollY());
         }
     }
 
@@ -566,9 +541,6 @@ void Gui::renderDebugSource() {
     ImGui::BeginTabBar("sourceCodeTabBar", tabBarFlags);
 
     uint sourceLineAtPc = debug->getLineNumberAtPc();
-    if (sourceLineAtPc != 0) {
-        goldSourceLine = sourceLineAtPc;
-    }
     std::string &sourceNameAtPc = debug->getSourceNameAtPc();
 
     for (SourceInfo *source : debug->getSourceInfo()) {
@@ -592,13 +564,13 @@ void Gui::renderDebugSource() {
             ImGui::TableNextRow();
 
             ImU32 color = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.65f));
-            if (row + 1 == goldSourceLine) {
+            if (row + 1 == sourceLineAtPc) {
                 color = ImGui::GetColorU32(ImVec4(0.75f, 0.61f, 0.19f, 0.25f));
             }
 
             // If stepping through code, scroll to next line
             if (forceSourceCodeScroll) {
-                float scrollPos = (goldSourceLine - 1.0) *
+                float scrollPos = (sourceLineAtPc - 1.0) *
                                   ImGui::GetTextLineHeightWithSpacing();
                 ImGui::SetScrollFromPosY(scrollPos - ImGui::GetScrollY());
                 forceSourceCodeScroll = false;
@@ -643,11 +615,13 @@ void Gui::renderDebugSource() {
     // Local/Global Variables (placeholder)
     std::vector<Variable *> globalVariables;
     std::vector<Variable *> localVariables;
+    debug->getLocalVariables(localVariables);
+    debug->getGlobalVariables(globalVariables);
 
     displayVarTable("Global Variables", globalVariables);
     displayVarTable("Local Variables", localVariables);
 
-    ImGui::EndChild();
+    ImGui::EndChild(); // sourceCodeVariables
     ImGui::End(); // Source Code Debugger
 }
 
@@ -664,13 +638,13 @@ void Gui::displayVarTable(const std::string &name,
     ImGui::TableSetupColumn(name.c_str());
     ImGui::TableHeadersRow();
 
-    for (uint row = 0; row < 10; row++) {
+    for (Variable *var : vars) {
         ImGui::TableNextRow();
 
         // Variable Information
         ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
         ImGui::TableSetColumnIndex(0);
-        ImGui::Text("var%d: ", row);
+        ImGui::Text("%s: ", var->getName().c_str());
         ImGui::PopStyleColor();
 
         ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
@@ -678,6 +652,21 @@ void Gui::displayVarTable(const std::string &name,
         ImGui::Text("null");
         ImGui::PopStyleColor();
     }
+
+    // for (uint row = 0; row < 10; row++) {
+    //     ImGui::TableNextRow();
+
+    //     // Variable Information
+    //     ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
+    //     ImGui::TableSetColumnIndex(0);
+    //     ImGui::Text("var%d: ", row);
+    //     ImGui::PopStyleColor();
+
+    //     ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
+    //     ImGui::SameLine();
+    //     ImGui::Text("null");
+    //     ImGui::PopStyleColor();
+    // }
     ImGui::TableNextRow();
     ImGui::EndTable();
 }

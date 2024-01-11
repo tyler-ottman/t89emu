@@ -135,7 +135,7 @@ Field   | A | B | G | R
  * Port build system to CMake (tentative)
  * macOS/Windows support
  * Design and run T89's architecture on an FPGA
- * Posibble extensions to project 
+ * Possible extensions to project 
     - Using LLVM to create a backend to target the RISC-V architecture designed
       for T89-EMU (the scope of backend development is vast and likely warrants
       a separate project of its own)

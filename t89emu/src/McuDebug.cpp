@@ -12,11 +12,29 @@ McuDebug *McuDebug::getInstance(const char *elfPath) {
     return instance;
 }
 
-void McuDebug::stepInstruction() { mcu->nextInstruction(); }
+void McuDebug::executeInstructions(uint cycles) {
+    ProgramCounter *pcModule = mcu->getProgramCounterModule();
+
+    for (; cycles && !isBreakpoint(pcModule->getPc()); cycles--) {
+        mcu->nextInstruction();
+    }
+
+    // if (isBreakpoint(pcModule->getPc())) {
+
+    // }
+}
+
+void McuDebug::stepInstruction() {
+    mcu->nextInstruction();
+    
+    // If new line reached, update latestSourceLine
+    uint curLine = dwarfParser->getLineNumberAtPc(
+        mcu->getProgramCounterModule()->getPc());
+    latestSourceLine = curLine ? curLine : latestSourceLine;
+}
 
 void McuDebug::stepLine() {
     uint startPc = mcu->getProgramCounterModule()->getPc();
-    uint startLine = dwarfParser->getLineNumberAtPc(startPc);
     uint curPc, curLine;
 
     // Keep executing instructions until current line changes
@@ -25,7 +43,30 @@ void McuDebug::stepLine() {
         mcu->nextInstruction();
         curPc = mcu->getProgramCounterModule()->getPc();
         curLine = dwarfParser->getLineNumberAtPc(curPc);
-    } while ((curLine == 0 || curLine == startLine) && startPc != curPc);
+    } while ((curLine == 0 || curLine == latestSourceLine) && startPc != curPc);
+
+    latestSourceLine = curLine;
+}
+
+void McuDebug::addBreakpoint(uint32_t address) {
+    if (std::find(breakpoints.begin(), breakpoints.end(), address) ==
+        breakpoints.end()) {  // Breakpoint at address not found, add it
+        breakpoints.push_back(address);
+    }
+}
+
+void McuDebug::removeBreakpoint(uint32_t address) {
+    for (size_t i = 0; i < breakpoints.size(); i++) {
+        if (address == breakpoints[i]) {
+            breakpoints.erase(breakpoints.begin() + i);
+            break;
+        }
+    }
+}
+
+bool McuDebug::isBreakpoint(uint32_t address) {
+    return std::find(breakpoints.begin(), breakpoints.end(), address) !=
+           breakpoints.end();
 }
 
 ClintMemoryDevice *McuDebug::getClintDevice() { return mcu->getClintDevice(); }
@@ -58,12 +99,20 @@ std::vector<SourceInfo *> &McuDebug::getSourceInfo() {
     return dwarfParser->getSourceInfo();
 }
 
-void McuDebug::getLocalVariables(std::vector<Variable *> &variables) {}
-void McuDebug::getGlobalVariables(std::vector<Variable *> &variables) {}
+void McuDebug::getLocalVariables(std::vector<Variable *> &variables) {
+    ProgramCounter *pcModule = mcu->getProgramCounterModule();
+    dwarfParser->getLocalVariables(variables, pcModule->getPc(),
+                                   latestSourceLine);
+}
+
+void McuDebug::getGlobalVariables(std::vector<Variable *> &variables) {
+    ProgramCounter *pcModule = mcu->getProgramCounterModule();
+    dwarfParser->getGlobalVariables(variables, pcModule->getPc(),
+                                    latestSourceLine);
+}
 
 uint McuDebug::getLineNumberAtPc() {
-    return dwarfParser->getLineNumberAtPc(
-        mcu->getProgramCounterModule()->getPc());
+    return latestSourceLine;
 }
 
 std::string &McuDebug::getSourceNameAtPc() {
@@ -79,6 +128,9 @@ McuDebug::McuDebug(const char *elfPath) {
                   elfParser->getEntryPc());
 
     elfParser->flashRom(mcu->getRomDevice());
+
+    latestSourceLine = dwarfParser->getLineNumberAtPc(
+        mcu->getProgramCounterModule()->getPc());
 }
 
 McuDebug::~McuDebug() {}
