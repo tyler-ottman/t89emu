@@ -1,33 +1,38 @@
 #include "DwarfParser.h"
 
-StackMachine::StackMachine() : opType(DW_OP_null) {}
+StackMachine::StackMachine(DebugData *location) {
+    exprStream = new DataStream(location->getData(), location->getLen());
+}
 
 StackMachine::~StackMachine() {}
 
-uint32_t StackMachine::processExpression(DebugData *expression) {
-    DataStream exprStream(expression->getData(), expression->getLen());
-    
-    while (exprStream.isStreamable()) {
-        uint8_t operation = exprStream.decodeUInt8();
-        opType = opType == DW_OP_null ? (OperationEncoding)operation : opType;
+DebugData StackMachine::parseExpr() {
+    DebugData res;
 
-        switch (operation) {
-        case DW_OP_addr: // Location of static variable
-            stack.push(exprStream.decodeUInt32());
+    while (exprStream->isStreamable()) {
+        OperationEncoding opcode = (OperationEncoding)exprStream->decodeUInt8();
+
+        switch (opcode) {
+        case DW_OP_lit0 ... DW_OP_lit31:
+            stack.push(opcode - DW_OP_lit0);
             break;
+
+        case DW_OP_addr:
+            stack.push(exprStream->decodeUInt32());
+            break;
+
         case DW_OP_fbreg:
-            stack.push(exprStream.decodeLeb128());
+            stack.push(exprStream->decodeLeb128());
             break;
+
         default:
-            printf("StackMachine: Unknown OP: 0x%x\n", operation);
+            printf("StackMachine: Unknown OP: 0x%x\n", opcode);
             exit(1);
         }
     }
 
-    return stack.top();
+    return res;
 }
-
-OperationEncoding StackMachine::getType() { return opType; }
 
 DataStream::DataStream(const uint8_t *data, size_t streamLen)
     : data(data), index(0), streamLen(streamLen) {}
@@ -92,9 +97,13 @@ bool DataStream::isStreamable() { return index < streamLen; }
 
 const uint8_t *DataStream::getData() { return data; }
 
+size_t DataStream::getIndex() { return index; }
+
 void DataStream::setOffset(size_t offset) { index = offset; }
 
 DebugData::DebugData(FormEncoding form) : form(form) {}
+
+DebugData::DebugData() : form(DW_FORM_data8) {}
 
 DebugData::~DebugData() {}
 
@@ -290,27 +299,14 @@ Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
 
 Variable::~Variable() {}
 
-uint32_t Variable::getLocation() { return location; }
-
 std::string& Variable::getName() { return name; }
-
-OperationEncoding Variable::getType() { return locType; }
 
 DebugData *Variable::getAttribute(AttributeEncoding attribute) {
     return debugEntry->getAttribute(attribute);
 }
 
 void Variable::processLocation() {
-    DebugData *locInfo = debugEntry->getAttribute(DW_AT_location);
-    if (locInfo->getForm() == DW_FORM_exprloc) {
-        StackMachine *exprloc = new StackMachine();
 
-        // Hacky way to get the location type
-        location = exprloc->processExpression(locInfo);
-        locType = exprloc->getType();
-    } else {
-        // loclist
-    }
 }
 
 Scope::Scope(DebugInfoEntry *debugEntry, Scope *parent) : parent(parent) {
@@ -335,7 +331,7 @@ void Scope::printScopes(int depth) {
     printf("S-%s, 0x%x - 0x%x\n", name.c_str(), lowPc, highPc);
     for (Variable *v : variables) {
         for (int i = 0; i < depth+1; i++) { printf("   "); }
-        printf("V-%s, 0x%x\n", v->getName().c_str(), v->getLocation());
+        printf("V-%s, 0x%x\n", v->getName().c_str(), 0);
     }
     for (Scope *child : scopes) { child->printScopes(depth + 1); }
 }
@@ -656,6 +652,63 @@ LineNumberInfo::LineEntry *LineNumberInfo::getLineEntryAtPc(uint32_t pc) {
         }
     }
     return nullptr;
+}
+
+CallFrameInfo::CallFrameInfo(uint8_t *debugFrameStart) {
+    cfiStream = new DataStream(debugFrameStart);
+    generateFrameInfo();  
+}
+
+CallFrameInfo::~CallFrameInfo() {}
+
+void CallFrameInfo::generateFrameInfo() {
+    while (cfiStream->isStreamable()) {
+        uint32_t length = cfiStream->decodeUInt32();
+        uint32_t identifier = cfiStream->decodeUInt32();
+
+        if (identifier == 0xffffffff) {
+            //                           CIE's byte offset into .debug_frame
+            parseCie(length, identifier, cfiStream->getIndex() - 8);
+        } else {
+            parseFde(length, identifier);
+        }
+        break;
+    }
+}
+
+void CallFrameInfo::parseCie(uint32_t length, uint32_t cieId,
+                             uint32_t debugFrameOffset) {
+    CommonInfoEntry *cie = new CommonInfoEntry();
+    cie->length = length;
+    cie->cieId = cieId;
+    cie->version = cfiStream->decodeUInt8();
+    
+    char c;
+    while ((c = cfiStream->decodeUInt8())) {
+        cie->augmentation.push_back(c);
+    }
+    
+    cie->addressSize = cfiStream->decodeUInt8();
+    cie->segmentSelectorSize = cfiStream->decodeUInt8();
+    cie->codeAlignmentFactor = cfiStream->decodeULeb128();
+    cie->dataAlignmentFactor = cfiStream->decodeLeb128();
+    cie->returnAddressRegister = cfiStream->decodeULeb128();
+    
+    // Instruction parse
+
+    cies.insert({debugFrameOffset, cie});
+}
+
+void CallFrameInfo::parseFde(uint32_t length, uint32_t ciePointer) {
+    FrameDescriptEntry *fde = new FrameDescriptEntry();
+    fde->length = length;
+    fde->ciePointer = ciePointer;
+    fde->initialLocation = cfiStream->decodeUInt32();
+    fde->addressRange = cfiStream->decodeUInt32();
+    
+    // Instruction parse
+
+    fdes.push_back(fde);
 }
 
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
@@ -1020,6 +1073,7 @@ DwarfParser::DwarfParser(const char *fileName)
     const ElfSectionHeader *debugLineStrHeader =
         getSectionHeader(".debug_line_str");
     const ElfSectionHeader *debugLineHeader = getSectionHeader(".debug_line");
+    const ElfSectionHeader *debugFrameHeader = getSectionHeader(".debug_frame");
 
     uint8_t *fileStart = elfFileInfo->elfData;
 
@@ -1029,6 +1083,7 @@ DwarfParser::DwarfParser(const char *fileName)
     uint8_t *debugStrStart = fileStart + debugStrHeader->offset;
     uint8_t *debugLineStrStart = fileStart + debugLineStrHeader->offset;
     uint8_t *debugLineStart = fileStart + debugLineHeader->offset;
+    uint8_t *debugFrameStart = fileStart + debugFrameHeader->offset;
 
     // Initialize Compile Units
     for (;;) {
@@ -1049,6 +1104,9 @@ DwarfParser::DwarfParser(const char *fileName)
         // Point to next .debug_line CU header
         debugLineStart += compileUnit->getDebugLineLength();
     }
+
+    // Initialize Call Frame Information
+    debugFrame = new CallFrameInfo(debugFrameStart);
 }
 
 DwarfParser::~DwarfParser() {

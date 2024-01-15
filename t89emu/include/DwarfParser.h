@@ -9,8 +9,10 @@
 
 #include "DwarfEncodings.h"
 #include "ElfParser.h"
+#include "Mcu.h"
 
 class CompileUnit;
+class DataStream;
 class DebugData;
 class DebugInfoEntry;
 class StringTable;
@@ -26,15 +28,23 @@ struct BaseUnitHeader {
 // For processing Dwarf Expressions
 class StackMachine {
 public:
-    StackMachine(void);
+    typedef uint32_t GenericType;
+    typedef OperationEncoding ExprType;
+    struct Element {
+        Element(ExprType type, GenericType value)
+            : type(type), value(value) {}
+        ExprType type;
+        GenericType value;
+    };
+
+    StackMachine(DebugData *location);
     ~StackMachine();
 
-    uint32_t processExpression(DebugData *expr);
-    OperationEncoding getType(void);
+    DebugData parseExpr(void);
 
 private:
-    std::stack<uint32_t> stack;
-    OperationEncoding opType; // FIrst operation parsed in expression
+    std::stack<GenericType> stack;
+    DataStream *exprStream;
 };
 
 class DataStream {
@@ -52,6 +62,7 @@ public:
 
     bool isStreamable(void);
     const uint8_t *getData(void);
+    size_t getIndex(void);
 
     void setOffset(size_t offset); // Offset from center
 
@@ -65,6 +76,7 @@ private:
 class DebugData {
 public:
     DebugData(FormEncoding form);
+    DebugData(void);
     ~DebugData();
 
     void write(uint8_t *buff, size_t len);
@@ -156,7 +168,6 @@ public:
     Variable(DebugInfoEntry *debugEntry);
     ~Variable();
 
-    uint32_t getLocation(void);
     std::string& getName(void);
     OperationEncoding getType(void);
     DebugData *getAttribute(AttributeEncoding attribute);
@@ -168,8 +179,7 @@ private:
 
     std::string name;
     
-    OperationEncoding locType;
-    uint32_t location;
+    StackMachine *locParser;
 };
 
 class Scope {
@@ -305,6 +315,41 @@ private:
     uint discriminator;
 };
 
+class CallFrameInfo {
+public:
+    CallFrameInfo(uint8_t *debugFrameStart);
+    ~CallFrameInfo();
+
+private:
+    struct CommonInfoEntry {
+        uint32_t length;
+        uint32_t cieId;
+        uint8_t version;
+        std::vector<char> augmentation;
+        uint8_t addressSize;
+        uint8_t segmentSelectorSize;
+        uint64_t codeAlignmentFactor;
+        int64_t dataAlignmentFactor;
+        uint64_t returnAddressRegister;
+    };
+
+    struct FrameDescriptEntry {
+        uint32_t length;
+        uint32_t ciePointer;
+        uint32_t initialLocation;
+        uint32_t addressRange;
+    };
+
+    void generateFrameInfo(void);
+    void parseCie(uint32_t length, uint32_t cieId, uint32_t debugFrameOffset);
+    void parseFde(uint32_t length, uint32_t ciePointer);
+
+    std::unordered_map<size_t, CommonInfoEntry *> cies;
+    std::vector<FrameDescriptEntry *> fdes;
+
+    DataStream *cfiStream;
+};
+
 class DebugInfoEntry {
 public:
     DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
@@ -427,11 +472,13 @@ public:
     void getGlobalVariables(std::vector<Variable *> &variables, uint32_t pc,
                             uint line);
 
-   private:
+private:
     std::vector<CompileUnit *> compileUnits;
 
     // Source File Information
     std::vector<SourceInfo *> sourceInfo;
+
+    CallFrameInfo *debugFrame;
 };
 
 #endif // DWARFPARSER_H

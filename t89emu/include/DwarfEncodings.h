@@ -540,6 +540,41 @@ enum ExtendedOpcodeEncoding {
     EXTENDED_OPCODE_ENCODING(DEFINE)
 };
 
+// Call Frame Instruction Encodings
+#define CFA_ENCODINGS(EXPR)                     \
+    EXPR(DW_CFA_advance_loc, 0x40)              \
+    EXPR(DW_CFA_offset, 0x80)                   \
+    EXPR(DW_CFA_restore, 0xc0)                  \
+    EXPR(DW_CFA_nop, 0x00)                      \
+    EXPR(DW_CFA_set_loc, 0x01)                  \
+    EXPR(DW_CFA_advance_loc1, 0x02)             \
+    EXPR(DW_CFA_advance_loc2, 0x03)             \
+    EXPR(DW_CFA_advance_loc4, 0x04)             \
+    EXPR(DW_CFA_offset_extended, 0x05)          \
+    EXPR(DW_CFA_restore_extended, 0x06)         \
+    EXPR(DW_CFA_undefined, 0x07)                \
+    EXPR(DW_CFA_same_value, 0x08)               \
+    EXPR(DW_CFA_register, 0x09)                 \
+    EXPR(DW_CFA_remember_state, 0x0a)           \
+    EXPR(DW_CFA_restore_state, 0x0b)            \
+    EXPR(DW_CFA_def_cfa, 0x0c)                  \
+    EXPR(DW_CFA_def_cfa_register, 0x0d)         \
+    EXPR(DW_CFA_def_cfa_offset, 0x0e)           \
+    EXPR(DW_CFA_def_cfa_expression, 0x0f)       \
+    EXPR(DW_CFA_expression, 0x10)               \
+    EXPR(DW_CFA_offset_extended_sf, 0x11)       \
+    EXPR(DW_CFA_def_cfa_sf, 0x12)               \
+    EXPR(DW_CFA_def_cfa_offset_sf, 0x13)        \
+    EXPR(DW_CFA_val_offset, 0x14)               \
+    EXPR(DW_CFA_val_offset_sf, 0x15)            \
+    EXPR(DW_CFA_val_expression, 0x16)           \
+    EXPR(DW_CFA_lo_user, 0x1c)                  \
+    EXPR(DW_CFA_hi_user, 0x3f)      
+
+enum CfaEncoding {
+    CFA_ENCODINGS(DEFINE)
+};
+
 #define PRINT_ENUM(NAME, ENUM, ENUM_LIST)       \
     static inline const char *NAME(ENUM type) { \
         switch (type) {                         \
