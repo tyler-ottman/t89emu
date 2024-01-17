@@ -649,24 +649,10 @@ void Gui::displayVarTable(const std::string &name,
 
         ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
         ImGui::SameLine();
-        ImGui::Text("null");
+        ImGui::Text("0x%x", debug->getVarLocation(var));
         ImGui::PopStyleColor();
     }
 
-    // for (uint row = 0; row < 10; row++) {
-    //     ImGui::TableNextRow();
-
-    //     // Variable Information
-    //     ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
-    //     ImGui::TableSetColumnIndex(0);
-    //     ImGui::Text("var%d: ", row);
-    //     ImGui::PopStyleColor();
-
-    //     ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
-    //     ImGui::SameLine();
-    //     ImGui::Text("null");
-    //     ImGui::PopStyleColor();
-    // }
     ImGui::TableNextRow();
     ImGui::EndTable();
 }

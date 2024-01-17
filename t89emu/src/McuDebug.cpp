@@ -120,6 +120,11 @@ std::string &McuDebug::getSourceNameAtPc() {
         mcu->getProgramCounterModule()->getPc());
 }
 
+uint32_t McuDebug::getVarLocation(Variable *var) {
+    return dwarfParser->getVarLocation(var, mcu->getRegisterFileModule(),
+                                       mcu->getProgramCounterModule()->getPc());
+}
+
 McuDebug::McuDebug(const char *elfPath) {
     elfParser = new ElfParser(elfPath);
     dwarfParser = new DwarfParser(elfPath);

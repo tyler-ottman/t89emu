@@ -11,11 +11,13 @@
 #include "ElfParser.h"
 #include "Mcu.h"
 
+class CallFrameInfo;
 class CompileUnit;
 class DataStream;
 class DebugData;
 class DebugInfoEntry;
 class StringTable;
+class Variable;
 
 struct BaseUnitHeader {
     uint32_t unitLength;
@@ -40,9 +42,11 @@ public:
     StackMachine(DebugData *location);
     ~StackMachine();
 
-    DebugData parseExpr(void);
+    DebugData parseExpr(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc);
+    DebugData parseExpr(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc,
+                        Variable *var);
 
-private:
+   private:
     std::stack<GenericType> stack;
     DataStream *exprStream;
 };
@@ -62,8 +66,10 @@ public:
 
     bool isStreamable(void);
     const uint8_t *getData(void);
+    const uint8_t *getData(size_t idx);
     size_t getIndex(void);
 
+    void setData(const uint8_t *data);
     void setOffset(size_t offset); // Offset from center
 
 private:
@@ -171,15 +177,13 @@ public:
     std::string& getName(void);
     OperationEncoding getType(void);
     DebugData *getAttribute(AttributeEncoding attribute);
+    DebugInfoEntry *getParentEntry(void);
+    uint32_t getLocation(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc);
 
 private:
-    void processLocation(void);
-
     DebugInfoEntry *debugEntry;
 
     std::string name;
-    
-    StackMachine *locParser;
 };
 
 class Scope {
@@ -317,11 +321,16 @@ private:
 
 class CallFrameInfo {
 public:
-    CallFrameInfo(uint8_t *debugFrameStart);
+    CallFrameInfo(uint8_t *debugFrameStart, uint8_t *debugFrameEnd);
     ~CallFrameInfo();
+
+    bool getCfaAtLocation(uint32_t &res, uint32_t l1, RegisterFile *regs);
+    bool getRegAtLocation(uint32_t &res, uint column, uint32_t l1,
+                          RegisterFile *regs);
 
 private:
     struct CommonInfoEntry {
+        size_t getLen(void) { return sizeof(length) + length; }
         uint32_t length;
         uint32_t cieId;
         uint8_t version;
@@ -331,18 +340,59 @@ private:
         uint64_t codeAlignmentFactor;
         int64_t dataAlignmentFactor;
         uint64_t returnAddressRegister;
+        const uint8_t *initialInstructions;
+        size_t instructionsBlockSize;
     };
 
     struct FrameDescriptEntry {
+        size_t getLen(void) { return sizeof(length) + length; }
         uint32_t length;
         uint32_t ciePointer;
         uint32_t initialLocation;
         uint32_t addressRange;
+        const uint8_t *instructions;
+        size_t instructionsBlockSize;
     };
 
+    enum CfiRule {
+        cfiUndefined,
+        cfiSameValue,
+        cfiOffset,
+        cfiValOffset,
+        cfiRegister,
+        cfiExpression,
+        cfiValExpression,
+        cfiArchitectural
+    };
+
+    struct RegRule {
+        uint32_t value;
+        CfiRule cfiRule;
+    };
+
+    struct TableEntry {
+        bool isCfaLocExpr = false;
+        uint32_t regNum;
+        union {
+            uint32_t regOffset;
+            uint32_t location;
+        };
+
+        // Register number -> Register rule
+        std::unordered_map<uint, RegRule> regRules;
+    };
+
+    bool generateVirtTable(std::vector<TableEntry> &virtTable, uint32_t l1,
+                           RegisterFile *regs);
     void generateFrameInfo(void);
-    void parseCie(uint32_t length, uint32_t cieId, uint32_t debugFrameOffset);
-    void parseFde(uint32_t length, uint32_t ciePointer);
+    CommonInfoEntry *parseCie(uint32_t length, uint32_t cieId,
+                              uint32_t debugFrameOffset);
+    FrameDescriptEntry *parseFde(uint32_t length, uint32_t ciePointer);
+    void processInstructions(std::vector<TableEntry> &virtTable,
+                             CommonInfoEntry *cie, DataStream &instrStream,
+                             RegisterFile *regs, uint32_t l1, uint32_t l2);
+    bool getUnwindedValue(uint32_t &res, std::vector<TableEntry> &virtTable,
+                          uint regCol, RegisterFile *regs, int depth);
 
     std::unordered_map<size_t, CommonInfoEntry *> cies;
     std::vector<FrameDescriptEntry *> fdes;
@@ -471,6 +521,7 @@ public:
                            uint line);
     void getGlobalVariables(std::vector<Variable *> &variables, uint32_t pc,
                             uint line);
+    uint32_t getVarLocation(Variable *var, RegisterFile *regs, uint32_t pc);
 
 private:
     std::vector<CompileUnit *> compileUnits;

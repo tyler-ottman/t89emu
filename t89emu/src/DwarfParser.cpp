@@ -6,7 +6,13 @@ StackMachine::StackMachine(DebugData *location) {
 
 StackMachine::~StackMachine() {}
 
-DebugData StackMachine::parseExpr() {
+DebugData StackMachine::parseExpr(RegisterFile *regs, CallFrameInfo *cfi,
+                                  uint32_t pc) {
+    return parseExpr(regs, cfi, pc, nullptr);
+}
+
+DebugData StackMachine::parseExpr(RegisterFile *regs, CallFrameInfo *cfi,
+                                  uint32_t pc, Variable *var) {
     DebugData res;
 
     while (exprStream->isStreamable()) {
@@ -21,16 +27,37 @@ DebugData StackMachine::parseExpr() {
             stack.push(exprStream->decodeUInt32());
             break;
 
-        case DW_OP_fbreg:
-            stack.push(exprStream->decodeLeb128());
-            break;
+        case DW_OP_fbreg: {
+            if (var == nullptr) {
+                printf("Unexpected DW_OP_fbreg"); exit(1);
+            }
+            int32_t offset = exprStream->decodeLeb128();
 
+            // Calculate DW_AT_frame_base location of current function
+            DebugInfoEntry *parent = var->getParentEntry();
+            DebugData *frameBase = parent->getAttribute(DW_AT_frame_base);
+            StackMachine frameLocation(frameBase);
+            DebugData location = frameLocation.parseExpr(regs, cfi, pc);
+            stack.push(offset + location.getUInt());
+            break;
+        }
+
+        case DW_OP_call_frame_cfa: {
+            uint32_t cfa;
+            bool ret = cfi->getCfaAtLocation(cfa, pc, regs);
+            if (!ret) { printf("%s error\n", printOperation(opcode)); exit(1);}
+            stack.push(cfa);
+            break;
+        }
+            
         default:
-            printf("StackMachine: Unknown OP: 0x%x\n", opcode);
+            printf("StackMachine: Unknown OP: %s\n",
+                   printOperation((OperationEncoding)opcode));
             exit(1);
         }
     }
 
+    res.write((uint8_t *)&stack.top(), sizeof(GenericType));
     return res;
 }
 
@@ -97,7 +124,13 @@ bool DataStream::isStreamable() { return index < streamLen; }
 
 const uint8_t *DataStream::getData() { return data; }
 
+const uint8_t *DataStream::getData(size_t idx) {
+    return (idx >= 0 && idx < streamLen) ? data + idx : nullptr;
+}
+
 size_t DataStream::getIndex() { return index; }
+
+void DataStream::setData(const uint8_t *data) { this->data = data; }
 
 void DataStream::setOffset(size_t offset) { index = offset; }
 
@@ -291,10 +324,6 @@ Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
     // Check if variable has name
     DebugData *attEntry = debugEntry->getAttribute(DW_AT_name);
     name = attEntry ? attEntry->getString() : "";
-
-    if(debugEntry->getAttribute(DW_AT_location)) {
-        processLocation();
-    }
 }
 
 Variable::~Variable() {}
@@ -305,8 +334,21 @@ DebugData *Variable::getAttribute(AttributeEncoding attribute) {
     return debugEntry->getAttribute(attribute);
 }
 
-void Variable::processLocation() {
+DebugInfoEntry *Variable::getParentEntry() {
+    return debugEntry->getParent();
+}
 
+uint32_t Variable::getLocation(RegisterFile *regs, CallFrameInfo *cfi,
+                               uint32_t pc) {
+    DebugData *locExpr = debugEntry->getAttribute(DW_AT_location);
+    DebugData location;
+    
+    if (locExpr) {
+        StackMachine *locParser = new StackMachine(locExpr);
+        location = locParser->parseExpr(regs, cfi, pc, this);
+    }
+
+    return location.getUInt();
 }
 
 Scope::Scope(DebugInfoEntry *debugEntry, Scope *parent) : parent(parent) {
@@ -654,30 +696,95 @@ LineNumberInfo::LineEntry *LineNumberInfo::getLineEntryAtPc(uint32_t pc) {
     return nullptr;
 }
 
-CallFrameInfo::CallFrameInfo(uint8_t *debugFrameStart) {
-    cfiStream = new DataStream(debugFrameStart);
-    generateFrameInfo();  
+CallFrameInfo::CallFrameInfo(uint8_t *debugFrameStart, uint8_t *debugFrameEnd) {
+    size_t debugFrameLen = (uintptr_t)(debugFrameEnd - debugFrameStart);
+    cfiStream = new DataStream(debugFrameStart, debugFrameLen);
+    generateFrameInfo();
 }
 
 CallFrameInfo::~CallFrameInfo() {}
 
+bool CallFrameInfo::getCfaAtLocation(uint32_t &res, uint32_t l1,
+                                     RegisterFile *regs) {
+    std::vector<TableEntry> virtualTable(1);
+    if (!generateVirtTable(virtualTable, l1, regs)) { return false; }
+
+    TableEntry &entry = virtualTable.back();
+    res = regs->read(entry.regNum) + entry.regOffset;
+    return true;
+}
+
+bool CallFrameInfo::getRegAtLocation(uint32_t &res, uint column, uint32_t l1,
+                                     RegisterFile *regs) {
+    std::vector<TableEntry> virtualTable(1);
+    if (!generateVirtTable(virtualTable, l1, regs)) { return false; }
+
+    return getUnwindedValue(res, virtualTable, column, regs,
+                            virtualTable.size() - 1);
+}
+
+bool CallFrameInfo::generateVirtTable(std::vector<TableEntry> &virtTable,
+                                      uint32_t l1, RegisterFile *regs) {
+    // Find the FDE contaning addr
+    FrameDescriptEntry *fde = nullptr;
+    for (FrameDescriptEntry *entry : fdes) {
+        uint32_t baseAddr = entry->initialLocation;
+        if (l1 >= baseAddr && l1 < baseAddr + entry->addressRange) {
+            fde = entry;
+        }
+    }
+    if (fde == nullptr || cies.find(fde->ciePointer) == cies.end()) {
+        return false;
+    }
+
+    // 1. Initialize Register Set (Virtual Table) and read CIE's initial
+    // instructions, then set L2 to initialLocation
+    CommonInfoEntry *cie = cies[fde->ciePointer];
+    DataStream cieStream(cie->initialInstructions, cie->instructionsBlockSize);
+    uint32_t l2 = fde->initialLocation;
+    for (uint i = 0; i < 32; i++) {
+        virtTable.back().regRules[i] = {.cfiRule = cfiUndefined};
+    }
+    virtTable[0].location = fde->initialLocation;
+    processInstructions(virtTable, cie, cieStream, regs, l1, l2);
+
+    // 2. Process FDE instruction stream
+    DataStream fdeStream(fde->instructions, fde->instructionsBlockSize);
+    processInstructions(virtTable, cie, fdeStream, regs, l1, l2);
+
+    return true;
+}
+
+bool CallFrameInfo::getUnwindedValue(uint32_t &res,
+                                     std::vector<TableEntry> &virtTable,
+                                     uint regCol, RegisterFile *regs,
+                                     int depth) {
+    return false;
+}
+
 void CallFrameInfo::generateFrameInfo() {
     while (cfiStream->isStreamable()) {
+        size_t entryLen;
+        size_t debugFrameOffset = cfiStream->getIndex();
         uint32_t length = cfiStream->decodeUInt32();
         uint32_t identifier = cfiStream->decodeUInt32();
 
         if (identifier == 0xffffffff) {
-            //                           CIE's byte offset into .debug_frame
-            parseCie(length, identifier, cfiStream->getIndex() - 8);
+            // 2nd param specifies CIE's byte offset into .debug_frame
+            CommonInfoEntry *cie = parseCie(length, identifier,
+                                            cfiStream->getIndex() - 8);
+            entryLen = cie->getLen();
         } else {
-            parseFde(length, identifier);
+            FrameDescriptEntry *fde = parseFde(length, identifier);
+            entryLen = fde->getLen();
         }
-        break;
+
+        cfiStream->setOffset(debugFrameOffset + entryLen);
     }
 }
 
-void CallFrameInfo::parseCie(uint32_t length, uint32_t cieId,
-                             uint32_t debugFrameOffset) {
+CallFrameInfo::CommonInfoEntry *CallFrameInfo::parseCie(
+    uint32_t length, uint32_t cieId, uint32_t debugFrameOffset) {
     CommonInfoEntry *cie = new CommonInfoEntry();
     cie->length = length;
     cie->cieId = cieId;
@@ -688,27 +795,107 @@ void CallFrameInfo::parseCie(uint32_t length, uint32_t cieId,
         cie->augmentation.push_back(c);
     }
     
-    cie->addressSize = cfiStream->decodeUInt8();
-    cie->segmentSelectorSize = cfiStream->decodeUInt8();
+    // cie->addressSize = cfiStream->decodeUInt8();
+    // cie->segmentSelectorSize = cfiStream->decodeUInt8();
     cie->codeAlignmentFactor = cfiStream->decodeULeb128();
     cie->dataAlignmentFactor = cfiStream->decodeLeb128();
     cie->returnAddressRegister = cfiStream->decodeULeb128();
-    
-    // Instruction parse
-
+    cie->initialInstructions = cfiStream->getData(cfiStream->getIndex());
+    cie->instructionsBlockSize =
+        cie->getLen() - (cfiStream->getIndex() - debugFrameOffset);
     cies.insert({debugFrameOffset, cie});
+
+    return cie;
 }
 
-void CallFrameInfo::parseFde(uint32_t length, uint32_t ciePointer) {
+CallFrameInfo::FrameDescriptEntry *CallFrameInfo::parseFde(
+    uint32_t length, uint32_t ciePointer) {
+    uint startIdx = cfiStream->getIndex() - 8; // First index into FDE
     FrameDescriptEntry *fde = new FrameDescriptEntry();
     fde->length = length;
     fde->ciePointer = ciePointer;
     fde->initialLocation = cfiStream->decodeUInt32();
     fde->addressRange = cfiStream->decodeUInt32();
-    
-    // Instruction parse
-
+    fde->instructions = cfiStream->getData(cfiStream->getIndex());
+    fde->instructionsBlockSize =
+        fde->getLen() - (cfiStream->getIndex() - startIdx);
     fdes.push_back(fde);
+
+    return fde;
+}
+
+void CallFrameInfo::processInstructions(std::vector<TableEntry> &virtTable,
+                             CommonInfoEntry *cie, DataStream &instrStream,
+                             RegisterFile *regs, uint32_t l1, uint32_t l2) {
+    while (instrStream.isStreamable()) {
+        uint8_t opcode = instrStream.decodeUInt8();
+
+        uint8_t primaryOpcode = opcode & 0xc0;
+        if (primaryOpcode) {
+            uint8_t operand = opcode & 0x4f;
+
+            switch (primaryOpcode) {
+            case DW_CFA_advance_loc: {
+                TableEntry entry(virtTable.back());
+                entry.location = virtTable.back().location +
+                                 operand * cie->codeAlignmentFactor;
+                virtTable.push_back(entry);
+                break;
+            }
+
+            case DW_CFA_offset:
+                virtTable.back().regRules[operand].value =
+                    instrStream.decodeULeb128() * cie->dataAlignmentFactor;
+                break;
+
+            case DW_CFA_restore:
+                virtTable.back().regRules[operand].cfiRule =
+                    virtTable.front().regRules[operand].cfiRule;
+                break;
+
+            default:
+                printf("Illegal CFA: %x\n", primaryOpcode); exit(1);
+            }
+            continue;
+        }
+
+        switch (opcode) {
+        case DW_CFA_nop: break;
+        
+        case DW_CFA_advance_loc1: {
+            uint32_t delta = instrStream.decodeUInt8();
+            TableEntry entry(virtTable.back());
+            entry.location = virtTable.back().location + delta;
+            virtTable.push_back(entry);
+            break;
+        }
+
+        case DW_CFA_def_cfa: {
+            virtTable.back().regNum = instrStream.decodeULeb128();
+            virtTable.back().regOffset = instrStream.decodeULeb128();
+            break;
+        }
+
+        case DW_CFA_def_cfa_register:
+            if (virtTable.back().isCfaLocExpr) {
+                printf("%s error\n", printCfa((CfaEncoding)opcode)); exit(1);
+            }
+            virtTable.back().regNum = instrStream.decodeULeb128();
+            break;
+
+        case DW_CFA_def_cfa_offset:
+            if (virtTable.back().isCfaLocExpr) {
+                printf("%s error\n", printCfa((CfaEncoding)opcode)); exit(1);
+            }
+            virtTable.back().regOffset = instrStream.decodeULeb128();
+            break;
+
+        default:
+            printf("Unsupported CFA: %s\n",
+                   printCfa((CfaEncoding)opcode));
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
@@ -1084,6 +1271,10 @@ DwarfParser::DwarfParser(const char *fileName)
     uint8_t *debugLineStrStart = fileStart + debugLineStrHeader->offset;
     uint8_t *debugLineStart = fileStart + debugLineHeader->offset;
     uint8_t *debugFrameStart = fileStart + debugFrameHeader->offset;
+    uint8_t *debugFrameEnd = debugFrameStart + debugFrameHeader->size;    
+
+    // Initialize Call Frame Information
+    debugFrame = new CallFrameInfo(debugFrameStart, debugFrameEnd);
 
     // Initialize Compile Units
     for (;;) {
@@ -1104,9 +1295,6 @@ DwarfParser::DwarfParser(const char *fileName)
         // Point to next .debug_line CU header
         debugLineStart += compileUnit->getDebugLineLength();
     }
-
-    // Initialize Call Frame Information
-    debugFrame = new CallFrameInfo(debugFrameStart);
 }
 
 DwarfParser::~DwarfParser() {
@@ -1174,4 +1362,9 @@ void DwarfParser::getLocalVariables(std::vector<Variable *> &variables,
 void DwarfParser::getGlobalVariables(std::vector<Variable *> &variables,
                                      uint32_t pc, uint line) {
     getCompileUnitAtPc(pc)->getGlobalVariables(variables, pc, line);
+}
+
+uint32_t DwarfParser::getVarLocation(Variable *var, RegisterFile *regs,
+                                     uint32_t pc) {
+    return var->getLocation(regs, debugFrame, pc);
 }

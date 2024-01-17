@@ -541,7 +541,7 @@ enum ExtendedOpcodeEncoding {
 };
 
 // Call Frame Instruction Encodings
-#define CFA_ENCODINGS(EXPR)                     \
+#define CFA_ENCODING(EXPR)                     \
     EXPR(DW_CFA_advance_loc, 0x40)              \
     EXPR(DW_CFA_offset, 0x80)                   \
     EXPR(DW_CFA_restore, 0xc0)                  \
@@ -572,7 +572,7 @@ enum ExtendedOpcodeEncoding {
     EXPR(DW_CFA_hi_user, 0x3f)      
 
 enum CfaEncoding {
-    CFA_ENCODINGS(DEFINE)
+    CFA_ENCODING(DEFINE)
 };
 
 #define PRINT_ENUM(NAME, ENUM, ENUM_LIST)       \
@@ -587,6 +587,8 @@ PRINT_ENUM(printUnitType, UnitType, UNIT_TYPE)
 PRINT_ENUM(printTag, TagEncoding, TAG_ENCODING)
 PRINT_ENUM(printChild, ChildEncoding, CHILD_ENCODING)
 PRINT_ENUM(printAttribute, AttributeEncoding, ATTRIBUTE_ENCODING)
-PRINT_ENUM(printForm, FormEncoding, FORM_ENCODING);
+PRINT_ENUM(printForm, FormEncoding, FORM_ENCODING)
+PRINT_ENUM(printOperation, OperationEncoding, OPERATION_ENCODING)
+PRINT_ENUM(printCfa, CfaEncoding, CFA_ENCODING)
 
 #endif // DWARFENCODINGS_H
