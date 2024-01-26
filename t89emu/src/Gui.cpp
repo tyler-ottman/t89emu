@@ -642,14 +642,19 @@ void Gui::displayVarTable(const std::string &name,
         ImGui::TableNextRow();
 
         // Variable Information
+        Variable::VarInfo varInfo;
+        debug->getVarInfo(varInfo, true, var);
+        
+        // Variable Name
         ImGui::PushStyleColor(ImGuiCol_Text, 0xff80a573);
         ImGui::TableSetColumnIndex(0);
-        ImGui::Text("%s: ", var->getName().c_str());
+        ImGui::Text("%s: ", varInfo.name.c_str());
         ImGui::PopStyleColor();
 
+        // Variable Value(s)
         ImGui::PushStyleColor(ImGuiCol_Text, 0xff909090);
         ImGui::SameLine();
-        ImGui::Text("0x%x", debug->getVarLocation(var));
+        ImGui::Text("%s", varInfo.value.c_str());
         ImGui::PopStyleColor();
     }
 

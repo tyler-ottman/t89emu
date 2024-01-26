@@ -39,14 +39,15 @@ public:
         GenericType value;
     };
 
-    StackMachine(DebugData *location);
+    StackMachine(void);
     ~StackMachine();
 
-    DebugData parseExpr(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc);
-    DebugData parseExpr(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc,
-                        Variable *var);
+    DebugData parseExpr(DebugData *expr, RegisterFile *regs, CallFrameInfo *cfi,
+                        uint32_t pc);
+    DebugData parseExpr(DebugData *expr, RegisterFile *regs, CallFrameInfo *cfi,
+                        uint32_t pc, Variable *var);
 
-   private:
+private:
     std::stack<GenericType> stack;
     DataStream *exprStream;
 };
@@ -71,6 +72,7 @@ public:
 
     void setData(const uint8_t *data);
     void setOffset(size_t offset); // Offset from center
+    void setLen(size_t len);
 
 private:
     const uint8_t *data;
@@ -169,21 +171,45 @@ private:
     FullCompileUnitHeader header;
 };
 
+class DataType {
+public:
+    DataType(void);
+    ~DataType();
+private:
+};
+
 class Variable {
 public:
+    struct VarInfo {
+        bool isValid;
+
+        DataType *type;
+        std::string name;
+        uint32_t location; // Todo: multiple locations
+        std::string value;
+    };
+
     Variable(DebugInfoEntry *debugEntry);
     ~Variable();
 
-    std::string& getName(void);
-    OperationEncoding getType(void);
     DebugData *getAttribute(AttributeEncoding attribute);
     DebugInfoEntry *getParentEntry(void);
-    uint32_t getLocation(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc);
+    void getVarInfo(VarInfo &res, bool doUpdate, RegisterFile *regs,
+                    CallFrameInfo *cfi, uint32_t pc);
 
 private:
+    bool updateLocation(RegisterFile *regs, CallFrameInfo *cfi, uint32_t pc);
+    bool updateValue(RegisterFile *regs);
+
+    // DWARF Expression state
+    DebugData *locExpr;
+    StackMachine *stack;
+
+    // DWARF Debug Information Entry
     DebugInfoEntry *debugEntry;
 
-    std::string name;
+    // Variable information
+    VarInfo varInfo;
 };
 
 class Scope {
@@ -521,7 +547,8 @@ public:
                            uint line);
     void getGlobalVariables(std::vector<Variable *> &variables, uint32_t pc,
                             uint line);
-    uint32_t getVarLocation(Variable *var, RegisterFile *regs, uint32_t pc);
+    void getVarInfo(Variable::VarInfo &res, bool doUpdate, Variable *var,
+                    RegisterFile *regs, uint32_t pc);
 
 private:
     std::vector<CompileUnit *> compileUnits;

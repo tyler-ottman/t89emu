@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "terminal.h"
 
 int kernel_main(void) {

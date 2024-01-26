@@ -36,7 +36,7 @@ public:
     std::vector<SourceInfo *> &getSourceInfo(void);
     uint getLineNumberAtPc(void);
     std::string &getSourceNameAtPc(void);
-    uint32_t getVarLocation(Variable *var);
+    void getVarInfo(Variable::VarInfo &res, bool doUpdate, Variable *var);
 
 private:
     McuDebug(const char *elfPath);

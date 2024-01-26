@@ -1,19 +1,22 @@
 #include "DwarfParser.h"
 
-StackMachine::StackMachine(DebugData *location) {
-    exprStream = new DataStream(location->getData(), location->getLen());
+StackMachine::StackMachine() {
+    exprStream = new DataStream(nullptr);
 }
 
 StackMachine::~StackMachine() {}
 
-DebugData StackMachine::parseExpr(RegisterFile *regs, CallFrameInfo *cfi,
-                                  uint32_t pc) {
-    return parseExpr(regs, cfi, pc, nullptr);
+DebugData StackMachine::parseExpr(DebugData *expr, RegisterFile *regs,
+                                  CallFrameInfo *cfi, uint32_t pc) {
+    return parseExpr(expr, regs, cfi, pc, nullptr);
 }
 
-DebugData StackMachine::parseExpr(RegisterFile *regs, CallFrameInfo *cfi,
-                                  uint32_t pc, Variable *var) {
+DebugData StackMachine::parseExpr(DebugData *expr, RegisterFile *regs,
+                                  CallFrameInfo *cfi, uint32_t pc,
+                                  Variable *var) {
     DebugData res;
+    exprStream->setData(expr->getData());
+    exprStream->setLen(expr->getLen());
 
     while (exprStream->isStreamable()) {
         OperationEncoding opcode = (OperationEncoding)exprStream->decodeUInt8();
@@ -33,11 +36,11 @@ DebugData StackMachine::parseExpr(RegisterFile *regs, CallFrameInfo *cfi,
             }
             int32_t offset = exprStream->decodeLeb128();
 
-            // Calculate DW_AT_frame_base location of current function
+            // DW_AT_frame_base is DWARF location expression
             DebugInfoEntry *parent = var->getParentEntry();
-            DebugData *frameBase = parent->getAttribute(DW_AT_frame_base);
-            StackMachine frameLocation(frameBase);
-            DebugData location = frameLocation.parseExpr(regs, cfi, pc);
+            DebugData *fbLoc = parent->getAttribute(DW_AT_frame_base);
+            StackMachine fbStack;
+            DebugData location = fbStack.parseExpr(fbLoc, regs, cfi, pc);
             stack.push(offset + location.getUInt());
             break;
         }
@@ -120,7 +123,7 @@ size_t DataStream::decodeULeb128() {
     return result;
 }
 
-bool DataStream::isStreamable() { return index < streamLen; }
+bool DataStream::isStreamable() { return data && (index < streamLen); }
 
 const uint8_t *DataStream::getData() { return data; }
 
@@ -133,6 +136,8 @@ size_t DataStream::getIndex() { return index; }
 void DataStream::setData(const uint8_t *data) { this->data = data; }
 
 void DataStream::setOffset(size_t offset) { index = offset; }
+
+void DataStream::setLen(size_t len) { streamLen = len; }
 
 DebugData::DebugData(FormEncoding form) : form(form) {}
 
@@ -321,14 +326,27 @@ size_t CompileUnitHeader::getHeaderLen() {
 }
 
 Variable::Variable(DebugInfoEntry *debugEntry) : debugEntry(debugEntry) {
-    // Check if variable has name
+    // Variable Name Attribute
     DebugData *attEntry = debugEntry->getAttribute(DW_AT_name);
-    name = attEntry ? attEntry->getString() : "";
+    varInfo.name = attEntry ? attEntry->getString() : "???";
+
+    // Variable Location Attribute
+    locExpr = debugEntry->getAttribute(DW_AT_location);
+    if (locExpr && locExpr->getForm() != DW_FORM_exprloc) {
+        printf("Unsupported form: loclist\n"); exit(1);
+    }
+
+    // Variable Type Attribute
+    attEntry = debugEntry->getAttribute(DW_AT_type);
+    if (attEntry) {
+        // Get Variable type
+    }
+
+    // Stack machine for evaluating locations/values
+    stack = new StackMachine();
 }
 
 Variable::~Variable() {}
-
-std::string& Variable::getName() { return name; }
 
 DebugData *Variable::getAttribute(AttributeEncoding attribute) {
     return debugEntry->getAttribute(attribute);
@@ -338,17 +356,37 @@ DebugInfoEntry *Variable::getParentEntry() {
     return debugEntry->getParent();
 }
 
-uint32_t Variable::getLocation(RegisterFile *regs, CallFrameInfo *cfi,
-                               uint32_t pc) {
-    DebugData *locExpr = debugEntry->getAttribute(DW_AT_location);
-    DebugData location;
-    
-    if (locExpr) {
-        StackMachine *locParser = new StackMachine(locExpr);
-        location = locParser->parseExpr(regs, cfi, pc, this);
+void Variable::getVarInfo(VarInfo &res, bool doUpdate, RegisterFile *regs,
+                          CallFrameInfo *cfi, uint32_t pc) {
+    if (!doUpdate) {
+        res = varInfo;
+        return;
     }
 
-    return location.getUInt();
+    // Re-calculate variable location and value
+    if (!updateLocation(regs, cfi, pc) || !updateValue(regs)) {
+        varInfo.isValid = false;
+    }
+    
+    res = varInfo;
+}
+
+bool Variable::updateLocation(RegisterFile *regs, CallFrameInfo *cfi,
+                              uint32_t pc) {
+    if (!locExpr) { // Variable has no DW_AT_location
+        return false;
+    }
+    
+    DebugData location = stack->parseExpr(locExpr, regs, cfi, pc, this);
+    varInfo.location = location.getUInt();
+    
+    return true;
+}
+
+bool Variable::updateValue(RegisterFile *regs) {
+    varInfo.value = "???";
+
+    return true;
 }
 
 Scope::Scope(DebugInfoEntry *debugEntry, Scope *parent) : parent(parent) {
@@ -373,7 +411,9 @@ void Scope::printScopes(int depth) {
     printf("S-%s, 0x%x - 0x%x\n", name.c_str(), lowPc, highPc);
     for (Variable *v : variables) {
         for (int i = 0; i < depth+1; i++) { printf("   "); }
-        printf("V-%s, 0x%x\n", v->getName().c_str(), 0);
+        Variable::VarInfo varInfo;
+        v->getVarInfo(varInfo, false, nullptr, nullptr, 0);
+        printf("V-%s, 0x%x\n", varInfo.name.c_str(), 0);
     }
     for (Scope *child : scopes) { child->printScopes(depth + 1); }
 }
@@ -1286,6 +1326,7 @@ DwarfParser::DwarfParser(const char *fileName)
         CompileUnit *compileUnit = new CompileUnit(debugInfoStart,
             debugAbbrevStart, debugStrStart, debugLineStrStart, debugLineStart);
         compileUnits.push_back(compileUnit);
+        
         compileUnit->generateScopes();
         // compileUnit->printScopes();
 
@@ -1364,7 +1405,7 @@ void DwarfParser::getGlobalVariables(std::vector<Variable *> &variables,
     getCompileUnitAtPc(pc)->getGlobalVariables(variables, pc, line);
 }
 
-uint32_t DwarfParser::getVarLocation(Variable *var, RegisterFile *regs,
-                                     uint32_t pc) {
-    return var->getLocation(regs, debugFrame, pc);
+void DwarfParser::getVarInfo(Variable::VarInfo &res, bool doUpdate,
+                             Variable *var, RegisterFile *regs, uint32_t pc) {
+    var->getVarInfo(res, doUpdate, regs, debugFrame, pc);
 }

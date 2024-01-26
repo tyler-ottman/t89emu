@@ -5,10 +5,8 @@ OBJDUMP = riscv32-unknown-elf-objdump
 OBJ_DIR = ./obj
 SRC_DIR = ./src
 BIN_DIR = ./bin
-INC_DIR = ./include
 
 LDFILE = ./t89-linker.ld
-INCLUDE = -I $(INC_DIR)
 CFLAGS = -ffreestanding -Wall -g
 LDFLAGS = -T $(LDFILE) -nostartfiles
 OBJCOPY_FLAGS = -O binary
@@ -22,10 +20,10 @@ $(BIN_DIR)/$(TARGET_NAME): $(TARGET_OBJS)
 	$(CXX) $(LDFLAGS) $(TARGET_OBJS) -o $(BIN_DIR)/$(TARGET_NAME).elf $(CFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
-	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CXX) $(CFLAGS) $(INCLUDE) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 directories: $(OBJ_DIR) $(BIN_DIR)
 
