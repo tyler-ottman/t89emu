@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "DwarfParser.h"
+#include "Dwarf/DwarfParser.h"
 #include "ElfParser.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"

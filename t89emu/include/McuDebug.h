@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "DwarfParser.h"
+#include "Dwarf/DwarfParser.h"
 #include "Mcu.h"
 
 // Debug interface between mcu and gui/dwarf/elf parser
