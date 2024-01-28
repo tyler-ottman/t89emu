@@ -2,46 +2,44 @@
 A RISC-V Emulator built for Embedded and Operating System emulation
 
 ## Features
- * 32-bit RV32I
- * C/C++ Support
- * Interrupt Handling (M-Mode)
- * Video Device (Text/Graphics Mode)
- * Debugging Interface (Disassembler, Registers, Memory Viewer)
+ * RV32I_zicsr
+ * C/C++ Firmware Support
+ * Machine Mode Privilege Level
+   * Interrupt/Syscall handling
+ * Framebuffer Device (Text/Graphics Mode)
+ * Core-Local Interruptor (CLINT) Device
+ * Debugging Interfaces
+   * Source-Level Debugger
+   * Disassembled Text Viewer
+   * Register/Memory Viewer
 
 ## Usage
-T89-EMU uses the RISC-V GNU Compiler Toolchain found <a href="https://github.com/riscv-collab/riscv-gnu-toolchain" target="_blank">here</a>. A guide outlining the build process can be found <a href="https://mindchasers.com/dev/rv-getting-started" target="_blank">here</a>. Most importantly, make sure to configure the cross compiler to properly target T89-EMU.
+T89-EMU uses the RISC-V GNU Compiler Toolchain found <a href="https://github.com/riscv-collab/riscv-gnu-toolchain" target="_blank">here</a>. Configure the cross compiler toolchain to target the proper base instruction set and extensions as demonstrated below. Place the toolchain directory in the same parent directory of t89emu.
 
 ```console
 $ cd riscv-gnu-toolchain/
 $ mkdir build
 $ cd build
-$ ../configure --prefix=/opt/riscv32 --with-arch=rv32i --with-abi=ilp32
-$ make
+$ ../configure --prefix=/opt/riscv32 --with-arch=rv32im_zicsr --with-abi=ilp32
+$ sudo make
 ```
-**Note**: The toolchain may take up to an hour to build
+**Note**: The toolchain may require additional dependencies and take an hour to build.
 
 ## Getting Started
 
-The firmware directory provides a skeleton template for Embedded or Operating Systems development. The code provided demonstrates how to properly interface T89-EMU's hardware (see details below detailing the hardware specifications). The emulator provides a modern graphical user interface using Dear ImGui with an OpenGL/GLFW backend. To build the emulator, execute the following commands
+The firmware directory provides a skeleton template for an Embedded/Operating systems project. The code provided demonstrates how to properly interface T89-EMU's hardware (see details below detailing the hardware specifications) and provides a modern graphical user interface using Dear ImGui. To build the emulator, execute the following commands:
 
 ```console
-$ cd build/
 $ ./build.sh
 ```
 
-Once the emulator is built, navigate to the firmware directory and compiler the firmware using make
-```console
-$ cd ../firmware/
-$ make
-```
-The Makefile provided compiles and links the source code, outputting an ELF file targeting the RISC-V T89-EMU architecture. After obtaining the binary, the emulator is ready to run
+Once the emulator is built, the firmware directory will contain an ELF file representing t89emu's firmware. The ELF file is used as input to initialize the emulator. Now, execute the following command to run the emulator:
 
 ```console
-$ cd ..
 $ ./run.sh
 ```
 
-A window with the application should appear allowing you to run the firmware on the emulator. Running the sample 'Hello world' application, the window should look like:
+A window with the application will appear. Running the sample 'Hello world' application, the window should look like:
 ![Alt text](./img/sample2.png "Hello World Example Pt. 2")
 
 ## Hardware Documentation
@@ -49,31 +47,32 @@ A window with the application should appear allowing you to run the firmware on 
 #### Memory Layout
 Address                 | Memory Section 
 ---                     | --- 
-0x00000000 - 0x0001FFFF | Instruction Memory
-0x10000000 - 0x100FFFFF | Data Memory
 0x20000000 - 0x2008FFFF | Video Memory
-0x30000000 - 0x30000010 | CSR Memory
+0x30000000 - 0x30000014 | CLINT Memory
+0x40000000 - 0x400FFFFF | Data (RAM) Memory
+0x80000000 - 0x8001FFFF | Instruction (ROM) Memory
 
-**Note**: The location of Instruction/Data Memory can be re-configured in the linker script, but the changes must also be reflected in the emulator's source code.
+**Note**: The location of Instruction/Data Memory can be re-configured in the linker script. Ensure memory devices do not intersect.
 
 #### Control State Registers (CSRs)
 
-Refer to the RISC-V privileged spec for a complete description of the control state registers. Below are details specific to T89-EMU's CSR implementation.
+Refer to the RISC-V privileged spec for a complete description of the control state registers. Below are details specific to memory-mapped CSRs.
 ##### Memory-mapped CSRs
 Address                 | CSR                   | Size (bytes) 
 ---                     | ---                   | ---
 0x30000000              | mcycle                | 8
 0x30000008              | mtimecmp              | 8
 0x30000010              | keyboard              | 4
+0x30000014              | msip                  | 4
 
 ##### mcycle
 Number of cycles since beginning of simulation
 
 ##### mtimecmp
-Because the architecture is 32-bit, mtimecmp is split into 2 32-bit registers
+Because the architecture is 32-bit, mtimecmp and mcycle are split into 2 32-bit registers each.
 
 ##### keyboard
-(WIP) - Buttons are mapped to a bit in the keyboard register. If a key is pressed, the corresponding bit becomes high, low otherwise
+(WIP)
 
 ##### mstatus
 
@@ -108,12 +107,13 @@ Address                 | Video Segment         | Size (bytes)
 ---                     | ---                   | ---
 0x20000000              | Video Mode            | 1
 0x20000001 - 0x2000000f | Unused                | 15
+0x20000010              | Graphics/Text Buffer  | Varies
 
-Most bytes of the video controller are unused or reserved for later use. However, the first byte defines the mode of the video controller. By default, the video mode byte initializes to 0. The video mode byte can be changed in software by setting the byte to 1 (Video Text Mode) or 2 (Video Graphics Mode, a WIP)
+Most bytes of the video controller are unused or reserved for later use. However, the first byte defines the mode of the video controller. By default, the video mode byte initializes to 0. The video mode byte can be changed in software by setting the byte to 1 (Video Text Mode) or 2 (Video Graphics Mode)
 
 ##### Video Text Buffer
 
-The Video Text Buffer is a character buffer located at physical memory address 0x20000010. When Video Text Mode is enabled, the characters stores in the Video Text Buffer will be displayed to the LCD display module. The display can print up to 21 lines of characters, each line fitting a maximum of 64 characters.
+The Video Text Buffer is a character buffer located at physical memory address 0x20000010. When Video Text Mode is enabled, the characters stored in the Video Text Buffer will be displayed to the Video module. The display can print up to 21 lines of characters, each line fitting a maximum of 64 characters.
 
 ##### Video Graphics Mode
 
@@ -126,14 +126,13 @@ Field   | A | B | G | R
 
 ## Future Ideas
 
- * C/C++ Decompiler
- * Read firmware directly from ELF file (first implementation released)
- * Implement exceptions in vector table (soon)
+ * C/C++ Source-Level Debugger :white_check_mark:
+ * Read firmware directly from ELF file :white_check_mark:
+ * Implement exceptions in vector table :white_check_mark:
+ * Add UART/PLIC hardware support
+ * Add F and M extension hardware support
  * Design a more extensive graphics mode to support Tiles/Palettes
  * Add User and Supervisor Protection Levels
- * Cleaner UI Support
- * Port build system to CMake (tentative)
- * macOS/Windows support
  * Design and run T89's architecture on an FPGA
  * Possible extensions to project 
     - Using LLVM to create a backend to target the RISC-V architecture designed
