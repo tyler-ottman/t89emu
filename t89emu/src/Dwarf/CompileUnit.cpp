@@ -26,23 +26,22 @@ size_t CompileUnitHeader::getHeaderLen() {
     return sizeof(FullCompileUnitHeader);
 }
 
-CompileUnit::CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                         uint8_t *debugStrStart, uint8_t *debugLineStrStart,
-                         uint8_t *debugLineStart) : rootScope(nullptr) {
+CompileUnit::CompileUnit(DwarfParser *dwarfParser, uint8_t *debugInfoCUHeader)
+        : dwarfParser(dwarfParser), rootScope(nullptr) {
     compileUnitHeader = new CompileUnitHeader(debugInfoCUHeader);
     // size of length-field (4 bytes) + Rest of CU Header + DIEs
     compileUnitLen = 4 + compileUnitHeader->getUnitLength();
     headerLen = compileUnitHeader->getHeaderLen();
 
-    abbrevTable = new AbbrevTable(debugAbbrevStart
+    abbrevTable = new AbbrevTable(dwarfParser->getDebugAbbrevStart()
                                   + compileUnitHeader->getDebugAbbrevOffset());
     debugStream = new DataStream(debugInfoCUHeader + headerLen,
                                  compileUnitLen - headerLen);
-    root = new DebugInfoEntry(this, nullptr);
-    debugStr = new StringTable((char *)debugStrStart);
-    debugLineStr = new StringTable((char *)debugLineStrStart);
-    debugLine = new LineNumberInfo(this, debugLineStart);
+    debugStr = new StringTable((char *)dwarfParser->getDebugStrStart());
+    debugLineStr = new StringTable((char *)dwarfParser->getDebugLineStrStart());
+    debugLine = new LineNumberInfo(this, dwarfParser->getDebugLineStart());
 
+    root = new DebugInfoEntry(nullptr);
     generateDebugInfo(root);
 }
 
@@ -53,6 +52,10 @@ CompileUnit::~CompileUnit() {
 
 void CompileUnit::generateScopes() {    
     rootScope = generateScopes(root, nullptr);
+}
+
+void CompileUnit::generateTypes() {
+    generateTypes(dwarfParser, root);
 }
 
 void CompileUnit::printScopes() {
@@ -219,14 +222,18 @@ DebugData *CompileUnit::decodeInfo(AttributeEntry *entry, DataStream *stream) {
 }
 
 DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
+    // Offset from first byte of .debug_info
+    size_t offset = (uintptr_t)(debugStream->getData() -
+        dwarfParser->getDebugInfoStart()) + debugStream->getIndex();
     size_t code = debugStream->decodeULeb128();
     if (code == 0) { // End of siblings, travel back up tree
         delete node;
         return nullptr;
     }
-    
+
     node->setCode(code);
     node->setAbbrevEntry(getAbbrevEntry(node->getCode()));
+    node->setOffset(offset);
     
     AbbrevEntry *dieAbbrevEntry = node->getAbbrevEntry();
     ASSERT(dieAbbrevEntry, "dieAbbrevEntry not found\n");
@@ -247,7 +254,7 @@ DebugInfoEntry *CompileUnit::generateDebugInfo(DebugInfoEntry *node) {
 
     // Traverse child subtrees
     DebugInfoEntry *child;
-    while ((child = generateDebugInfo(new DebugInfoEntry(this, node)))) {
+    while ((child = generateDebugInfo(new DebugInfoEntry(node)))) {
         node->addChild(child);
     }
 
@@ -268,4 +275,17 @@ Scope *CompileUnit::generateScopes(DebugInfoEntry *node, Scope *parent) {
     }
 
     return scope;
+}
+
+void CompileUnit::generateTypes(DwarfParser *dwarfParser,
+                                DebugInfoEntry *entry) {
+    // Create new data type if not yet added
+    if (entry->isType() && !dwarfParser->getTypeEntry(entry->getOffset())) {
+        DataType *dataType = new DataType(entry);
+        dwarfParser->addTypeEntry(entry->getOffset(), dataType);
+    }
+
+    for (size_t i = 0; i < entry->getNumChildren(); i++) {
+        generateTypes(dwarfParser, entry->getChild(i));
+    }
 }

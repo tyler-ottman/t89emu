@@ -642,7 +642,7 @@ void Gui::displayVarTable(const std::string &name,
         ImGui::TableNextRow();
 
         // Variable Information
-        Variable::VarInfo varInfo;
+        VarInfo varInfo;
         debug->getVarInfo(varInfo, true, var);
         
         // Variable Name

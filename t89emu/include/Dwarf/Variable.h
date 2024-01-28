@@ -6,20 +6,20 @@
 #include "Dwarf/Variable.h"
 #include "RegisterFile.h"
 
+struct VarInfo {
+    bool isValid;
+    
+    void *type;
+    std::string name;
+    uint32_t location; // Todo: multiple locations
+    std::string value;
+};
+
 class DebugInfoEntry;
 class StackMachine;
 
 class Variable {
 public:
-    struct VarInfo {
-        bool isValid;
-
-        void *type;
-        std::string name;
-        uint32_t location; // Todo: multiple locations
-        std::string value;
-    };
-
     Variable(DebugInfoEntry *debugEntry);
     ~Variable();
 

@@ -1,5 +1,4 @@
-#ifndef DWARFENCODINGS_H
-#define DWARFENCODINGS_H
+#pragma once
 
 #include <iostream>
 #include <utility>
@@ -541,7 +540,7 @@ enum ExtendedOpcodeEncoding {
 };
 
 // Call Frame Instruction Encodings
-#define CFA_ENCODING(EXPR)                     \
+#define CFA_ENCODING(EXPR)                      \
     EXPR(DW_CFA_advance_loc, 0x40)              \
     EXPR(DW_CFA_offset, 0x80)                   \
     EXPR(DW_CFA_restore, 0xc0)                  \
@@ -575,6 +574,37 @@ enum CfaEncoding {
     CFA_ENCODING(DEFINE)
 };
 
+#define ATE_ENCODING(EXPR)                      \
+    EXPR(AteReserved0, 0x00)                    \
+    EXPR(DW_ATE_address, 0x01)                  \
+    EXPR(DW_ATE_boolean, 0x02)                  \
+    EXPR(DW_ATE_complex_float, 0x03)            \
+    EXPR(DW_ATE_float, 0x04)                    \
+    EXPR(DW_ATE_signed, 0x05)                   \
+    EXPR(DW_ATE_signed_char, 0x06)              \
+    EXPR(DW_ATE_unsigned, 0x07)                 \
+    EXPR(DW_ATE_unsigned_char, 0x08)            \
+    EXPR(DW_ATE_imaginary_float, 0x09)          \
+    EXPR(DW_ATE_packed_decimal, 0x0a)           \
+    EXPR(DW_ATE_numeric_string, 0x0b)           \
+    EXPR(DW_ATE_edited, 0x0c)                   \
+    EXPR(DW_ATE_signed_fixed, 0x0d)
+
+enum AteEncoding {
+    ATE_ENCODING(DEFINE)
+};
+
+#define END_ENCODING(EXPR)                      \
+    EXPR(DW_END_default, 0x00)                  \
+    EXPR(DW_END_big, 0x01)                      \
+    EXPR(DW_END_little, 0x02)                   \
+    EXPR(DW_END_lo_user, 0x40)                  \
+    EXPR(DW_END_hi_user, 0xff)
+
+enum EndEncoding {
+    END_ENCODING(DEFINE)
+};
+
 #define PRINT_ENUM(NAME, ENUM, ENUM_LIST)       \
     static inline const char *NAME(ENUM type) { \
         switch (type) {                         \
@@ -590,5 +620,4 @@ PRINT_ENUM(printAttribute, AttributeEncoding, ATTRIBUTE_ENCODING)
 PRINT_ENUM(printForm, FormEncoding, FORM_ENCODING)
 PRINT_ENUM(printOperation, OperationEncoding, OPERATION_ENCODING)
 PRINT_ENUM(printCfa, CfaEncoding, CFA_ENCODING)
-
-#endif // DWARFENCODINGS_H
+PRINT_ENUM(printAte, AteEncoding, ATE_ENCODING)

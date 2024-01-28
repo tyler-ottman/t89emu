@@ -163,8 +163,8 @@ AbbrevEntry *AbbrevTable::getAbbrevEntry(size_t dieCode) {
                : nullptr;
 }
 
-DebugInfoEntry::DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent)
-    : compileUnit(compileUnit), parent(parent), code(0) {}
+DebugInfoEntry::DebugInfoEntry(DebugInfoEntry *parent)
+    : parent(parent), code(0) {}
 
 DebugInfoEntry::~DebugInfoEntry() {
     for (DebugInfoEntry *debugEntry : children) {
@@ -202,6 +202,8 @@ DebugData *DebugInfoEntry::getAttribute(AttributeEncoding attribute) {
 
 size_t DebugInfoEntry::getCode() { return code; }
 
+size_t DebugInfoEntry::getOffset() { return offset; }
+
 TagEncoding DebugInfoEntry::getTag() { return abbrevEntry->getDieTag(); }
 
 size_t DebugInfoEntry::getNumChildren() { return children.size(); }
@@ -217,6 +219,8 @@ void DebugInfoEntry::setAbbrevEntry(AbbrevEntry *abbrevEntry) {
 }
 
 void DebugInfoEntry::setCode(size_t dieCode) { code = dieCode; }
+
+void DebugInfoEntry::setOffset(size_t offset) { this->offset = offset; }
 
 bool DebugInfoEntry::isScope() {
     switch (abbrevEntry->getDieTag()) {

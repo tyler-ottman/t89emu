@@ -81,7 +81,7 @@ private:
 
 class DebugInfoEntry {
 public:
-    DebugInfoEntry(CompileUnit *compileUnit, DebugInfoEntry *parent);
+    DebugInfoEntry(DebugInfoEntry *parent);
     ~DebugInfoEntry();
 
     void addAttribute(AttributeEncoding encoding, DebugData *data);
@@ -91,6 +91,7 @@ public:
     AbbrevEntry *getAbbrevEntry(void);
     DebugData *getAttribute(AttributeEncoding attribute);
     size_t getCode(void);
+    size_t getOffset(void);
     TagEncoding getTag(void);
     size_t getNumChildren(void);
     DebugInfoEntry *getChild(size_t index);
@@ -98,14 +99,13 @@ public:
 
     void setAbbrevEntry(AbbrevEntry *abbrevEntry);
     void setCode(size_t dieCode);
+    void setOffset(size_t offset);
 
     bool isScope(void);
     bool isType(void);
     bool isVariable(void);
 
-private:
-    CompileUnit *compileUnit;
-    
+private:    
     AbbrevEntry *abbrevEntry;
     std::map<AttributeEncoding, DebugData *> attributes; // {Attribute, Data}
 
@@ -113,5 +113,5 @@ private:
     DebugInfoEntry *parent;
 
     size_t code;
-    // std::string name;
+    size_t offset; // offse to DIE within .debug_info
 };

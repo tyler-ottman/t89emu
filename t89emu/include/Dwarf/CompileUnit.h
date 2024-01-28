@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "Dwarf/DataType.h"
 #include "Dwarf/DebugInfoEntry.h"
+#include "Dwarf/DwarfParser.h"
 #include "Dwarf/LineNumberInfo.h"
 #include "Dwarf/Scope.h"
 #include "Dwarf/StringTable.h"
@@ -12,6 +14,8 @@
 class AbbrevEntry;
 class AbbrevTable;
 class AttributeEntry;
+class DataType;
+class DwarfParser;
 class LineNumberInfo;
 class Scope;
 class SourceInfo;
@@ -47,12 +51,13 @@ private:
 
 class CompileUnit {
 public:
-    CompileUnit(uint8_t *debugInfoCUHeader, uint8_t *debugAbbrevStart,
-                uint8_t *debugStrStart, uint8_t *debugLineStrStart,
-                uint8_t *debugLineStart);
+    CompileUnit(DwarfParser *dwarfParser, uint8_t *debugInfoCUHeader);
     ~CompileUnit();
 
     void generateScopes(void);
+    void generateDebugEntriesByOffset(std::unordered_map<size_t,
+                                      DebugInfoEntry *> &res);
+    void generateTypes(void);
     void printScopes(void);
 
     // Given an attribute's form, read bytes from byteStream accordingly
@@ -82,23 +87,25 @@ private:
     // Recursively generate scopes, and identify variables within scopes
     Scope *generateScopes(DebugInfoEntry *node, Scope *parent);
 
+    void generateTypes(DwarfParser *dwarfParser, DebugInfoEntry *entry);
+
+    DwarfParser *dwarfParser;
+
     // CU Header for corresponding CU in .debug_info 
     CompileUnitHeader *compileUnitHeader;
     size_t compileUnitLen; // Compile Unit Header + payload
     size_t headerLen;
 
-    // CU Abbreviation Table
-    AbbrevTable *abbrevTable;
-
-    // String Tables (.debug_info, .debug_line_str)
-    StringTable *debugStr;
-    StringTable *debugLineStr;
-
+    // Scope Information
     DebugInfoEntry *root;
     Scope *rootScope;
 
+    // Compile Unit specific DWARF section information
+    AbbrevTable *abbrevTable; // .debug_abbrev
+    StringTable *debugStr; // .debug_info
+    StringTable *debugLineStr; // .debug_line_str
+    LineNumberInfo *debugLine; // .debug_line
+
     // Starts at first byte of first DIE entry within CU
     DataStream *debugStream;
-
-    LineNumberInfo *debugLine;
 };

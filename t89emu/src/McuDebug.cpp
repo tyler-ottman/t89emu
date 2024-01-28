@@ -120,7 +120,7 @@ std::string &McuDebug::getSourceNameAtPc() {
         mcu->getProgramCounterModule()->getPc());
 }
 
-void McuDebug::getVarInfo(Variable::VarInfo &res, bool doUpdate, Variable *var) {
+void McuDebug::getVarInfo(VarInfo &res, bool doUpdate, Variable *var) {
     dwarfParser->getVarInfo(res, doUpdate, var, mcu->getRegisterFileModule(),
                             mcu->getProgramCounterModule()->getPc());
 }

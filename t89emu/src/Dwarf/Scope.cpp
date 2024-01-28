@@ -22,7 +22,7 @@ void Scope::printScopes(int depth) {
     printf("S-%s, 0x%x - 0x%x\n", name.c_str(), lowPc, highPc);
     for (Variable *v : variables) {
         for (int i = 0; i < depth+1; i++) { printf("   "); }
-        Variable::VarInfo varInfo;
+        VarInfo varInfo;
         v->getVarInfo(varInfo, false, nullptr, nullptr, 0);
         printf("V-%s, 0x%x\n", varInfo.name.c_str(), 0);
     }

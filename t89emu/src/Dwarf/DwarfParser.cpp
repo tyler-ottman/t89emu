@@ -13,40 +13,41 @@ DwarfParser::DwarfParser(const char *fileName)
 
     uint8_t *fileStart = elfFileInfo->elfData;
 
-    uint8_t *debugInfoStart = fileStart + debugInfoHeader->offset;
-    uint8_t *debugInfoEnd = debugInfoStart + debugInfoHeader->size;
-    uint8_t *debugAbbrevStart = fileStart + debugAbbrevHeader->offset;
-    uint8_t *debugStrStart = fileStart + debugStrHeader->offset;
-    uint8_t *debugLineStrStart = fileStart + debugLineStrHeader->offset;
-    uint8_t *debugLineStart = fileStart + debugLineHeader->offset;
-    uint8_t *debugFrameStart = fileStart + debugFrameHeader->offset;
-    uint8_t *debugFrameEnd = debugFrameStart + debugFrameHeader->size;    
+    debugInfoStart = fileStart + debugInfoHeader->offset;
+    debugAbbrevStart = fileStart + debugAbbrevHeader->offset;
+    debugStrStart = fileStart + debugStrHeader->offset;
+    debugLineStrStart = fileStart + debugLineStrHeader->offset;
+    debugLineStart = fileStart + debugLineHeader->offset;
+    debugFrameStart = fileStart + debugFrameHeader->offset;
 
     // Initialize Compile Units and Debug Information Tree
+    uint8_t *debugInfoOffset = debugInfoStart;
     for (;;) {
         // End of .debug_info section, CU parsing complete
-        if ((uintptr_t)debugInfoStart >= ((uintptr_t)debugInfoEnd)) {
+        uint8_t *debugInfoEnd = debugInfoStart + debugInfoHeader->size;
+        if ((uintptr_t)debugInfoOffset >= ((uintptr_t)debugInfoEnd)) {
             break;
         }
 
-        CompileUnit *compileUnit = new CompileUnit(debugInfoStart,
-            debugAbbrevStart, debugStrStart, debugLineStrStart, debugLineStart);
+        CompileUnit *compileUnit = new CompileUnit(this, debugInfoOffset);
         compileUnits.push_back(compileUnit);
         
         compileUnit->generateScopes();
         // compileUnit->printScopes();
 
         // Point to next .debug_info CU Header
-        debugInfoStart += compileUnit->getDebugInfoLength();
+        debugInfoOffset += compileUnit->getDebugInfoLength();
 
         // Point to next .debug_line CU header
         debugLineStart += compileUnit->getDebugLineLength();
     }
 
     // Initialize Call Frame Information
-    debugFrame = new CallFrameInfo(debugFrameStart, debugFrameEnd);
+    debugFrame = new CallFrameInfo(debugFrameStart, debugFrameStart +
+                                   debugFrameHeader->size);
 
     // Generate types
+    generateTypes();
 }
 
 DwarfParser::~DwarfParser() {
@@ -54,6 +55,23 @@ DwarfParser::~DwarfParser() {
         delete compileUnit;
     }
     compileUnits.clear();
+}
+
+void DwarfParser::generateTypes() {
+    for (CompileUnit *cu : compileUnits) {
+        cu->generateTypes();
+    }
+}
+
+void DwarfParser::addTypeEntry(size_t offset, DataType *dataType) {
+    if (typeEntries.find(offset) == typeEntries.end()) {
+        typeEntries.insert({offset, dataType});
+    }
+}
+
+DataType *DwarfParser::getTypeEntry(size_t offset) {
+    return typeEntries.find(offset) != typeEntries.end() ?
+        typeEntries[offset] : nullptr;
 }
 
 Scope *DwarfParser::getScope(uint32_t pc) {
@@ -116,7 +134,19 @@ void DwarfParser::getGlobalVariables(std::vector<Variable *> &variables,
     getCompileUnitAtPc(pc)->getGlobalVariables(variables, pc, line);
 }
 
-void DwarfParser::getVarInfo(Variable::VarInfo &res, bool doUpdate,
-                             Variable *var, RegisterFile *regs, uint32_t pc) {
+void DwarfParser::getVarInfo(VarInfo &res, bool doUpdate, Variable *var,
+                             RegisterFile *regs, uint32_t pc) {
     var->getVarInfo(res, doUpdate, regs, debugFrame, pc);
 }
+
+uint8_t *DwarfParser::getDebugAbbrevStart(void) { return debugAbbrevStart; }
+
+uint8_t *DwarfParser::getDebugFrameStart(void) { return debugFrameStart; }
+
+uint8_t *DwarfParser::getDebugInfoStart(void) { return debugInfoStart; }
+
+uint8_t *DwarfParser::getDebugLineStart(void) { return debugLineStart; }
+
+uint8_t *DwarfParser::getDebugLineStrStart(void) { return debugLineStrStart; }
+
+uint8_t *DwarfParser::getDebugStrStart(void) { return debugStrStart; }
